@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="Background" type="TextureRect" parent="."]
+offset_right = 1600.0
+offset_bottom = 900.0
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 6
+mouse_filter = 2
+
+[node name="InteractiveLayer" type="Node2D" parent="."]
+
+[node name="InterfaceLayer" type="CanvasLayer" parent="."]
