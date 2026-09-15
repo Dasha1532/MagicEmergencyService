@@ -1,8 +1,10 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://cj6reyeswul12"]
 
-[ext_resource type="Script" path="res://scripts/office_dashboard.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://b6iqyfttm7vuj" path="res://scripts/office_dashboard.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://do5dtmlnk4d3g" path="res://assets/backgrounds/office_hub.png" id="2_background"]
+[ext_resource type="Script" uid="uid://dkginrqomyptg" path="res://scripts/polygon_hotspot.gd" id="3_polygon"]
 
-[node name="OfficeDashboard" type="Control"]
+[node name="OfficeDashboard" type="Control" unique_id=1064504089]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -10,3 +12,150 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
+
+[node name="HotspotEditorPreview" type="TextureRect" parent="." unique_id=1519010469]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_background")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="BookHotspots" type="Control" parent="." unique_id=870727771]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -7.0
+offset_top = -1.0
+offset_right = -7.0
+offset_bottom = -1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="AccountingBook" type="Control" parent="BookHotspots" unique_id=312183951]
+anchors_preset = 0
+offset_left = 620.0
+offset_top = 465.0
+offset_right = 766.0
+offset_bottom = 601.0
+mouse_default_cursor_shape = 2
+script = ExtResource("3_polygon")
+
+[node name="Highlight" type="Polygon2D" parent="BookHotspots/AccountingBook" unique_id=1562761846]
+position = Vector2(-16.361992, -21.751192)
+scale = Vector2(1.1243165, 1.2045817)
+color = Color(1, 0.72, 0.2, 0.1)
+polygon = PackedVector2Array(48.351135, 33.83017, 116.83722, 34.66034, 114.168884, 42.961975, 115.05835, 51.26361, 118.61603, 52.92392, 107.05347, 90.28128, 18.999939, 88.62097, 17.22113, 73.67801)
+
+[node name="ReviewsBook" type="Control" parent="BookHotspots" unique_id=1009071041]
+anchors_preset = 0
+offset_left = 766.0
+offset_top = 465.0
+offset_right = 912.0
+offset_bottom = 601.0
+mouse_default_cursor_shape = 2
+script = ExtResource("3_polygon")
+
+[node name="Highlight" type="Polygon2D" parent="BookHotspots/ReviewsBook" unique_id=1015016529]
+color = Color(1, 0.72, 0.2, 0.1)
+polygon = PackedVector2Array(4, 23, 85, 24, 95, 66, 91, 68, 92, 81, 97, 86, -12, 85, -14, 73, -11, 66)
+
+[node name="IncidentArchive" type="Control" parent="BookHotspots" unique_id=1284279019]
+anchors_preset = 0
+offset_left = 911.0
+offset_top = 465.0
+offset_right = 1062.0
+offset_bottom = 575.0
+mouse_default_cursor_shape = 2
+script = ExtResource("3_polygon")
+
+[node name="Highlight" type="Polygon2D" parent="BookHotspots/IncidentArchive" unique_id=1747309099]
+color = Color(1, 0.72, 0.2, 0.1)
+polygon = PackedVector2Array(-21, 31, 57, 29, 90, 68, 85, 71, 87, 79, 91, 86, -12, 85, -28, 47, -27, 38)
+
+[node name="ObjectHotspots" type="Control" parent="." unique_id=607918311]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -12.0
+offset_top = -15.0
+offset_right = -12.0
+offset_bottom = -15.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="JobBoard" type="Control" parent="ObjectHotspots" unique_id=256239569]
+anchors_preset = 0
+offset_left = 38.0
+offset_top = 34.0
+offset_right = 438.0
+offset_bottom = 336.0
+mouse_default_cursor_shape = 2
+script = ExtResource("3_polygon")
+
+[node name="Highlight" type="Polygon2D" parent="ObjectHotspots/JobBoard" unique_id=2110671224]
+color = Color(1, 0.72, 0.2, 0.1)
+polygon = PackedVector2Array(7, 0, 399, 61, 400, 305, -4, 307)
+
+[node name="EmployeesBoard" type="Control" parent="ObjectHotspots" unique_id=191576341]
+anchors_preset = 0
+offset_left = 524.0
+offset_top = 113.0
+offset_right = 894.0
+offset_bottom = 371.0
+mouse_default_cursor_shape = 2
+script = ExtResource("3_polygon")
+
+[node name="Highlight" type="Polygon2D" parent="ObjectHotspots/EmployeesBoard" unique_id=1819140700]
+position = Vector2(2, 11)
+color = Color(1, 0.72, 0.2, 0.1)
+polygon = PackedVector2Array(4, 16, 367, 16, 367, 251, 4, 253)
+
+[node name="EquipmentStorage" type="Control" parent="ObjectHotspots" unique_id=1693484768]
+anchors_preset = 0
+offset_left = 28.0
+offset_top = 346.0
+offset_right = 475.0
+offset_bottom = 715.0
+mouse_default_cursor_shape = 2
+script = ExtResource("3_polygon")
+
+[node name="Highlight" type="Polygon2D" parent="ObjectHotspots/EquipmentStorage" unique_id=525362817]
+position = Vector2(16.03893, 14.141394)
+scale = Vector2(0.9610706, 0.96464646)
+color = Color(1, 0.72, 0.2, 0.1)
+polygon = PackedVector2Array(1, 4, 62, 13, 62, 7, 341, 6, 342, 18, 419.28357, 20.586426, 422.4051, 317.0681, 351.65067, 306.70166, 351.65067, 323.28802, 61.34937, 398.96344, 55.106327, 386.52362, -1.0810127, 415.5498)
+
+[node name="CityMap" type="Control" parent="ObjectHotspots" unique_id=1308019828]
+anchors_preset = 0
+offset_left = 1180.0
+offset_top = 36.0
+offset_right = 1576.0
+offset_bottom = 374.0
+mouse_default_cursor_shape = 2
+script = ExtResource("3_polygon")
+
+[node name="Highlight" type="Polygon2D" parent="ObjectHotspots/CityMap" unique_id=1798661050]
+color = Color(1, 0.72, 0.2, 0.1)
+polygon = PackedVector2Array(18, 61, 422, 24, 423, 380, 18, 349)
+
+[node name="SupplyShop" type="Control" parent="ObjectHotspots" unique_id=2097547320]
+anchors_preset = 0
+offset_left = 1192.0
+offset_top = 402.0
+offset_right = 1574.0
+offset_bottom = 754.0
+mouse_default_cursor_shape = 2
+script = ExtResource("3_polygon")
+
+[node name="Highlight" type="Polygon2D" parent="ObjectHotspots/SupplyShop" unique_id=807265873]
+color = Color(1, 0.72, 0.2, 0.1)
+polygon = PackedVector2Array(158, 16, 368, 32, 358, 345, 282, 362, 282, 373, 267, 377, 244, 373, 251, 352, 222, 344, 191, 352, 73, 318, 58, 319, 57, 303, 66, 302, 67, 197, 34, 189, 33, 175, 116, 20)

@@ -18,11 +18,17 @@ var detail_body: Label
 var assignment_label: Label
 var warning_label: Label
 var depart_button: Button
+var dashboard_layer: Control
+var hub_layer: Control
+var section_dialog: Panel
+var section_title: Label
+var section_body: Label
 @onready var game_state: Node = get_node("/root/GameState")
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	$HotspotEditorPreview.visible = false
 	selected_job_id = game_state.selected_job_id
 	_build_interface()
 	game_state.state_changed.connect(_refresh)
@@ -30,22 +36,27 @@ func _ready() -> void:
 
 
 func _build_interface() -> void:
+	dashboard_layer = Control.new()
+	dashboard_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(dashboard_layer)
 	_build_top_bar()
 	_build_jobs_panel()
 	_build_detail_panel()
 	_build_employee_panel()
+	_build_dashboard_return()
+	_build_office_hub()
 
 
 func _build_top_bar() -> void:
 	var panel := _panel(Vector2(22, 18), Vector2(1556, 74), 12)
-	add_child(panel)
+	dashboard_layer.add_child(panel)
 
 	var title := _label("МАГИЧЕСКАЯ АВАРИЙНАЯ СЛУЖБА", 24, COLOR_GOLD)
 	title.position = Vector2(24, 12)
 	title.size = Vector2(650, 44)
 	panel.add_child(title)
 
-	var motto := _label("Не со всем справимся, но почти", 14, COLOR_MUTED)
+	var motto := _label("Диспетчерская заявок", 14, COLOR_MUTED)
 	motto.position = Vector2(25, 42)
 	motto.size = Vector2(500, 22)
 	panel.add_child(motto)
@@ -75,7 +86,7 @@ func _build_top_bar() -> void:
 
 func _build_jobs_panel() -> void:
 	var panel := _panel(Vector2(22, 112), Vector2(415, 455), 12)
-	add_child(panel)
+	dashboard_layer.add_child(panel)
 
 	var heading := _label("ТЕКУЩИЕ ЗАЯВКИ", 21, COLOR_GOLD)
 	heading.position = Vector2(20, 16)
@@ -97,7 +108,7 @@ func _build_jobs_panel() -> void:
 
 func _build_detail_panel() -> void:
 	var panel := _panel(Vector2(1163, 112), Vector2(415, 455), 12)
-	add_child(panel)
+	dashboard_layer.add_child(panel)
 
 	detail_title = _label("", 24, COLOR_GOLD)
 	detail_title.position = Vector2(22, 18)
@@ -130,7 +141,7 @@ func _build_detail_panel() -> void:
 
 func _build_employee_panel() -> void:
 	var panel := _panel(Vector2(180, 585), Vector2(1240, 295), 12)
-	add_child(panel)
+	dashboard_layer.add_child(panel)
 
 	var heading := _label("СОТРУДНИКИ  •  выберите заявку, затем назначьте специалистов", 18, COLOR_GOLD)
 	heading.position = Vector2(20, 10)
@@ -144,6 +155,132 @@ func _build_employee_panel() -> void:
 	employee_list.alignment = BoxContainer.ALIGNMENT_CENTER
 	employee_list.add_theme_constant_override("separation", 14)
 	panel.add_child(employee_list)
+
+
+func _build_dashboard_return() -> void:
+	var back_button := _button("←  В ОФИС", Vector2(746, 30), Vector2(180, 50))
+	back_button.pressed.connect(_show_hub)
+	dashboard_layer.add_child(back_button)
+
+
+func _build_office_hub() -> void:
+	hub_layer = Control.new()
+	hub_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(hub_layer)
+
+	var background := TextureRect.new()
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.texture = load("res://assets/backgrounds/office_hub.png") as Texture2D
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hub_layer.add_child(background)
+
+	_connect_editable_hotspot($ObjectHotspots/JobBoard, "ДОСКА ЗАЯВОК", "Что опять случилось?", _open_jobs)
+	_connect_editable_hotspot($ObjectHotspots/EmployeesBoard, "СОТРУДНИКИ", "Кто сегодня работает?", _open_section.bind("СОТРУДНИКИ", "Кто сегодня работает?", "Здесь появятся личные дела, найм, способности и обучение сотрудников."))
+	_connect_editable_hotspot($ObjectHotspots/EquipmentStorage, "СКЛАД СНАРЯЖЕНИЯ", "Чем будем чинить?", _open_section.bind("СКЛАД СНАРЯЖЕНИЯ", "Чем будем чинить?", "Здесь будет храниться обычное и магическое оборудование службы."))
+	_connect_editable_hotspot($ObjectHotspots/CityMap, "КАРТА ГОРОДА", "Где опять прорвало?", _open_section.bind("КАРТА ГОРОДА", "Где опять прорвало?", "Здесь появятся районы города, адреса заявок и перемещение между объектами."))
+	_connect_editable_hotspot($BookHotspots/AccountingBook, "КНИГА УЧЁТА", "Куда делись деньги?", _open_section.bind("КНИГА УЧЁТА", "Куда делись деньги?", "Здесь будут показаны доходы, расходы, зарплаты и компенсации."))
+	_connect_editable_hotspot($BookHotspots/ReviewsBook, "КНИГА ОТЗЫВОВ", "Благодарности, жалобы и угрозы.", _open_section.bind("КНИГА ОТЗЫВОВ", "Благодарности, жалобы и угрозы.", "Здесь появятся оценки жильцов, отзывы и изменение репутации службы."))
+	_connect_editable_hotspot($BookHotspots/IncidentArchive, "АРХИВ ПРОИСШЕСТВИЙ", "Так больше не делать.", _open_section.bind("АРХИВ ПРОИСШЕСТВИЙ", "Так больше не делать.", "Здесь будет сохраняться история решений, последствий и необычных аварий."))
+	_connect_editable_hotspot($ObjectHotspots/SupplyShop, "ЛАВКА СНАБЖЕНИЯ", "Очень нужные покупки", _open_section.bind("ЛАВКА СНАБЖЕНИЯ", "Очень нужные покупки", "Здесь можно будет покупать инструменты, магические предметы и учебные материалы."))
+
+	var hint := _label("Наведите курсор на предметы в офисе", 15, COLOR_PARCHMENT)
+	hint.position = Vector2(575, 852)
+	hint.size = Vector2(450, 30)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hub_layer.add_child(hint)
+
+	_build_section_dialog()
+
+
+func _add_hotspot(area: Rect2, title_text: String, subtitle_text: String, action: Callable) -> void:
+	var button := Button.new()
+	button.position = area.position
+	button.size = area.size
+	button.add_theme_stylebox_override("normal", _style(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 10))
+	button.add_theme_stylebox_override("hover", _style(Color(0.15, 0.10, 0.035, 0.20), COLOR_GOLD, 3, 10))
+	button.add_theme_stylebox_override("pressed", _style(Color(0.10, 0.16, 0.18, 0.30), COLOR_GOLD, 4, 10))
+	button.add_theme_stylebox_override("focus", _style(Color(0.15, 0.10, 0.035, 0.16), COLOR_GOLD, 3, 10))
+	button.pressed.connect(action)
+	hub_layer.add_child(button)
+	_attach_hotspot_caption(button, area.size, title_text, subtitle_text)
+
+
+func _connect_editable_hotspot(hotspot: Control, title_text: String, subtitle_text: String, action: Callable) -> void:
+	hotspot.reparent(hub_layer, true)
+	hotspot.activated.connect(action)
+	_attach_hotspot_caption(hotspot, hotspot.size, title_text, subtitle_text)
+
+
+func _attach_hotspot_caption(owner: Control, owner_size: Vector2, title_text: String, subtitle_text: String) -> void:
+	var caption := Panel.new()
+	var caption_width := maxf(owner_size.x - 24, 320.0)
+	caption.position = Vector2((owner_size.x - caption_width) * 0.5, owner_size.y - 78)
+	caption.size = Vector2(caption_width, 66)
+	caption.visible = false
+	caption.z_index = 20
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caption.add_theme_stylebox_override("panel", _style(Color(0.035, 0.025, 0.018, 0.94), COLOR_BRASS, 2, 7))
+	owner.add_child(caption)
+
+	var title_label := _label(title_text, 19, COLOR_GOLD)
+	title_label.position = Vector2(10, 7)
+	title_label.size = Vector2(caption.size.x - 20, 27)
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption.add_child(title_label)
+
+	var subtitle_label := _label(subtitle_text, 14, COLOR_PARCHMENT)
+	subtitle_label.position = Vector2(10, 34)
+	subtitle_label.size = Vector2(caption.size.x - 20, 22)
+	subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption.add_child(subtitle_label)
+
+	owner.mouse_entered.connect(func() -> void: caption.visible = true)
+	owner.mouse_exited.connect(func() -> void: caption.visible = false)
+
+
+func _build_section_dialog() -> void:
+	section_dialog = _panel(Vector2(480, 260), Vector2(640, 380), 14)
+	section_dialog.visible = false
+	hub_layer.add_child(section_dialog)
+
+	section_title = _label("", 28, COLOR_GOLD)
+	section_title.position = Vector2(35, 32)
+	section_title.size = Vector2(570, 44)
+	section_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	section_dialog.add_child(section_title)
+
+	section_body = _label("", 18, COLOR_PARCHMENT)
+	section_body.position = Vector2(48, 98)
+	section_body.size = Vector2(544, 160)
+	section_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	section_body.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	section_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	section_dialog.add_child(section_body)
+
+	var close_button := _button("ВЕРНУТЬСЯ В ОФИС", Vector2(120, 292), Vector2(400, 58))
+	close_button.pressed.connect(func() -> void: section_dialog.visible = false)
+	section_dialog.add_child(close_button)
+
+
+func _open_jobs() -> void:
+	hub_layer.visible = false
+	dashboard_layer.visible = true
+	_refresh()
+
+
+func _show_hub() -> void:
+	dashboard_layer.visible = false
+	hub_layer.visible = true
+	section_dialog.visible = false
+
+
+func _open_section(title_text: String, subtitle_text: String, description: String) -> void:
+	section_title.text = title_text
+	section_body.text = "%s\n\n%s\n\nРаздел подготовлен для следующего этапа разработки." % [subtitle_text, description]
+	section_dialog.visible = true
+	section_dialog.move_to_front()
 
 
 func _refresh() -> void:

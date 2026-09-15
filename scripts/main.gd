@@ -7,6 +7,6 @@ extends Node2D
 
 
 func _ready() -> void:
-	var image_texture := load("res://assets/backgrounds/office.png") as Texture2D
+	var image_texture := load("res://assets/backgrounds/office_hub.png") as Texture2D
 	if image_texture != null:
 		background.texture = image_texture
