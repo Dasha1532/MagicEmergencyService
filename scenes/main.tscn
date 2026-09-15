@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/ui/OfficeDashboard.tscn" id="2_dashboard"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -16,3 +17,5 @@ mouse_filter = 2
 [node name="InteractiveLayer" type="Node2D" parent="."]
 
 [node name="InterfaceLayer" type="CanvasLayer" parent="."]
+
+[node name="OfficeDashboard" parent="InterfaceLayer" instance=ExtResource("2_dashboard")]

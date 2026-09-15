@@ -1,0 +1,178 @@
+extends Control
+
+const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
+const COLOR_CARD := Color(0.13, 0.09, 0.055, 0.96)
+const COLOR_SELECTED := Color(0.10, 0.16, 0.18, 0.98)
+const COLOR_BRASS := Color(0.76, 0.54, 0.27)
+const COLOR_GOLD := Color(0.96, 0.78, 0.46)
+const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
+
+var selected_employee_id: StringName = &""
+var employee_box: VBoxContainer
+var tool_bar: MarginContainer
+@onready var game_state: Node = get_node("/root/GameState")
+
+
+func _ready() -> void:
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	tool_bar = get_node("../ToolBar")
+	if game_state.active_job_id.is_empty():
+		game_state.active_job_id = game_state.selected_job_id
+	_build_job_header()
+	_build_employee_selector()
+	_build_return_button()
+	_select_first_employee()
+
+
+func _build_job_header() -> void:
+	var job: Dictionary = game_state.get_active_job()
+	var panel := Panel.new()
+	panel.position = Vector2(20, 18)
+	panel.size = Vector2(500, 92)
+	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
+	add_child(panel)
+
+	var title := _label(job.get("title", "Ремонт"), 23, COLOR_GOLD)
+	title.position = Vector2(18, 12)
+	title.size = Vector2(464, 32)
+	panel.add_child(title)
+
+	var address := _label("%s  •  %s" % [job.get("address", ""), job.get("danger", "")], 16, COLOR_PARCHMENT)
+	address.position = Vector2(18, 50)
+	address.size = Vector2(464, 28)
+	panel.add_child(address)
+
+
+func _build_employee_selector() -> void:
+	var panel := Panel.new()
+	panel.position = Vector2(20, 575)
+	panel.size = Vector2(286, 305)
+	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
+	add_child(panel)
+
+	var heading := _label("БРИГАДА", 19, COLOR_GOLD)
+	heading.position = Vector2(16, 12)
+	heading.size = Vector2(254, 28)
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(heading)
+
+	employee_box = VBoxContainer.new()
+	employee_box.position = Vector2(14, 49)
+	employee_box.size = Vector2(258, 238)
+	employee_box.add_theme_constant_override("separation", 8)
+	panel.add_child(employee_box)
+
+	var job: Dictionary = game_state.get_active_job()
+	var assigned: PackedStringArray = job.get("assigned", PackedStringArray())
+	for employee_id: String in assigned:
+		_add_employee_button(StringName(employee_id))
+
+
+func _add_employee_button(employee_id: StringName) -> void:
+	var employee: Dictionary = game_state.employees[employee_id]
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(258, 70)
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.text = "              %s\n              %s" % [employee["name"], employee["core_actions"]]
+	button.add_theme_font_size_override("font_size", 14)
+	button.add_theme_color_override("font_color", COLOR_PARCHMENT)
+	button.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_BRASS, 2, 7))
+	button.add_theme_stylebox_override("hover", _style(Color(0.21, 0.14, 0.075, 0.98), COLOR_GOLD, 2, 7))
+	button.add_theme_stylebox_override("pressed", _style(COLOR_SELECTED, COLOR_GOLD, 3, 7))
+	button.pressed.connect(_select_employee.bind(employee_id))
+	employee_box.add_child(button)
+	button.set_meta("employee_id", employee_id)
+
+	var portrait_frame := Panel.new()
+	portrait_frame.position = Vector2(6, 5)
+	portrait_frame.size = Vector2(58, 60)
+	portrait_frame.clip_contents = true
+	portrait_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_frame.add_theme_stylebox_override("panel", _style(Color(0.035, 0.03, 0.028, 1), COLOR_BRASS, 1, 5))
+	button.add_child(portrait_frame)
+
+	var portrait := TextureRect.new()
+	portrait.position = Vector2(1, 1)
+	portrait.size = Vector2(56, 59)
+	portrait.texture = _cropped_portrait(employee["portrait"])
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_frame.add_child(portrait)
+
+
+func _build_return_button() -> void:
+	var button := Button.new()
+	button.text = "←  ВЕРНУТЬСЯ В ОФИС"
+	button.position = Vector2(1325, 24)
+	button.size = Vector2(253, 54)
+	button.add_theme_font_size_override("font_size", 17)
+	button.add_theme_color_override("font_color", COLOR_PARCHMENT)
+	button.add_theme_stylebox_override("normal", _style(COLOR_PANEL, COLOR_BRASS, 2, 8))
+	button.add_theme_stylebox_override("hover", _style(Color(0.21, 0.14, 0.075, 0.98), COLOR_GOLD, 2, 8))
+	button.pressed.connect(_return_to_office)
+	add_child(button)
+
+
+func _select_first_employee() -> void:
+	var job: Dictionary = game_state.get_active_job()
+	var assigned: PackedStringArray = job.get("assigned", PackedStringArray())
+	if not assigned.is_empty():
+		_select_employee(StringName(assigned[0]))
+	else:
+		tool_bar.visible = false
+
+
+func _select_employee(employee_id: StringName) -> void:
+	selected_employee_id = employee_id
+	for child in employee_box.get_children():
+		if child is Button:
+			var selected: bool = child.get_meta("employee_id") == employee_id
+			child.add_theme_stylebox_override("normal", _style(COLOR_SELECTED if selected else COLOR_CARD, COLOR_GOLD if selected else COLOR_BRASS, 3 if selected else 2, 7))
+
+	var employee: Dictionary = game_state.employees[employee_id]
+	tool_bar.visible = true
+	tool_bar.configure_for_employee(employee["name"], employee["abilities"], employee["core_actions"])
+
+
+func _return_to_office() -> void:
+	game_state.leave_active_job()
+	get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+
+func _label(text_value: String, font_size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text_value
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.85))
+	label.add_theme_constant_override("shadow_offset_x", 1)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+	return label
+
+
+func _style(background: Color, border: Color, width: int, radius: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = background
+	style.border_color = border
+	style.border_width_left = width
+	style.border_width_top = width
+	style.border_width_right = width
+	style.border_width_bottom = width
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_right = radius
+	style.corner_radius_bottom_left = radius
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	return style
+
+
+func _cropped_portrait(path: String) -> AtlasTexture:
+	var portrait := AtlasTexture.new()
+	portrait.atlas = load(path)
+	portrait.region = Rect2(177, 0, 900, 932)
+	portrait.filter_clip = true
+	return portrait

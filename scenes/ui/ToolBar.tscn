@@ -1,0 +1,256 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/tool_bar.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/icons/tools/tool_freeze.png" id="2_freeze"]
+[ext_resource type="Texture2D" path="res://assets/icons/tools/tool_heat.png" id="3_heat"]
+[ext_resource type="Texture2D" path="res://assets/icons/tools/tool_move.png" id="4_move"]
+[ext_resource type="Texture2D" path="res://assets/icons/tools/tool_animate.png" id="5_animate"]
+[ext_resource type="Texture2D" path="res://assets/icons/tools/tool_antimagic.png" id="6_antimagic"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_tools"]
+allow_unpress = false
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_panel"]
+bg_color = Color(0.0705882, 0.0470588, 0.0352941, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.596078, 0.431373, 0.239216, 0.95)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.65)
+shadow_size = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_normal"]
+bg_color = Color(0.117647, 0.0862745, 0.0666667, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.384314, 0.286275, 0.188235, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_hover"]
+bg_color = Color(0.188235, 0.137255, 0.0941176, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.835294, 0.631373, 0.305882, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0.941176, 0.670588, 0.25098, 0.22)
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_pressed"]
+bg_color = Color(0.101961, 0.160784, 0.180392, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.933333, 0.694118, 0.294118, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(1, 0.713726, 0.270588, 0.38)
+shadow_size = 7
+
+[node name="ToolBar" type="MarginContainer"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -395.0
+offset_top = -176.0
+offset_right = 395.0
+offset_bottom = -18.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 1
+script = ExtResource("1_script")
+
+[node name="Panel" type="PanelContainer" parent="."]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBox_panel")
+
+[node name="ContentMargin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="Content" type="VBoxContainer" parent="Panel/ContentMargin"]
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="TitleLabel" type="Label" parent="Panel/ContentMargin/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.941176, 0.827451, 0.623529, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 18
+text = "Набор инструментов"
+horizontal_alignment = 1
+
+[node name="Buttons" type="HBoxContainer" parent="Panel/ContentMargin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="FreezeButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 100)
+layout_mode = 2
+tooltip_text = "Заморозка — сильно снижает температуру объекта"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_tools")
+theme_override_styles/normal = SubResource("StyleBox_normal")
+theme_override_styles/hover = SubResource("StyleBox_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pressed")
+theme_override_styles/hover_pressed = SubResource("StyleBox_pressed")
+theme_override_styles/focus = SubResource("StyleBox_hover")
+
+[node name="Icon" type="TextureRect" parent="Panel/ContentMargin/Content/Buttons/FreezeButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_freeze")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HeatButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 100)
+layout_mode = 2
+tooltip_text = "Нагрев — повышает температуру объекта"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_tools")
+theme_override_styles/normal = SubResource("StyleBox_normal")
+theme_override_styles/hover = SubResource("StyleBox_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pressed")
+theme_override_styles/hover_pressed = SubResource("StyleBox_pressed")
+theme_override_styles/focus = SubResource("StyleBox_hover")
+
+[node name="Icon" type="TextureRect" parent="Panel/ContentMargin/Content/Buttons/HeatButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_heat")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MoveButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 100)
+layout_mode = 2
+tooltip_text = "Перемещение — переносит объект в допустимую точку"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_tools")
+theme_override_styles/normal = SubResource("StyleBox_normal")
+theme_override_styles/hover = SubResource("StyleBox_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pressed")
+theme_override_styles/hover_pressed = SubResource("StyleBox_pressed")
+theme_override_styles/focus = SubResource("StyleBox_hover")
+
+[node name="Icon" type="TextureRect" parent="Panel/ContentMargin/Content/Buttons/MoveButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_move")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="AnimateButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 100)
+layout_mode = 2
+tooltip_text = "Оживление — пробуждает простое поведение предмета"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_tools")
+theme_override_styles/normal = SubResource("StyleBox_normal")
+theme_override_styles/hover = SubResource("StyleBox_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pressed")
+theme_override_styles/hover_pressed = SubResource("StyleBox_pressed")
+theme_override_styles/focus = SubResource("StyleBox_hover")
+
+[node name="Icon" type="TextureRect" parent="Panel/ContentMargin/Content/Buttons/AnimateButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("5_animate")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="AntimagicButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(132, 100)
+layout_mode = 2
+tooltip_text = "Антимагия — временно подавляет магические эффекты"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_tools")
+theme_override_styles/normal = SubResource("StyleBox_normal")
+theme_override_styles/hover = SubResource("StyleBox_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pressed")
+theme_override_styles/hover_pressed = SubResource("StyleBox_pressed")
+theme_override_styles/focus = SubResource("StyleBox_hover")
+
+[node name="Icon" type="TextureRect" parent="Panel/ContentMargin/Content/Buttons/AntimagicButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("6_antimagic")
+expand_mode = 1
+stretch_mode = 5

@@ -1,0 +1,345 @@
+extends Control
+
+const HUD_ICON_SCRIPT = preload("res://scripts/hud_icon.gd")
+const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
+const COLOR_CARD := Color(0.13, 0.09, 0.055, 0.96)
+const COLOR_CARD_HOVER := Color(0.21, 0.14, 0.075, 0.98)
+const COLOR_SELECTED := Color(0.10, 0.16, 0.18, 0.98)
+const COLOR_BRASS := Color(0.76, 0.54, 0.27)
+const COLOR_GOLD := Color(0.96, 0.78, 0.46)
+const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
+const COLOR_MUTED := Color(0.70, 0.63, 0.52)
+
+var selected_job_id: StringName
+var job_list: VBoxContainer
+var employee_list: HBoxContainer
+var detail_title: Label
+var detail_body: Label
+var assignment_label: Label
+var warning_label: Label
+var depart_button: Button
+@onready var game_state: Node = get_node("/root/GameState")
+
+
+func _ready() -> void:
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	selected_job_id = game_state.selected_job_id
+	_build_interface()
+	game_state.state_changed.connect(_refresh)
+	_refresh()
+
+
+func _build_interface() -> void:
+	_build_top_bar()
+	_build_jobs_panel()
+	_build_detail_panel()
+	_build_employee_panel()
+
+
+func _build_top_bar() -> void:
+	var panel := _panel(Vector2(22, 18), Vector2(1556, 74), 12)
+	add_child(panel)
+
+	var title := _label("МАГИЧЕСКАЯ АВАРИЙНАЯ СЛУЖБА", 24, COLOR_GOLD)
+	title.position = Vector2(24, 12)
+	title.size = Vector2(650, 44)
+	panel.add_child(title)
+
+	var motto := _label("Не со всем справимся, но почти", 14, COLOR_MUTED)
+	motto.position = Vector2(25, 42)
+	motto.size = Vector2(500, 22)
+	panel.add_child(motto)
+
+	var day_label := _label("День %d" % game_state.day, 20, COLOR_PARCHMENT)
+	day_label.position = Vector2(1010, 19)
+	day_label.size = Vector2(90, 36)
+	panel.add_child(day_label)
+
+	var time_label := _label(game_state.format_time(), 20, COLOR_PARCHMENT)
+	time_label.position = Vector2(1105, 19)
+	time_label.size = Vector2(78, 36)
+	panel.add_child(time_label)
+
+	_add_stat_icon(panel, 0, Vector2(1200, 18))
+	var money_label := _label("%d монет" % game_state.money, 20, COLOR_PARCHMENT)
+	money_label.position = Vector2(1234, 19)
+	money_label.size = Vector2(126, 36)
+	panel.add_child(money_label)
+
+	_add_stat_icon(panel, 1, Vector2(1372, 18))
+	var reputation_label := _label("Репутация %d" % game_state.reputation, 18, COLOR_PARCHMENT)
+	reputation_label.position = Vector2(1406, 20)
+	reputation_label.size = Vector2(132, 34)
+	panel.add_child(reputation_label)
+
+
+func _build_jobs_panel() -> void:
+	var panel := _panel(Vector2(22, 112), Vector2(415, 455), 12)
+	add_child(panel)
+
+	var heading := _label("ТЕКУЩИЕ ЗАЯВКИ", 21, COLOR_GOLD)
+	heading.position = Vector2(20, 16)
+	heading.size = Vector2(375, 32)
+	panel.add_child(heading)
+
+	var rule := ColorRect.new()
+	rule.color = Color(COLOR_BRASS, 0.65)
+	rule.position = Vector2(20, 53)
+	rule.size = Vector2(375, 2)
+	panel.add_child(rule)
+
+	job_list = VBoxContainer.new()
+	job_list.position = Vector2(18, 70)
+	job_list.size = Vector2(379, 360)
+	job_list.add_theme_constant_override("separation", 12)
+	panel.add_child(job_list)
+
+
+func _build_detail_panel() -> void:
+	var panel := _panel(Vector2(1163, 112), Vector2(415, 455), 12)
+	add_child(panel)
+
+	detail_title = _label("", 24, COLOR_GOLD)
+	detail_title.position = Vector2(22, 18)
+	detail_title.size = Vector2(371, 62)
+	detail_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(detail_title)
+
+	detail_body = _label("", 17, COLOR_PARCHMENT)
+	detail_body.position = Vector2(22, 88)
+	detail_body.size = Vector2(371, 180)
+	detail_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(detail_body)
+
+	assignment_label = _label("", 16, COLOR_GOLD)
+	assignment_label.position = Vector2(22, 274)
+	assignment_label.size = Vector2(371, 58)
+	assignment_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(assignment_label)
+
+	warning_label = _label("", 14, Color(0.96, 0.62, 0.35))
+	warning_label.position = Vector2(22, 332)
+	warning_label.size = Vector2(371, 44)
+	warning_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(warning_label)
+
+	depart_button = _button("ОТПРАВИТЬ БРИГАДУ", Vector2(22, 384), Vector2(371, 52))
+	depart_button.pressed.connect(_depart)
+	panel.add_child(depart_button)
+
+
+func _build_employee_panel() -> void:
+	var panel := _panel(Vector2(180, 585), Vector2(1240, 295), 12)
+	add_child(panel)
+
+	var heading := _label("СОТРУДНИКИ  •  выберите заявку, затем назначьте специалистов", 18, COLOR_GOLD)
+	heading.position = Vector2(20, 10)
+	heading.size = Vector2(1200, 28)
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(heading)
+
+	employee_list = HBoxContainer.new()
+	employee_list.position = Vector2(18, 43)
+	employee_list.size = Vector2(1204, 234)
+	employee_list.alignment = BoxContainer.ALIGNMENT_CENTER
+	employee_list.add_theme_constant_override("separation", 14)
+	panel.add_child(employee_list)
+
+
+func _refresh() -> void:
+	game_state.selected_job_id = selected_job_id
+	_rebuild_jobs()
+	_rebuild_employees()
+	_refresh_details()
+
+
+func _rebuild_jobs() -> void:
+	_clear(job_list)
+	for job_id: StringName in game_state.jobs:
+		var job: Dictionary = game_state.jobs[job_id]
+		var assigned: PackedStringArray = job["assigned"]
+		var crew_text := "Бригада не назначена" if assigned.is_empty() else "Назначено: %d" % assigned.size()
+		var button := _button(
+			"%s\n%s\n%s  •  осталось %d мин.\n%s" % [job["title"], job["address"], job["urgency"], job["time_left"], crew_text],
+			Vector2.ZERO,
+			Vector2(379, 150)
+		)
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.add_theme_font_size_override("font_size", 16)
+		button.add_theme_stylebox_override("normal", _style(COLOR_SELECTED if job_id == selected_job_id else COLOR_CARD, COLOR_GOLD if job_id == selected_job_id else COLOR_BRASS, 3 if job_id == selected_job_id else 2, 9))
+		button.pressed.connect(_select_job.bind(job_id))
+		job_list.add_child(button)
+
+
+func _rebuild_employees() -> void:
+	_clear(employee_list)
+	for employee_id: StringName in game_state.STARTING_EMPLOYEES:
+		var employee: Dictionary = game_state.employees[employee_id]
+		var assigned_job: StringName = game_state.get_employee_job(employee_id)
+		var selected: bool = assigned_job == selected_job_id
+		var card := _button("", Vector2.ZERO, Vector2(390, 225))
+		card.tooltip_text = "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение"
+		card.add_theme_stylebox_override("normal", _style(COLOR_SELECTED if selected else COLOR_CARD, COLOR_GOLD if selected else COLOR_BRASS, 3 if selected else 2, 9))
+		card.pressed.connect(_toggle_employee.bind(employee_id))
+		employee_list.add_child(card)
+
+		var portrait_frame := Panel.new()
+		portrait_frame.position = Vector2(8, 8)
+		portrait_frame.size = Vector2(160, 209)
+		portrait_frame.clip_contents = true
+		portrait_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		portrait_frame.add_theme_stylebox_override("panel", _style(Color(0.035, 0.03, 0.028, 1), COLOR_BRASS, 1, 6))
+		card.add_child(portrait_frame)
+
+		var portrait := TextureRect.new()
+		portrait.position = Vector2(2, 2)
+		portrait.size = Vector2(156, 207)
+		portrait.texture = _cropped_portrait(employee["portrait"])
+		portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		portrait_frame.add_child(portrait)
+
+		var name_label := _label(employee["name"], 19, COLOR_GOLD)
+		name_label.position = Vector2(180, 20)
+		name_label.size = Vector2(198, 30)
+		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(name_label)
+
+		var role_label := _label(employee["role"], 14, COLOR_PARCHMENT)
+		role_label.position = Vector2(180, 55)
+		role_label.size = Vector2(198, 26)
+		role_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(role_label)
+
+		var method_label := _label(employee["core_actions"], 13, COLOR_MUTED)
+		method_label.position = Vector2(180, 92)
+		method_label.size = Vector2(198, 58)
+		method_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		method_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(method_label)
+
+		var status_color := COLOR_GOLD if selected else COLOR_MUTED
+		var status_label := _label("✓ В этой бригаде" if selected else employee["status"], 13, status_color)
+		status_label.position = Vector2(180, 184)
+		status_label.size = Vector2(198, 26)
+		status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(status_label)
+
+
+func _refresh_details() -> void:
+	var job: Dictionary = game_state.jobs[selected_job_id]
+	var assigned: PackedStringArray = job["assigned"]
+	detail_title.text = job["title"]
+	detail_body.text = "%s\nЖилец: %s\nОпасность: %s\n\n%s" % [job["address"], job["resident"], job["danger"], job["description"]]
+
+	if assigned.is_empty():
+		assignment_label.text = "Бригада: не назначена"
+	else:
+		var names := PackedStringArray()
+		for employee_id: String in assigned:
+			names.append(game_state.employees[StringName(employee_id)]["name"])
+		assignment_label.text = "Бригада:\n%s" % ", ".join(names)
+
+	warning_label.text = ""
+	if not assigned.is_empty():
+		for other_job_id: StringName in game_state.jobs:
+			if other_job_id == selected_job_id:
+				continue
+			var other_assigned: PackedStringArray = game_state.jobs[other_job_id]["assigned"]
+			if other_assigned.is_empty():
+				warning_label.text = "Внимание: «%s» останется без бригады." % game_state.jobs[other_job_id]["title"]
+				break
+
+	depart_button.disabled = assigned.is_empty()
+
+
+func _select_job(job_id: StringName) -> void:
+	selected_job_id = job_id
+	_refresh()
+
+
+func _toggle_employee(employee_id: StringName) -> void:
+	game_state.assign_employee(employee_id, selected_job_id)
+
+
+func _depart() -> void:
+	if game_state.begin_job(selected_job_id):
+		get_tree().change_scene_to_file("res://scenes/RepairHouse.tscn")
+
+
+func _panel(panel_position: Vector2, panel_size: Vector2, radius: int) -> Panel:
+	var panel := Panel.new()
+	panel.position = panel_position
+	panel.size = panel_size
+	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, radius))
+	return panel
+
+
+func _label(text_value: String, font_size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text_value
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.85))
+	label.add_theme_constant_override("shadow_offset_x", 1)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+	return label
+
+
+func _button(text_value: String, button_position: Vector2, button_size: Vector2) -> Button:
+	var button := Button.new()
+	button.text = text_value
+	button.position = button_position
+	button.custom_minimum_size = button_size
+	button.size = button_size
+	button.add_theme_font_size_override("font_size", 17)
+	button.add_theme_color_override("font_color", COLOR_PARCHMENT)
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_color_override("font_disabled_color", Color(0.45, 0.40, 0.34))
+	button.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_BRASS, 2, 8))
+	button.add_theme_stylebox_override("hover", _style(COLOR_CARD_HOVER, COLOR_GOLD, 2, 8))
+	button.add_theme_stylebox_override("pressed", _style(COLOR_SELECTED, COLOR_GOLD, 3, 8))
+	button.add_theme_stylebox_override("focus", _style(COLOR_CARD_HOVER, COLOR_GOLD, 2, 8))
+	button.add_theme_stylebox_override("disabled", _style(Color(0.07, 0.055, 0.045, 0.90), Color(0.28, 0.24, 0.19), 1, 8))
+	return button
+
+
+func _style(background: Color, border: Color, width: int, radius: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = background
+	style.border_color = border
+	style.border_width_left = width
+	style.border_width_top = width
+	style.border_width_right = width
+	style.border_width_bottom = width
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_right = radius
+	style.corner_radius_bottom_left = radius
+	style.content_margin_left = 14
+	style.content_margin_right = 14
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	return style
+
+
+func _cropped_portrait(path: String) -> AtlasTexture:
+	var portrait := AtlasTexture.new()
+	portrait.atlas = load(path)
+	portrait.region = Rect2(177, 0, 900, 932)
+	portrait.filter_clip = true
+	return portrait
+
+
+func _add_stat_icon(parent: Control, icon_kind: int, icon_position: Vector2) -> void:
+	var icon: Control = HUD_ICON_SCRIPT.new()
+	icon.kind = icon_kind
+	icon.position = icon_position
+	icon.size = Vector2(28, 28)
+	parent.add_child(icon)
+
+
+func _clear(container: Node) -> void:
+	for child in container.get_children():
+		child.queue_free()
