@@ -1,0 +1,20 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/backgrounds/repair_house.png" id="1_house"]
+
+[node name="RepairHouse" type="Node2D"]
+
+[node name="Background" type="TextureRect" parent="."]
+offset_right = 1600.0
+offset_bottom = 900.0
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 6
+texture = ExtResource("1_house")
+mouse_filter = 2
+
+[node name="InteractiveObjects" type="Node2D" parent="."]
+
+[node name="Effects" type="Node2D" parent="."]
+
+[node name="Interface" type="CanvasLayer" parent="."]
