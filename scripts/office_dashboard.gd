@@ -60,15 +60,15 @@ func _build_top_bar() -> void:
 	time_label.size = Vector2(78, 36)
 	panel.add_child(time_label)
 
-	_add_stat_icon(panel, 0, Vector2(1200, 18))
+	_add_stat_icon(panel, 0, Vector2(1168, 18))
 	var money_label := _label("%d монет" % game_state.money, 20, COLOR_PARCHMENT)
-	money_label.position = Vector2(1234, 19)
+	money_label.position = Vector2(1202, 19)
 	money_label.size = Vector2(126, 36)
 	panel.add_child(money_label)
 
-	_add_stat_icon(panel, 1, Vector2(1372, 18))
+	_add_stat_icon(panel, 1, Vector2(1338, 18))
 	var reputation_label := _label("Репутация %d" % game_state.reputation, 18, COLOR_PARCHMENT)
-	reputation_label.position = Vector2(1406, 20)
+	reputation_label.position = Vector2(1372, 20)
 	reputation_label.size = Vector2(132, 34)
 	panel.add_child(reputation_label)
 

@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Texture2D" path="res://assets/backgrounds/repair_house.png" id="1_house"]
 [ext_resource type="PackedScene" path="res://scenes/ui/ToolBar.tscn" id="2_toolbar"]
 [ext_resource type="PackedScene" path="res://scenes/ui/RepairHUD.tscn" id="3_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="4_pause"]
 
 [node name="RepairHouse" type="Node2D"]
 
@@ -24,3 +25,5 @@ mouse_filter = 2
 [node name="ToolBar" parent="Interface" instance=ExtResource("2_toolbar")]
 
 [node name="RepairHUD" parent="Interface" instance=ExtResource("3_hud")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("4_pause")]
