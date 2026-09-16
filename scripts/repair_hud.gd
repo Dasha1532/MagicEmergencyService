@@ -21,6 +21,7 @@ func _ready() -> void:
 	_build_job_header()
 	_build_employee_selector()
 	_build_return_button()
+	_build_complete_button()
 	_select_first_employee()
 
 
@@ -114,6 +115,19 @@ func _build_return_button() -> void:
 	add_child(button)
 
 
+func _build_complete_button() -> void:
+	var button := Button.new()
+	button.text = "ЗАВЕРШИТЬ РАБОТУ"
+	button.position = Vector2(1048, 24)
+	button.size = Vector2(255, 54)
+	button.add_theme_font_size_override("font_size", 17)
+	button.add_theme_color_override("font_color", COLOR_GOLD)
+	button.add_theme_stylebox_override("normal", _style(COLOR_SELECTED, COLOR_GOLD, 2, 8))
+	button.add_theme_stylebox_override("hover", _style(Color(0.18, 0.25, 0.20, 0.98), COLOR_GOLD, 3, 8))
+	button.pressed.connect(_complete_job)
+	add_child(button)
+
+
 func _select_first_employee() -> void:
 	var job: Dictionary = game_state.get_active_job()
 	var assigned: PackedStringArray = job.get("assigned", PackedStringArray())
@@ -138,6 +152,11 @@ func _select_employee(employee_id: StringName) -> void:
 func _return_to_office() -> void:
 	game_state.leave_active_job()
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+
+func _complete_job() -> void:
+	if game_state.complete_active_job():
+		get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 
 func _label(text_value: String, font_size: int, color: Color) -> Label:

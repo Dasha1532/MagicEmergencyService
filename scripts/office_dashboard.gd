@@ -44,6 +44,9 @@ var supply_purchase_button: Button
 var section_dialog: Panel
 var section_title: Label
 var section_body: Label
+var job_report_layer: Control
+var job_report_title: Label
+var job_report_body: Label
 @onready var game_state: Node = get_node("/root/GameState")
 
 
@@ -69,6 +72,7 @@ func _build_interface() -> void:
 	_build_employee_panel()
 	_build_dashboard_return()
 	_build_office_hub()
+	_build_job_report_dialog()
 	_build_personnel_screen()
 	_build_supply_shop()
 
@@ -596,6 +600,36 @@ func _build_section_dialog() -> void:
 	section_dialog.add_child(close_button)
 
 
+func _build_job_report_dialog() -> void:
+	job_report_layer = Control.new()
+	job_report_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	job_report_layer.visible = false
+	job_report_layer.z_index = 100
+	hub_layer.add_child(job_report_layer)
+
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.015, 0.01, 0.008, 0.72)
+	job_report_layer.add_child(shade)
+
+	var panel := _panel(Vector2(410, 165), Vector2(780, 570), 14)
+	job_report_layer.add_child(panel)
+	job_report_title = _label("АКТ ВЫПОЛНЕННЫХ РАБОТ", 27, COLOR_GOLD)
+	job_report_title.position = Vector2(42, 34)
+	job_report_title.size = Vector2(696, 48)
+	job_report_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(job_report_title)
+	job_report_body = _label("", 18, COLOR_PARCHMENT)
+	job_report_body.position = Vector2(66, 108)
+	job_report_body.size = Vector2(648, 328)
+	job_report_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	job_report_body.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	panel.add_child(job_report_body)
+	var close_button := _button("ПРИНЯТЬ ОТЧЁТ", Vector2(210, 468), Vector2(360, 62))
+	close_button.pressed.connect(_dismiss_job_report)
+	panel.add_child(close_button)
+
+
 func _open_jobs() -> void:
 	hub_layer.visible = false
 	personnel_layer.visible = false
@@ -637,6 +671,12 @@ func _open_section(title_text: String, subtitle_text: String, description: Strin
 
 func _refresh() -> void:
 	game_state.selected_job_id = selected_job_id
+	if game_state.completed_job_ids.has(String(selected_job_id)):
+		for available_job_id: StringName in game_state.jobs:
+			if not game_state.completed_job_ids.has(String(available_job_id)):
+				selected_job_id = available_job_id
+				game_state.selected_job_id = available_job_id
+				break
 	day_label.text = "День %d" % game_state.day
 	time_label.text = game_state.format_time()
 	money_label.text = "%d монет" % game_state.money
@@ -647,6 +687,23 @@ func _refresh() -> void:
 		_refresh_personnel()
 	if supply_layer != null:
 		_refresh_supply_shop()
+	_refresh_job_report()
+
+
+func _refresh_job_report() -> void:
+	if job_report_layer == null:
+		return
+	var report: Dictionary = game_state.pending_job_report
+	job_report_layer.visible = not report.is_empty()
+	if report.is_empty():
+		return
+	var crew: Array = report.get("crew", [])
+	var crew_text: String = ", ".join(PackedStringArray(crew)) if not crew.is_empty() else "бригада не указана"
+	job_report_body.text = "%s\n\nЗаказчик: %s\nБригада: %s\n\nБазовая оплата: %d монет\n\n%s" % [report.get("title", "Заявка"), report.get("resident", ""), crew_text, int(report.get("reward", 0)), report.get("summary", "")]
+
+
+func _dismiss_job_report() -> void:
+	game_state.dismiss_pending_job_report()
 
 
 func _select_personnel_employee(employee_id: StringName) -> void:
@@ -759,6 +816,8 @@ func _refresh_personnel() -> void:
 func _rebuild_jobs() -> void:
 	_clear(job_list)
 	for job_id: StringName in game_state.jobs:
+		if game_state.completed_job_ids.has(String(job_id)):
+			continue
 		var job: Dictionary = game_state.jobs[job_id]
 		var assigned: PackedStringArray = job["assigned"]
 		var crew_text := "Бригада не назначена" if assigned.is_empty() else "Назначено: %d" % assigned.size()
@@ -852,6 +911,8 @@ func _refresh_details() -> void:
 	if not assigned.is_empty():
 		for other_job_id: StringName in game_state.jobs:
 			if other_job_id == selected_job_id:
+				continue
+			if game_state.completed_job_ids.has(String(other_job_id)):
 				continue
 			var other_assigned: PackedStringArray = game_state.jobs[other_job_id]["assigned"]
 			if other_assigned.is_empty():

@@ -4,7 +4,7 @@ signal state_changed
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 2
+const SAVE_VERSION: int = 3
 const SAVE_PATH: String = "user://savegame.json"
 const SUPPLY_ITEMS: Dictionary = {
 	&"animation_kit": {
@@ -32,6 +32,9 @@ var reputation: int = 37
 var selected_job_id: StringName = &"lava_leak"
 var active_job_id: StringName = &""
 var owned_supply_items: PackedStringArray = PackedStringArray()
+var completed_job_ids: PackedStringArray = PackedStringArray()
+var job_reports: Array = []
+var pending_job_report: Dictionary = {}
 
 var employees: Dictionary = {
 	&"liliya": {
@@ -128,6 +131,7 @@ var jobs: Dictionary = {
 		"urgency": "Срочно",
 		"time_left": 95,
 		"danger": "Огонь • давление",
+		"base_reward": 500,
 		"assigned": PackedStringArray(),
 	},
 	&"walking_wardrobe": {
@@ -138,6 +142,7 @@ var jobs: Dictionary = {
 		"urgency": "Важно",
 		"time_left": 180,
 		"danger": "Магия • шум",
+		"base_reward": 420,
 		"assigned": PackedStringArray(),
 	},
 }
@@ -283,7 +288,7 @@ func get_active_job() -> Dictionary:
 
 
 func begin_job(job_id: StringName) -> bool:
-	if not jobs.has(job_id):
+	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
 		return false
 	var assigned: PackedStringArray = jobs[job_id]["assigned"]
 	if assigned.is_empty():
@@ -295,6 +300,44 @@ func begin_job(job_id: StringName) -> bool:
 
 func leave_active_job() -> void:
 	active_job_id = &""
+	state_changed.emit()
+
+
+func complete_active_job() -> bool:
+	if active_job_id.is_empty() or not jobs.has(active_job_id):
+		return false
+	var completed_id: StringName = active_job_id
+	if completed_job_ids.has(String(completed_id)):
+		return false
+	var job: Dictionary = jobs[completed_id]
+	var reward: int = maxi(0, int(job.get("base_reward", 0)))
+	var assigned: PackedStringArray = job["assigned"]
+	var crew_names: PackedStringArray = PackedStringArray()
+	for employee_id: String in assigned:
+		var employee_key: StringName = StringName(employee_id)
+		if employees.has(employee_key):
+			crew_names.append(str(employees[employee_key]["name"]))
+	money += reward
+	completed_job_ids.append(String(completed_id))
+	job["assigned"] = PackedStringArray()
+	jobs[completed_id] = job
+	pending_job_report = {
+		"job_id": String(completed_id),
+		"title": str(job["title"]),
+		"resident": str(job["resident"]),
+		"reward": reward,
+		"crew": Array(crew_names),
+		"summary": "Аварийные работы приняты. Подробная оценка ущерба появится после подключения системы объектов.",
+	}
+	job_reports.append(pending_job_report.duplicate(true))
+	active_job_id = &""
+	_update_employee_statuses()
+	state_changed.emit()
+	return true
+
+
+func dismiss_pending_job_report() -> void:
+	pending_job_report = {}
 	state_changed.emit()
 
 
@@ -314,6 +357,9 @@ func start_new_game() -> void:
 	selected_job_id = &"lava_leak"
 	active_job_id = &""
 	owned_supply_items = PackedStringArray()
+	completed_job_ids = PackedStringArray()
+	job_reports = []
+	pending_job_report = {}
 
 	for job_id: StringName in jobs:
 		var job: Dictionary = jobs[job_id]
@@ -365,6 +411,9 @@ func save_game() -> Error:
 		"selected_job_id": String(selected_job_id),
 		"active_job_id": String(active_job_id),
 		"owned_supply_items": Array(owned_supply_items),
+		"completed_job_ids": Array(completed_job_ids),
+		"job_reports": job_reports,
+		"pending_job_report": pending_job_report,
 		"job_assignments": job_assignments,
 		"employee_progress": employee_progress,
 	}
@@ -411,15 +460,37 @@ func load_game() -> Error:
 		if SUPPLY_ITEMS.has(item_id) and not owned_supply_items.has(String(item_id)):
 			owned_supply_items.append(String(item_id))
 
+	completed_job_ids = PackedStringArray()
+	var loaded_completed_jobs: Array = save_data.get("completed_job_ids", [])
+	for loaded_job_id: Variant in loaded_completed_jobs:
+		var completed_id := StringName(str(loaded_job_id))
+		if jobs.has(completed_id) and not completed_job_ids.has(String(completed_id)):
+			completed_job_ids.append(String(completed_id))
+	if completed_job_ids.has(String(active_job_id)):
+		active_job_id = &""
+	job_reports = []
+	var loaded_reports: Array = save_data.get("job_reports", [])
+	for loaded_report: Variant in loaded_reports:
+		if loaded_report is Dictionary:
+			var report: Dictionary = loaded_report
+			job_reports.append(report.duplicate(true))
+	var loaded_pending_report: Variant = save_data.get("pending_job_report", {})
+	if loaded_pending_report is Dictionary:
+		var pending_report: Dictionary = loaded_pending_report
+		pending_job_report = pending_report.duplicate(true)
+	else:
+		pending_job_report = {}
+
 	var job_assignments: Dictionary = save_data.get("job_assignments", {})
 	for job_id: StringName in jobs:
 		var job: Dictionary = jobs[job_id]
 		var loaded_ids: Array = job_assignments.get(String(job_id), [])
 		var valid_ids := PackedStringArray()
-		for employee_id: Variant in loaded_ids:
-			var employee_key := StringName(str(employee_id))
-			if employees.has(employee_key) and not valid_ids.has(String(employee_key)):
-				valid_ids.append(String(employee_key))
+		if not completed_job_ids.has(String(job_id)):
+			for employee_id: Variant in loaded_ids:
+				var employee_key := StringName(str(employee_id))
+				if employees.has(employee_key) and not valid_ids.has(String(employee_key)):
+					valid_ids.append(String(employee_key))
 		job["assigned"] = valid_ids
 		jobs[job_id] = job
 
