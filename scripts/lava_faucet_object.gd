@@ -6,6 +6,7 @@ signal selected
 @onready var damaged_faucet: TextureRect = $DamagedFaucet
 @onready var lava_stream: TextureRect = $LavaStream
 @onready var hit_area: Button = $HitArea
+@onready var overheat_damage: Node2D = $OverheatDamage
 
 
 func _ready() -> void:
@@ -32,6 +33,11 @@ func show_overheated_state() -> void:
 	damaged_faucet.visible = true
 	lava_stream.visible = true
 	modulate = Color(1.22, 0.72, 0.52, 1.0)
+	overheat_damage.visible = true
+
+
+func set_damage_visible(is_visible: bool) -> void:
+	overheat_damage.visible = is_visible
 
 
 func _configure_hit_area() -> void:

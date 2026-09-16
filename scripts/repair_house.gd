@@ -11,6 +11,8 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 @onready var bathroom_preview: TextureRect = $BathroomPreview
 @onready var closeup_background: TextureRect = $BathroomCloseup
 @onready var bathroom_hotspot: Button = $BathroomHotspot
+@onready var problem_room_marker: Panel = $ProblemRoomMarker
+@onready var lower_floor_consequence: Panel = $LowerFloorConsequence
 @onready var lava_faucet: Control = $InteractiveObjects/LavaFaucet
 @onready var back_to_house_button: Button = $Interface/BackToHouseButton
 @onready var tool_bar: Control = $Interface/ToolBar
@@ -45,18 +47,20 @@ func _ready() -> void:
 
 func _open_bathroom() -> void:
 	bathroom_hotspot.disabled = true
+	problem_room_marker.visible = false
+	lower_floor_consequence.visible = false
 	closeup_background.visible = true
 	closeup_background.modulate = Color(1, 1, 1, 0)
-	closeup_background.pivot_offset = closeup_background.size * 0.5
-	closeup_background.scale = Vector2(1.025, 1.025)
+	closeup_background.scale = Vector2.ONE
+	lava_faucet.visible = true
+	lava_faucet.self_modulate = Color(1, 1, 1, 0)
 	var tween := create_tween().set_parallel(true)
-	tween.tween_property(closeup_background, "modulate", Color.WHITE, 0.32)
-	tween.tween_property(closeup_background, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(closeup_background, "modulate", Color.WHITE, 0.24)
+	tween.tween_property(lava_faucet, "self_modulate", Color.WHITE, 0.24)
 	await tween.finished
 	overview_background.visible = false
 	bathroom_preview_backdrop.visible = false
 	bathroom_preview.visible = false
-	lava_faucet.visible = true
 	back_to_house_button.visible = true
 	tool_bar.visible = true
 	if repair_hud.has_method("set_work_ui_visible"):
@@ -69,6 +73,8 @@ func _show_house_overview(animated: bool = true) -> void:
 	bathroom_preview_backdrop.visible = true
 	bathroom_preview.visible = true
 	bathroom_hotspot.disabled = false
+	problem_room_marker.visible = not simulation.is_resolved()
+	lower_floor_consequence.visible = _has_damage()
 	lava_faucet.visible = false
 	back_to_house_button.visible = false
 	tool_bar.visible = false
@@ -102,6 +108,14 @@ func _configure_buttons() -> void:
 	back_to_house_button.add_theme_stylebox_override("normal", _button_style(COLOR_PANEL, Color(0.76, 0.54, 0.27), 2))
 	back_to_house_button.add_theme_stylebox_override("hover", _button_style(Color(0.21, 0.14, 0.075, 0.98), COLOR_GOLD, 3))
 	feedback_panel.add_theme_stylebox_override("panel", _button_style(COLOR_PANEL, Color(0.76, 0.54, 0.27), 2))
+	var problem_style := _button_style(Color(0.15, 0.08, 0.025, 0.08), COLOR_GOLD, 3)
+	problem_style.shadow_color = Color(1.0, 0.58, 0.12, 0.24)
+	problem_style.shadow_size = 10
+	problem_room_marker.add_theme_stylebox_override("panel", problem_style)
+	var consequence_style := _button_style(Color(0.18, 0.035, 0.015, 0.12), Color(1.0, 0.32, 0.08, 0.9), 3)
+	consequence_style.shadow_color = Color(1.0, 0.18, 0.03, 0.28)
+	consequence_style.shadow_size = 12
+	lower_floor_consequence.add_theme_stylebox_override("panel", consequence_style)
 
 
 func _on_tool_selected(tool_id: StringName) -> void:
@@ -125,6 +139,7 @@ func _apply_selected_action() -> void:
 		lava_faucet.show_repaired_state()
 	elif visual_state == &"overheated":
 		lava_faucet.show_overheated_state()
+	lava_faucet.set_damage_visible(_has_damage())
 	_show_feedback(str(result["message"]), not bool(result["applied"]))
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
@@ -149,7 +164,12 @@ func _restore_repair_state() -> void:
 	else:
 		lava_faucet.show_emergency_state()
 		_show_feedback("Выберите действие сотрудника и примените его к аварийному крану.")
+	lava_faucet.set_damage_visible(_has_damage())
 	repair_hud.set_completion_ready(simulation.is_resolved())
+
+
+func _has_damage() -> bool:
+	return int(simulation.world_object.get("damage", 0)) > 0
 
 
 func _show_feedback(message: String, is_warning: bool = false) -> void:

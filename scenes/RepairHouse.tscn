@@ -59,6 +59,51 @@ offset_bottom = 262.0
 tooltip_text = "Ванная • из крана течёт лава"
 mouse_default_cursor_shape = 2
 
+[node name="ProblemRoomMarker" type="Panel" parent="."]
+offset_left = 1282.0
+offset_top = 2.0
+offset_right = 1597.0
+offset_bottom = 263.0
+mouse_filter = 2
+
+[node name="Label" type="Label" parent="ProblemRoomMarker"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 219.0
+offset_right = 305.0
+offset_bottom = 251.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.78, 0.38, 1)
+theme_override_colors/font_outline_color = Color(0.08, 0.035, 0.015, 0.95)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 14
+text = "АВАРИЯ • ЛАВОВЫЙ КРАН"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LowerFloorConsequence" type="Panel" parent="."]
+visible = false
+offset_left = 1282.0
+offset_top = 326.0
+offset_right = 1596.0
+offset_bottom = 592.0
+mouse_filter = 2
+
+[node name="Label" type="Label" parent="LowerFloorConsequence"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 304.0
+offset_bottom = 42.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.69, 0.34, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 14
+text = "⚠ ПЕРЕГРЕВ ТРУБЫ ЭТАЖОМ НИЖЕ"
+horizontal_alignment = 1
+
 [node name="InteractiveObjects" type="Node2D" parent="." unique_id=843465227]
 
 [node name="LavaFaucet" type="Control" parent="InteractiveObjects" unique_id=841803786]
@@ -71,6 +116,25 @@ offset_right = 744.0
 offset_bottom = 580.0
 mouse_filter = 1
 script = ExtResource("8_faucet_script")
+
+[node name="OverheatDamage" type="Node2D" parent="InteractiveObjects/LavaFaucet"]
+visible = false
+
+[node name="WallGlow" type="Polygon2D" parent="InteractiveObjects/LavaFaucet/OverheatDamage"]
+polygon = PackedVector2Array(-190, -58, -82, -72, 20, -18, 36, 82, 8, 150, -88, 164, -176, 112, -205, 30)
+color = Color(0.96, 0.16, 0.035, 0.14)
+
+[node name="Scorch" type="Polygon2D" parent="InteractiveObjects/LavaFaucet/OverheatDamage"]
+polygon = PackedVector2Array(-169, -30, -111, -45, -50, -16, -31, 39, -58, 85, -126, 76, -178, 34)
+color = Color(0.11, 0.035, 0.018, 0.42)
+
+[node name="PipeGlow" type="Line2D" parent="InteractiveObjects/LavaFaucet/OverheatDamage"]
+points = PackedVector2Array(-170, 28, -112, 18, -57, 27, -28, 58, -17, 111)
+width = 11.0
+default_color = Color(1, 0.22, 0.035, 0.5)
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
 
 [node name="NormalFaucet" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1560197138]
 layout_mode = 0

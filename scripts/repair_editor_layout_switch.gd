@@ -27,6 +27,7 @@ func _apply_editor_mode() -> void:
 	_set_visible(scene_root, "BathroomPreviewBackdrop", overview_mode)
 	_set_visible(scene_root, "BathroomPreview", overview_mode)
 	_set_visible(scene_root, "BathroomHotspot", overview_mode)
+	_set_visible(scene_root, "ProblemRoomMarker", overview_mode)
 	_set_visible(scene_root, "BathroomCloseup", not overview_mode)
 	_set_visible(scene_root, "InteractiveObjects/LavaFaucet", not overview_mode)
 
