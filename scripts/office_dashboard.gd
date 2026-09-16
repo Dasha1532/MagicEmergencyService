@@ -16,6 +16,8 @@ var selected_job_id: StringName
 var job_list: VBoxContainer
 var employee_list: HBoxContainer
 var money_label: Label
+var day_label: Label
+var time_label: Label
 var detail_title: Label
 var detail_body: Label
 var assignment_label: Label
@@ -35,6 +37,10 @@ var personnel_portrait: TextureRect
 var personnel_hire_button: Button
 var personnel_cards: Dictionary = {}
 var selected_employee_id: StringName = &"liliya"
+var supply_layer: Control
+var supply_money_label: Label
+var supply_catalog_status: Label
+var supply_purchase_button: Button
 var section_dialog: Panel
 var section_title: Label
 var section_body: Label
@@ -64,6 +70,7 @@ func _build_interface() -> void:
 	_build_dashboard_return()
 	_build_office_hub()
 	_build_personnel_screen()
+	_build_supply_shop()
 
 
 func _build_top_bar() -> void:
@@ -80,12 +87,12 @@ func _build_top_bar() -> void:
 	motto.size = Vector2(500, 22)
 	panel.add_child(motto)
 
-	var day_label := _label("День %d" % game_state.day, 20, COLOR_PARCHMENT)
+	day_label = _label("День %d" % game_state.day, 20, COLOR_PARCHMENT)
 	day_label.position = Vector2(1010, 19)
 	day_label.size = Vector2(90, 36)
 	panel.add_child(day_label)
 
-	var time_label := _label(game_state.format_time(), 20, COLOR_PARCHMENT)
+	time_label = _label(game_state.format_time(), 20, COLOR_PARCHMENT)
 	time_label.position = Vector2(1105, 19)
 	time_label.size = Vector2(78, 36)
 	panel.add_child(time_label)
@@ -208,7 +215,7 @@ func _build_office_hub() -> void:
 	_connect_editable_hotspot($BookHotspots/AccountingBook, "КНИГА УЧЁТА", "Куда делись деньги?", _open_section.bind("КНИГА УЧЁТА", "Куда делись деньги?", "Здесь будут показаны доходы, расходы, зарплаты и компенсации."))
 	_connect_editable_hotspot($BookHotspots/ReviewsBook, "КНИГА ОТЗЫВОВ", "Благодарности, жалобы и угрозы.", _open_section.bind("КНИГА ОТЗЫВОВ", "Благодарности, жалобы и угрозы.", "Здесь появятся оценки жильцов, отзывы и изменение репутации службы."))
 	_connect_editable_hotspot($BookHotspots/IncidentArchive, "АРХИВ ПРОИСШЕСТВИЙ", "Так больше не делать.", _open_section.bind("АРХИВ ПРОИСШЕСТВИЙ", "Так больше не делать.", "Здесь будет сохраняться история решений, последствий и необычных аварий."))
-	_connect_editable_hotspot($ObjectHotspots/SupplyShop, "ЛАВКА СНАБЖЕНИЯ", "Очень нужные покупки", _open_section.bind("ЛАВКА СНАБЖЕНИЯ", "Очень нужные покупки", "Здесь можно будет покупать инструменты, магические предметы и учебные материалы."))
+	_connect_editable_hotspot($ObjectHotspots/SupplyShop, "ЛАВКА СНАБЖЕНИЯ", "Очень нужные покупки", _open_supply_shop)
 
 	_build_office_menu_button()
 
@@ -330,12 +337,132 @@ func _build_personnel_screen() -> void:
 		personnel_layer.add_child(label)
 
 	var hire_rect := _personnel_guide_rect("StatusArea")
-	personnel_hire_button = _button("", hire_rect.position, hire_rect.size)
-	personnel_hire_button.add_theme_font_size_override("font_size", 15)
-	personnel_hire_button.pressed.connect(_hire_selected_employee)
+	personnel_hire_button = _button("", hire_rect.position + Vector2(10, 8), hire_rect.size - Vector2(20, 16))
+	personnel_hire_button.add_theme_font_size_override("font_size", 13)
+	personnel_hire_button.pressed.connect(_personnel_action_pressed)
 	personnel_layer.add_child(personnel_hire_button)
 
 	_refresh_personnel()
+
+
+func _build_supply_shop() -> void:
+	supply_layer = Control.new()
+	supply_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	supply_layer.visible = false
+	add_child(supply_layer)
+
+	var background := TextureRect.new()
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.texture = load("res://assets/backgrounds/office_hub.png") as Texture2D
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	background.modulate = Color(0.62, 0.56, 0.48)
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	supply_layer.add_child(background)
+
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.018, 0.012, 0.008, 0.45)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	supply_layer.add_child(shade)
+
+	var top_panel := _panel(Vector2(160, 24), Vector2(1280, 82), 12)
+	supply_layer.add_child(top_panel)
+	var heading := _label("ЛАВКА СНАБЖЕНИЯ", 29, COLOR_GOLD)
+	heading.position = Vector2(28, 16)
+	heading.size = Vector2(650, 48)
+	top_panel.add_child(heading)
+	supply_money_label = _label("", 20, COLOR_PARCHMENT)
+	supply_money_label.position = Vector2(805, 22)
+	supply_money_label.size = Vector2(210, 38)
+	supply_money_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	top_panel.add_child(supply_money_label)
+	var back_button := _button("←  В ОФИС", Vector2(1040, 14), Vector2(210, 54))
+	back_button.pressed.connect(_show_hub)
+	top_panel.add_child(back_button)
+
+	var catalog_panel := _panel(Vector2(160, 124), Vector2(430, 726), 12)
+	supply_layer.add_child(catalog_panel)
+	var catalog_heading := _label("КАТАЛОГ", 22, COLOR_GOLD)
+	catalog_heading.position = Vector2(22, 17)
+	catalog_heading.size = Vector2(386, 34)
+	catalog_panel.add_child(catalog_heading)
+
+	var item: Dictionary = game_state.SUPPLY_ITEMS[&"animation_kit"]
+	var item_name: String = str(item["name"])
+	var item_category: String = str(item["category"])
+	var item_icon_path: String = str(item["icon"])
+	var item_description: String = str(item["description"])
+	var item_card := _button("", Vector2(18, 68), Vector2(394, 178))
+	item_card.add_theme_stylebox_override("normal", _style(COLOR_SELECTED, COLOR_GOLD, 2, 9))
+	catalog_panel.add_child(item_card)
+	var catalog_icon := TextureRect.new()
+	catalog_icon.position = Vector2(16, 22)
+	catalog_icon.size = Vector2(118, 118)
+	catalog_icon.texture = load(item_icon_path) as Texture2D
+	catalog_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	catalog_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	catalog_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	item_card.add_child(catalog_icon)
+	var catalog_name := _label(item_name, 17, COLOR_GOLD)
+	catalog_name.position = Vector2(146, 22)
+	catalog_name.size = Vector2(228, 72)
+	catalog_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	catalog_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	item_card.add_child(catalog_name)
+	supply_catalog_status = _label("", 15, COLOR_PARCHMENT)
+	supply_catalog_status.position = Vector2(146, 112)
+	supply_catalog_status.size = Vector2(228, 34)
+	supply_catalog_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	item_card.add_child(supply_catalog_status)
+
+	var catalog_hint := _label("Ассортимент городской службы пока невелик. Зато каждая покупка проходит через три журнала.", 15, COLOR_MUTED)
+	catalog_hint.position = Vector2(28, 285)
+	catalog_hint.size = Vector2(374, 110)
+	catalog_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	catalog_panel.add_child(catalog_hint)
+	if OS.is_debug_build():
+		var debug_day_button := _button("ТЕСТ: СЛЕДУЮЩИЙ ДЕНЬ", Vector2(62, 558), Vector2(306, 46))
+		debug_day_button.pressed.connect(_advance_debug_day)
+		catalog_panel.add_child(debug_day_button)
+		var debug_money_button := _button("ТЕСТ: +500 МОНЕТ", Vector2(62, 616), Vector2(306, 46))
+		debug_money_button.pressed.connect(_grant_debug_money)
+		catalog_panel.add_child(debug_money_button)
+
+	var detail_panel := _panel(Vector2(610, 124), Vector2(830, 726), 12)
+	supply_layer.add_child(detail_panel)
+	var detail_heading := _label(item_name, 27, COLOR_GOLD)
+	detail_heading.position = Vector2(258, 36)
+	detail_heading.size = Vector2(530, 82)
+	detail_heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail_panel.add_child(detail_heading)
+	var category_label := _label(item_category, 17, COLOR_MUTED)
+	category_label.position = Vector2(260, 120)
+	category_label.size = Vector2(500, 28)
+	detail_panel.add_child(category_label)
+	var detail_icon := TextureRect.new()
+	detail_icon.position = Vector2(38, 38)
+	detail_icon.size = Vector2(180, 180)
+	detail_icon.texture = load(item_icon_path) as Texture2D
+	detail_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	detail_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	detail_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	detail_panel.add_child(detail_icon)
+	var description := _label(item_description, 19, COLOR_PARCHMENT)
+	description.position = Vector2(42, 260)
+	description.size = Vector2(746, 140)
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail_panel.add_child(description)
+	var delivery_note := _label("После покупки комплект поступит в собственность службы. Запустить обучение можно будет из личного дела совместимого сотрудника.", 16, COLOR_MUTED)
+	delivery_note.position = Vector2(42, 420)
+	delivery_note.size = Vector2(746, 92)
+	delivery_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail_panel.add_child(delivery_note)
+	supply_purchase_button = _button("", Vector2(236, 596), Vector2(360, 68))
+	supply_purchase_button.pressed.connect(_buy_animation_kit)
+	detail_panel.add_child(supply_purchase_button)
+
+	_refresh_supply_shop()
 
 
 func _personnel_label(label_position: Vector2, label_size: Vector2, font_size: int, color: Color) -> Label:
@@ -472,6 +599,7 @@ func _build_section_dialog() -> void:
 func _open_jobs() -> void:
 	hub_layer.visible = false
 	personnel_layer.visible = false
+	supply_layer.visible = false
 	dashboard_layer.visible = true
 	_refresh()
 
@@ -479,13 +607,23 @@ func _open_jobs() -> void:
 func _open_personnel() -> void:
 	hub_layer.visible = false
 	dashboard_layer.visible = false
+	supply_layer.visible = false
 	personnel_layer.visible = true
 	_refresh_personnel()
+
+
+func _open_supply_shop() -> void:
+	hub_layer.visible = false
+	dashboard_layer.visible = false
+	personnel_layer.visible = false
+	supply_layer.visible = true
+	_refresh_supply_shop()
 
 
 func _show_hub() -> void:
 	dashboard_layer.visible = false
 	personnel_layer.visible = false
+	supply_layer.visible = false
 	hub_layer.visible = true
 	section_dialog.visible = false
 
@@ -499,12 +637,16 @@ func _open_section(title_text: String, subtitle_text: String, description: Strin
 
 func _refresh() -> void:
 	game_state.selected_job_id = selected_job_id
+	day_label.text = "День %d" % game_state.day
+	time_label.text = game_state.format_time()
 	money_label.text = "%d монет" % game_state.money
 	_rebuild_jobs()
 	_rebuild_employees()
 	_refresh_details()
 	if personnel_layer != null:
 		_refresh_personnel()
+	if supply_layer != null:
+		_refresh_supply_shop()
 
 
 func _select_personnel_employee(employee_id: StringName) -> void:
@@ -512,8 +654,48 @@ func _select_personnel_employee(employee_id: StringName) -> void:
 	_refresh_personnel()
 
 
-func _hire_selected_employee() -> void:
-	game_state.hire_employee(selected_employee_id)
+func _personnel_action_pressed() -> void:
+	var employee: Dictionary = game_state.employees[selected_employee_id]
+	if not bool(employee["available"]):
+		game_state.hire_employee(selected_employee_id)
+	else:
+		game_state.train_employee(selected_employee_id, &"animate")
+
+
+func _buy_animation_kit() -> void:
+	game_state.buy_supply_item(&"animation_kit")
+
+
+func _grant_debug_money() -> void:
+	game_state.grant_debug_money(500)
+
+
+func _advance_debug_day() -> void:
+	game_state.advance_day(1)
+
+
+func _refresh_supply_shop() -> void:
+	if supply_purchase_button == null:
+		return
+	var item: Dictionary = game_state.SUPPLY_ITEMS[&"animation_kit"]
+	var price := int(item["price"])
+	var owned: bool = game_state.has_supply_item(&"animation_kit")
+	supply_money_label.text = "В казне: %d монет" % game_state.money
+	if owned:
+		supply_catalog_status.text = "ПРИОБРЕТЕНО"
+		supply_catalog_status.add_theme_color_override("font_color", COLOR_GOLD)
+		supply_purchase_button.text = "ПРИОБРЕТЕНО"
+		supply_purchase_button.disabled = true
+	elif game_state.money < price:
+		supply_catalog_status.text = "%d МОНЕТ" % price
+		supply_catalog_status.add_theme_color_override("font_color", COLOR_PARCHMENT)
+		supply_purchase_button.text = "НЕ ХВАТАЕТ МОНЕТ • %d" % price
+		supply_purchase_button.disabled = true
+	else:
+		supply_catalog_status.text = "%d МОНЕТ" % price
+		supply_catalog_status.add_theme_color_override("font_color", COLOR_PARCHMENT)
+		supply_purchase_button.text = "КУПИТЬ • %d МОНЕТ" % price
+		supply_purchase_button.disabled = false
 
 
 func _refresh_personnel() -> void:
@@ -547,14 +729,31 @@ func _refresh_personnel() -> void:
 	personnel_status.text = "СТАТУС\n%s" % employee["status"]
 	personnel_strength.text = employee["strength"]
 	personnel_weakness.text = employee["weakness"]
-	personnel_traits.text = "ОСОБЕННОСТИ\n%s\n\nСПЕЦИАЛИЗАЦИЯ\n%s" % [employee["traits"], employee["core_actions"]]
+	var abilities: PackedStringArray = employee["abilities"]
+	var specialization: String = str(employee["core_actions"])
+	if abilities.has("animate"):
+		specialization += " • Оживление"
+	personnel_traits.text = "ОСОБЕННОСТИ\n%s\n\nСПЕЦИАЛИЗАЦИЯ\n%s" % [employee["traits"], specialization]
 	var is_candidate: bool = not bool(employee["available"])
-	personnel_status.visible = not is_candidate
-	personnel_hire_button.visible = is_candidate
+	var training_state: StringName = game_state.get_training_availability(selected_employee_id, &"animate")
+	var show_training_button: bool = training_state in [&"available", &"missing_supply", &"assigned", &"no_slots"]
+	personnel_status.visible = not is_candidate and not show_training_button
+	personnel_hire_button.visible = is_candidate or show_training_button
 	if is_candidate:
 		var hire_cost := int(employee.get("hire_cost", 0))
 		personnel_hire_button.disabled = game_state.money < hire_cost
 		personnel_hire_button.text = "НАНЯТЬ • %d МОНЕТ" % hire_cost if not personnel_hire_button.disabled else "НУЖНО %d МОНЕТ" % hire_cost
+	elif show_training_button:
+		personnel_hire_button.disabled = training_state != &"available"
+		match training_state:
+			&"available":
+				personnel_hire_button.text = "ОБУЧИТЬ «ОЖИВЛЕНИЮ» • 1 ДЕНЬ"
+			&"missing_supply":
+				personnel_hire_button.text = "НУЖЕН КОМПЛЕКТ ИЗ ЛАВКИ"
+			&"assigned":
+				personnel_hire_button.text = "СНАЧАЛА СНЯТЬ С ЗАЯВКИ"
+			&"no_slots":
+				personnel_hire_button.text = "НЕТ СВОБОДНОЙ ЯЧЕЙКИ"
 
 
 func _rebuild_jobs() -> void:
@@ -584,7 +783,9 @@ func _rebuild_employees() -> void:
 		var assigned_job: StringName = game_state.get_employee_job(employee_id)
 		var selected: bool = assigned_job == selected_job_id
 		var card := _button("", Vector2.ZERO, Vector2(390, 225))
-		card.tooltip_text = "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение"
+		var is_training: bool = game_state.is_employee_training(employee_id)
+		card.disabled = is_training
+		card.tooltip_text = "Сотрудник заканчивает обучение на следующий день" if is_training else "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение"
 		card.add_theme_stylebox_override("normal", _style(COLOR_SELECTED if selected else COLOR_CARD, COLOR_GOLD if selected else COLOR_BRASS, 3 if selected else 2, 9))
 		card.pressed.connect(_toggle_employee.bind(employee_id))
 		employee_list.add_child(card)

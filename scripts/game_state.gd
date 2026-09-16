@@ -4,15 +4,34 @@ signal state_changed
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 1
+const SAVE_VERSION: int = 2
 const SAVE_PATH: String = "user://savegame.json"
+const SUPPLY_ITEMS: Dictionary = {
+	&"animation_kit": {
+		"name": "Практическое оживление бытовых предметов",
+		"category": "Учебный комплект",
+		"price": 400,
+		"icon": "res://assets/icons/tools/tool_animate.png",
+		"description": "Служебное руководство, учебный кристалл и набор безопасных печатей. Открывает однодневный курс «Оживление» для совместимого сотрудника.",
+		"training_id": "animate",
+	},
+}
+const TRAINING_DEFINITIONS: Dictionary = {
+	&"animate": {
+		"name": "Оживление",
+		"supply_item_id": &"animation_kit",
+		"category": &"magic",
+		"duration_days": 1,
+	},
+}
 
 var day: int = 1
 var time_minutes: int = 9 * 60
-var money: int = 1240
+var money: int = 600
 var reputation: int = 37
 var selected_job_id: StringName = &"lava_leak"
 var active_job_id: StringName = &""
+var owned_supply_items: PackedStringArray = PackedStringArray()
 
 var employees: Dictionary = {
 	&"liliya": {
@@ -22,6 +41,8 @@ var employees: Dictionary = {
 		"status": "Свободна",
 		"idle_status": "Свободна",
 		"abilities": PackedStringArray(["freeze", "heat"]),
+		"training_categories": PackedStringArray(["magic"]),
+		"max_special_abilities": 2,
 		"core_actions": "Магическая диагностика",
 		"description": "Полевой маг широкого профиля. Определяет природу чар и аккуратно меняет температуру повреждённых объектов.",
 		"strength": "Сильная сторона: диагностика и контроль стихий",
@@ -36,6 +57,8 @@ var employees: Dictionary = {
 		"status": "Свободен",
 		"idle_status": "Свободен",
 		"abilities": PackedStringArray(["move"]),
+		"training_categories": PackedStringArray(["physical"]),
+		"max_special_abilities": 2,
 		"core_actions": "Удержание и силовая работа",
 		"description": "Такелажник для случаев, когда аварийный объект нужно удержать, передвинуть или убедительно поставить на место.",
 		"strength": "Сильная сторона: сила и устойчивость",
@@ -50,6 +73,8 @@ var employees: Dictionary = {
 		"status": "Свободен",
 		"idle_status": "Свободен",
 		"abilities": PackedStringArray(),
+		"training_categories": PackedStringArray(["technical"]),
+		"max_special_abilities": 2,
 		"core_actions": "Диагностика и точный ремонт",
 		"description": "Опытный мастер по трубам, кранам и прочей инфраструктуре, которая обычно течёт в самый неподходящий момент.",
 		"strength": "Сильная сторона: аккуратный обычный ремонт",
@@ -65,6 +90,8 @@ var employees: Dictionary = {
 		"idle_status": "Свободна",
 		"hire_cost": 350,
 		"abilities": PackedStringArray(),
+		"training_categories": PackedStringArray(["magic", "technical"]),
+		"max_special_abilities": 2,
 		"core_actions": "Быстрое обучение",
 		"description": "Младший специалист широкого профиля. Быстро осваивает новые инструменты и охотно берётся за незнакомые задачи.",
 		"strength": "Сильная сторона: гибкость и скорость обучения",
@@ -80,6 +107,9 @@ var employees: Dictionary = {
 		"idle_status": "Свободен",
 		"hire_cost": 650,
 		"abilities": PackedStringArray(["antimagic"]),
+		"training_categories": PackedStringArray(["magic"]),
+		"incompatible_abilities": PackedStringArray(["animate"]),
+		"max_special_abilities": 2,
 		"core_actions": "Магическая изоляция",
 		"description": "Инспектор по нестабильным чарам. Локализует магические утечки и проверяет объект перед ремонтом.",
 		"strength": "Сильная сторона: антимагия и безопасность",
@@ -118,6 +148,8 @@ func assign_employee(employee_id: StringName, job_id: StringName) -> void:
 		return
 	if not employees[employee_id]["available"]:
 		return
+	if is_employee_training(employee_id):
+		return
 
 	var current_job := get_employee_job(employee_id)
 	if current_job == job_id:
@@ -150,6 +182,87 @@ func hire_employee(employee_id: StringName) -> bool:
 	money -= hire_cost
 	employee["available"] = true
 	employee["status"] = employee["idle_status"]
+	employees[employee_id] = employee
+	state_changed.emit()
+	return true
+
+
+func buy_supply_item(item_id: StringName) -> bool:
+	if not SUPPLY_ITEMS.has(item_id) or owned_supply_items.has(String(item_id)):
+		return false
+	var item: Dictionary = SUPPLY_ITEMS[item_id]
+	var price := int(item["price"])
+	if price <= 0 or money < price:
+		return false
+	money -= price
+	owned_supply_items.append(String(item_id))
+	state_changed.emit()
+	return true
+
+
+func has_supply_item(item_id: StringName) -> bool:
+	return owned_supply_items.has(String(item_id))
+
+
+func grant_debug_money(amount: int = 500) -> void:
+	if not OS.is_debug_build() or amount <= 0:
+		return
+	money += amount
+	state_changed.emit()
+
+
+func advance_day(days: int = 1) -> void:
+	if days <= 0:
+		return
+	day += days
+	time_minutes = 9 * 60
+	_complete_finished_training()
+	_update_employee_statuses()
+	state_changed.emit()
+
+
+func is_employee_training(employee_id: StringName) -> bool:
+	if not employees.has(employee_id):
+		return false
+	var employee: Dictionary = employees[employee_id]
+	return not StringName(str(employee.get("training_id", ""))).is_empty()
+
+
+func get_training_availability(employee_id: StringName, training_id: StringName) -> StringName:
+	if not employees.has(employee_id) or not TRAINING_DEFINITIONS.has(training_id):
+		return &"unknown"
+	var employee: Dictionary = employees[employee_id]
+	var training: Dictionary = TRAINING_DEFINITIONS[training_id]
+	if not bool(employee["available"]):
+		return &"not_hired"
+	if is_employee_training(employee_id):
+		return &"training"
+	var abilities: PackedStringArray = employee["abilities"]
+	if abilities.has(String(training_id)):
+		return &"learned"
+	var incompatible: PackedStringArray = employee.get("incompatible_abilities", PackedStringArray())
+	if incompatible.has(String(training_id)):
+		return &"incompatible"
+	var categories: PackedStringArray = employee.get("training_categories", PackedStringArray())
+	if not categories.has(String(training["category"])):
+		return &"incompatible"
+	if abilities.size() >= int(employee.get("max_special_abilities", 2)):
+		return &"no_slots"
+	if not get_employee_job(employee_id).is_empty():
+		return &"assigned"
+	var supply_item_id: StringName = StringName(str(training["supply_item_id"]))
+	if not has_supply_item(supply_item_id):
+		return &"missing_supply"
+	return &"available"
+
+
+func train_employee(employee_id: StringName, training_id: StringName) -> bool:
+	if get_training_availability(employee_id, training_id) != &"available":
+		return false
+	var employee: Dictionary = employees[employee_id]
+	employee["training_id"] = training_id
+	employee["training_end_day"] = day + maxi(1, int(TRAINING_DEFINITIONS[training_id]["duration_days"]))
+	employee["status"] = "Учится: %s" % TRAINING_DEFINITIONS[training_id]["name"]
 	employees[employee_id] = employee
 	state_changed.emit()
 	return true
@@ -196,10 +309,11 @@ func has_save() -> bool:
 func start_new_game() -> void:
 	day = 1
 	time_minutes = 9 * 60
-	money = 1240
+	money = 600
 	reputation = 37
 	selected_job_id = &"lava_leak"
 	active_job_id = &""
+	owned_supply_items = PackedStringArray()
 
 	for job_id: StringName in jobs:
 		var job: Dictionary = jobs[job_id]
@@ -221,6 +335,8 @@ func _reset_employee(employee_id: StringName, available: bool, abilities: Packed
 	employee["available"] = available
 	employee["abilities"] = abilities
 	employee["status"] = status
+	employee["training_id"] = &""
+	employee["training_end_day"] = 0
 	employees[employee_id] = employee
 
 
@@ -236,6 +352,8 @@ func save_game() -> Error:
 		employee_progress[String(employee_id)] = {
 			"available": employee["available"],
 			"abilities": Array(employee["abilities"]),
+			"training_id": str(employee.get("training_id", "")),
+			"training_end_day": int(employee.get("training_end_day", 0)),
 		}
 
 	var save_data: Dictionary = {
@@ -246,6 +364,7 @@ func save_game() -> Error:
 		"reputation": reputation,
 		"selected_job_id": String(selected_job_id),
 		"active_job_id": String(active_job_id),
+		"owned_supply_items": Array(owned_supply_items),
 		"job_assignments": job_assignments,
 		"employee_progress": employee_progress,
 	}
@@ -285,6 +404,13 @@ func load_game() -> Error:
 	var loaded_active := StringName(save_data.get("active_job_id", ""))
 	active_job_id = loaded_active if jobs.has(loaded_active) else &""
 
+	owned_supply_items = PackedStringArray()
+	var loaded_supply_items: Array = save_data.get("owned_supply_items", [])
+	for loaded_item_id: Variant in loaded_supply_items:
+		var item_id := StringName(str(loaded_item_id))
+		if SUPPLY_ITEMS.has(item_id) and not owned_supply_items.has(String(item_id)):
+			owned_supply_items.append(String(item_id))
+
 	var job_assignments: Dictionary = save_data.get("job_assignments", {})
 	for job_id: StringName in jobs:
 		var job: Dictionary = jobs[job_id]
@@ -306,8 +432,12 @@ func load_game() -> Error:
 		employee["available"] = bool(loaded_employee.get("available", employee["available"]))
 		var loaded_abilities: Array = loaded_employee.get("abilities", Array(employee["abilities"]))
 		employee["abilities"] = PackedStringArray(loaded_abilities)
+		var loaded_training_id := StringName(str(loaded_employee.get("training_id", "")))
+		employee["training_id"] = loaded_training_id if TRAINING_DEFINITIONS.has(loaded_training_id) else &""
+		employee["training_end_day"] = int(loaded_employee.get("training_end_day", 0))
 		employees[employee_id] = employee
 
+	_complete_finished_training()
 	_update_employee_statuses()
 	state_changed.emit()
 	return OK
@@ -329,8 +459,29 @@ func _update_employee_statuses() -> void:
 		var employee: Dictionary = employees[employee_id]
 		if not employee["available"]:
 			continue
+		var training_id := StringName(str(employee.get("training_id", "")))
+		if not training_id.is_empty() and TRAINING_DEFINITIONS.has(training_id):
+			employee["status"] = "Учится: %s" % TRAINING_DEFINITIONS[training_id]["name"]
+			employees[employee_id] = employee
+			continue
 		var job_id := get_employee_job(employee_id)
 		employee["status"] = employee["idle_status"]
 		if not job_id.is_empty():
 			employee["status"] = "На заявке: %s" % jobs[job_id]["title"]
+		employees[employee_id] = employee
+
+
+func _complete_finished_training() -> void:
+	for employee_id: StringName in EMPLOYEE_ORDER:
+		var employee: Dictionary = employees[employee_id]
+		var training_id := StringName(str(employee.get("training_id", "")))
+		if training_id.is_empty() or day < int(employee.get("training_end_day", 0)):
+			continue
+		var abilities: PackedStringArray = employee["abilities"]
+		if not abilities.has(String(training_id)):
+			abilities.append(String(training_id))
+		employee["abilities"] = abilities
+		employee["training_id"] = &""
+		employee["training_end_day"] = 0
+		employee["status"] = employee["idle_status"]
 		employees[employee_id] = employee
