@@ -3,6 +3,7 @@ extends Node
 signal state_changed
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
+const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
 const SAVE_VERSION: int = 1
 const SAVE_PATH: String = "user://savegame.json"
 
@@ -19,6 +20,7 @@ var employees: Dictionary = {
 		"role": "Маг-практик",
 		"portrait": "res://assets/portraits/employees/liliya.png",
 		"status": "Свободна",
+		"idle_status": "Свободна",
 		"abilities": PackedStringArray(["freeze", "heat"]),
 		"core_actions": "Магическая диагностика",
 		"description": "Полевой маг широкого профиля. Определяет природу чар и аккуратно меняет температуру повреждённых объектов.",
@@ -32,6 +34,7 @@ var employees: Dictionary = {
 		"role": "Орк-такелажник",
 		"portrait": "res://assets/portraits/employees/grog.png",
 		"status": "Свободен",
+		"idle_status": "Свободен",
 		"abilities": PackedStringArray(["move"]),
 		"core_actions": "Удержание и силовая работа",
 		"description": "Такелажник для случаев, когда аварийный объект нужно удержать, передвинуть или убедительно поставить на место.",
@@ -45,6 +48,7 @@ var employees: Dictionary = {
 		"role": "Мастер-сантехник",
 		"portrait": "res://assets/portraits/employees/boris.png",
 		"status": "Свободен",
+		"idle_status": "Свободен",
 		"abilities": PackedStringArray(),
 		"core_actions": "Диагностика и точный ремонт",
 		"description": "Опытный мастер по трубам, кранам и прочей инфраструктуре, которая обычно течёт в самый неподходящий момент.",
@@ -58,9 +62,11 @@ var employees: Dictionary = {
 		"role": "Универсальный ученик",
 		"portrait": "res://assets/portraits/employees/nika.png",
 		"status": "Не нанята",
+		"idle_status": "Свободна",
+		"hire_cost": 350,
 		"abilities": PackedStringArray(),
 		"core_actions": "Быстрое обучение",
-		"description": "Кандидат на должность младшего специалиста. Быстро осваивает новые инструменты и охотно берётся за незнакомые задачи.",
+		"description": "Младший специалист широкого профиля. Быстро осваивает новые инструменты и охотно берётся за незнакомые задачи.",
 		"strength": "Сильная сторона: гибкость и скорость обучения",
 		"weakness": "Ограничение: мало полевого опыта",
 		"traits": "Любознательна • энергична • ведёт слишком подробные записи",
@@ -71,9 +77,11 @@ var employees: Dictionary = {
 		"role": "Магический инспектор",
 		"portrait": "res://assets/portraits/employees/felix.png",
 		"status": "Не нанят",
+		"idle_status": "Свободен",
+		"hire_cost": 650,
 		"abilities": PackedStringArray(["antimagic"]),
 		"core_actions": "Магическая изоляция",
-		"description": "Кандидат-инспектор по нестабильным чарам. Локализует магические утечки и проверяет объект перед ремонтом.",
+		"description": "Инспектор по нестабильным чарам. Локализует магические утечки и проверяет объект перед ремонтом.",
 		"strength": "Сильная сторона: антимагия и безопасность",
 		"weakness": "Ограничение: действует медленно и по инструкции",
 		"traits": "Методичен • невозмутим • замечает нарушения с порога",
@@ -128,6 +136,23 @@ func assign_employee(employee_id: StringName, job_id: StringName) -> void:
 
 	_update_employee_statuses()
 	state_changed.emit()
+
+
+func hire_employee(employee_id: StringName) -> bool:
+	if not employees.has(employee_id):
+		return false
+	var employee: Dictionary = employees[employee_id]
+	if employee["available"]:
+		return false
+	var hire_cost := int(employee.get("hire_cost", 0))
+	if hire_cost <= 0 or money < hire_cost:
+		return false
+	money -= hire_cost
+	employee["available"] = true
+	employee["status"] = employee["idle_status"]
+	employees[employee_id] = employee
+	state_changed.emit()
+	return true
 
 
 func get_employee_job(employee_id: StringName) -> StringName:
@@ -300,14 +325,12 @@ func _remove_employee_from_all_jobs(employee_id: StringName) -> void:
 
 
 func _update_employee_statuses() -> void:
-	for employee_id: StringName in STARTING_EMPLOYEES:
+	for employee_id: StringName in EMPLOYEE_ORDER:
 		var employee: Dictionary = employees[employee_id]
+		if not employee["available"]:
+			continue
 		var job_id := get_employee_job(employee_id)
-		employee["status"] = "Свободен"
-		if employee_id == &"liliya":
-			employee["status"] = "Свободна"
+		employee["status"] = employee["idle_status"]
 		if not job_id.is_empty():
-			employee["status"] = "Назначен: %s" % jobs[job_id]["address"]
-			if employee_id == &"liliya":
-				employee["status"] = "Назначена: %s" % jobs[job_id]["address"]
+			employee["status"] = "На заявке: %s" % jobs[job_id]["title"]
 		employees[employee_id] = employee

@@ -15,6 +15,7 @@ const CANDIDATE_CLASP_TEXTURE = preload("res://assets/ui/candidate_clasp.png")
 var selected_job_id: StringName
 var job_list: VBoxContainer
 var employee_list: HBoxContainer
+var money_label: Label
 var detail_title: Label
 var detail_body: Label
 var assignment_label: Label
@@ -31,6 +32,7 @@ var personnel_strength: Label
 var personnel_weakness: Label
 var personnel_traits: Label
 var personnel_portrait: TextureRect
+var personnel_hire_button: Button
 var personnel_cards: Dictionary = {}
 var selected_employee_id: StringName = &"liliya"
 var section_dialog: Panel
@@ -89,7 +91,7 @@ func _build_top_bar() -> void:
 	panel.add_child(time_label)
 
 	_add_stat_icon(panel, 0, Vector2(1168, 18))
-	var money_label := _label("%d монет" % game_state.money, 20, COLOR_PARCHMENT)
+	money_label = _label("%d монет" % game_state.money, 20, COLOR_PARCHMENT)
 	money_label.position = Vector2(1202, 19)
 	money_label.size = Vector2(126, 36)
 	panel.add_child(money_label)
@@ -166,12 +168,18 @@ func _build_employee_panel() -> void:
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	panel.add_child(heading)
 
+	var employee_scroll := ScrollContainer.new()
+	employee_scroll.position = Vector2(18, 43)
+	employee_scroll.size = Vector2(1204, 234)
+	employee_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	employee_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(employee_scroll)
+
 	employee_list = HBoxContainer.new()
-	employee_list.position = Vector2(18, 43)
-	employee_list.size = Vector2(1204, 234)
+	employee_list.custom_minimum_size = Vector2(1204, 225)
 	employee_list.alignment = BoxContainer.ALIGNMENT_CENTER
 	employee_list.add_theme_constant_override("separation", 14)
-	panel.add_child(employee_list)
+	employee_scroll.add_child(employee_list)
 
 
 func _build_dashboard_return() -> void:
@@ -314,12 +322,18 @@ func _build_personnel_screen() -> void:
 	personnel_name = _personnel_label_from_guide("NameArea", 26, Color(0.25, 0.14, 0.055))
 	personnel_role = _personnel_label_from_guide("RoleArea", 19, Color(0.34, 0.22, 0.11))
 	personnel_description = _personnel_label_from_guide("DescriptionArea", 17, Color(0.24, 0.16, 0.09))
-	personnel_status = _personnel_label_from_guide("StatusArea", 16, Color(0.24, 0.16, 0.09))
+	personnel_status = _personnel_label_from_guide("StatusArea", 13, Color(0.24, 0.16, 0.09))
 	personnel_strength = _personnel_label_from_guide("StrengthArea", 13, Color(0.24, 0.16, 0.09))
 	personnel_weakness = _personnel_label_from_guide("WeaknessArea", 13, Color(0.24, 0.16, 0.09))
 	personnel_traits = _personnel_label_from_guide("TraitsArea", 14, Color(0.24, 0.16, 0.09))
 	for label in [personnel_name, personnel_role, personnel_description, personnel_status, personnel_strength, personnel_weakness, personnel_traits]:
 		personnel_layer.add_child(label)
+
+	var hire_rect := _personnel_guide_rect("StatusArea")
+	personnel_hire_button = _button("", hire_rect.position, hire_rect.size)
+	personnel_hire_button.add_theme_font_size_override("font_size", 15)
+	personnel_hire_button.pressed.connect(_hire_selected_employee)
+	personnel_layer.add_child(personnel_hire_button)
 
 	_refresh_personnel()
 
@@ -485,6 +499,7 @@ func _open_section(title_text: String, subtitle_text: String, description: Strin
 
 func _refresh() -> void:
 	game_state.selected_job_id = selected_job_id
+	money_label.text = "%d монет" % game_state.money
 	_rebuild_jobs()
 	_rebuild_employees()
 	_refresh_details()
@@ -495,6 +510,10 @@ func _refresh() -> void:
 func _select_personnel_employee(employee_id: StringName) -> void:
 	selected_employee_id = employee_id
 	_refresh_personnel()
+
+
+func _hire_selected_employee() -> void:
+	game_state.hire_employee(selected_employee_id)
 
 
 func _refresh_personnel() -> void:
@@ -525,10 +544,17 @@ func _refresh_personnel() -> void:
 	personnel_name.text = employee["name"]
 	personnel_role.text = employee["role"]
 	personnel_description.text = employee["description"]
-	personnel_status.text = "СТАТУС: %s" % employee["status"]
+	personnel_status.text = "СТАТУС\n%s" % employee["status"]
 	personnel_strength.text = employee["strength"]
 	personnel_weakness.text = employee["weakness"]
 	personnel_traits.text = "ОСОБЕННОСТИ\n%s\n\nСПЕЦИАЛИЗАЦИЯ\n%s" % [employee["traits"], employee["core_actions"]]
+	var is_candidate: bool = not bool(employee["available"])
+	personnel_status.visible = not is_candidate
+	personnel_hire_button.visible = is_candidate
+	if is_candidate:
+		var hire_cost := int(employee.get("hire_cost", 0))
+		personnel_hire_button.disabled = game_state.money < hire_cost
+		personnel_hire_button.text = "НАНЯТЬ • %d МОНЕТ" % hire_cost if not personnel_hire_button.disabled else "НУЖНО %d МОНЕТ" % hire_cost
 
 
 func _rebuild_jobs() -> void:
@@ -551,8 +577,10 @@ func _rebuild_jobs() -> void:
 
 func _rebuild_employees() -> void:
 	_clear(employee_list)
-	for employee_id: StringName in game_state.STARTING_EMPLOYEES:
+	for employee_id: StringName in game_state.EMPLOYEE_ORDER:
 		var employee: Dictionary = game_state.employees[employee_id]
+		if not employee["available"]:
+			continue
 		var assigned_job: StringName = game_state.get_employee_job(employee_id)
 		var selected: bool = assigned_job == selected_job_id
 		var card := _button("", Vector2.ZERO, Vector2(390, 225))
