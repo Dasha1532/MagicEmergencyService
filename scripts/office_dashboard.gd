@@ -9,6 +9,8 @@ const COLOR_BRASS := Color(0.76, 0.54, 0.27)
 const COLOR_GOLD := Color(0.96, 0.78, 0.46)
 const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 const COLOR_MUTED := Color(0.70, 0.63, 0.52)
+const PERSONNEL_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
+const CANDIDATE_CLASP_TEXTURE = preload("res://assets/ui/candidate_clasp.png")
 
 var selected_job_id: StringName
 var job_list: VBoxContainer
@@ -20,6 +22,17 @@ var warning_label: Label
 var depart_button: Button
 var dashboard_layer: Control
 var hub_layer: Control
+var personnel_layer: Control
+var personnel_name: Label
+var personnel_role: Label
+var personnel_description: Label
+var personnel_status: Label
+var personnel_strength: Label
+var personnel_weakness: Label
+var personnel_traits: Label
+var personnel_portrait: TextureRect
+var personnel_cards: Dictionary = {}
+var selected_employee_id: StringName = &"liliya"
 var section_dialog: Panel
 var section_title: Label
 var section_body: Label
@@ -29,6 +42,9 @@ var section_body: Label
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	$HotspotEditorPreview.visible = false
+	$PersonnelEditorPreview.visible = false
+	$ObjectHotspots.visible = true
+	$BookHotspots.visible = true
 	selected_job_id = game_state.selected_job_id
 	_build_interface()
 	game_state.state_changed.connect(_refresh)
@@ -45,6 +61,7 @@ func _build_interface() -> void:
 	_build_employee_panel()
 	_build_dashboard_return()
 	_build_office_hub()
+	_build_personnel_screen()
 
 
 func _build_top_bar() -> void:
@@ -177,7 +194,7 @@ func _build_office_hub() -> void:
 	hub_layer.add_child(background)
 
 	_connect_editable_hotspot($ObjectHotspots/JobBoard, "ДОСКА ЗАЯВОК", "Что опять случилось?", _open_jobs)
-	_connect_editable_hotspot($ObjectHotspots/EmployeesBoard, "СОТРУДНИКИ", "Кто сегодня работает?", _open_section.bind("СОТРУДНИКИ", "Кто сегодня работает?", "Здесь появятся личные дела, найм, способности и обучение сотрудников."))
+	_connect_editable_hotspot($ObjectHotspots/EmployeesBoard, "СОТРУДНИКИ", "Кто сегодня работает?", _open_personnel)
 	_connect_editable_hotspot($ObjectHotspots/EquipmentStorage, "СКЛАД СНАРЯЖЕНИЯ", "Чем будем чинить?", _open_section.bind("СКЛАД СНАРЯЖЕНИЯ", "Чем будем чинить?", "Здесь будет храниться обычное и магическое оборудование службы."))
 	_connect_editable_hotspot($ObjectHotspots/CityMap, "КАРТА ГОРОДА", "Где опять прорвало?", _open_section.bind("КАРТА ГОРОДА", "Где опять прорвало?", "Здесь появятся районы города, адреса заявок и перемещение между объектами."))
 	_connect_editable_hotspot($BookHotspots/AccountingBook, "КНИГА УЧЁТА", "Куда делись деньги?", _open_section.bind("КНИГА УЧЁТА", "Куда делись деньги?", "Здесь будут показаны доходы, расходы, зарплаты и компенсации."))
@@ -200,6 +217,132 @@ func _build_office_hub() -> void:
 	pulse.tween_property(hint, "scale", Vector2(0.96, 0.96), 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	_build_section_dialog()
+
+
+func _build_personnel_screen() -> void:
+	personnel_layer = Control.new()
+	personnel_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	personnel_layer.visible = false
+	add_child(personnel_layer)
+
+	var background := TextureRect.new()
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.texture = load("res://assets/ui/personnel_department_background_neutral.png") as Texture2D
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	personnel_layer.add_child(background)
+
+	var heading := _label("СОТРУДНИКИ", 30, COLOR_GOLD)
+	heading.position = Vector2(520, 35)
+	heading.size = Vector2(560, 52)
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	personnel_layer.add_child(heading)
+
+	var back_button := _button("←  В ОФИС", Vector2(1190, 37), Vector2(150, 48))
+	back_button.pressed.connect(_show_hub)
+	personnel_layer.add_child(back_button)
+
+	for index in PERSONNEL_ORDER.size():
+		var employee_id := StringName(PERSONNEL_ORDER[index])
+		var employee: Dictionary = game_state.employees[employee_id]
+		var card_rect := _personnel_guide_rect("EmployeeCard%d" % (index + 1))
+		var card := Button.new()
+		card.position = card_rect.position
+		card.size = card_rect.size
+		card.add_theme_stylebox_override("normal", _style(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 5))
+		card.add_theme_stylebox_override("hover", _style(Color(0.18, 0.12, 0.055, 0.28), COLOR_GOLD, 2, 5))
+		card.add_theme_stylebox_override("pressed", _style(Color(0.24, 0.16, 0.07, 0.36), COLOR_GOLD, 2, 5))
+		card.add_theme_stylebox_override("focus", _style(Color(0.18, 0.12, 0.055, 0.22), COLOR_GOLD, 2, 5))
+		card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		card.pressed.connect(_select_personnel_employee.bind(employee_id))
+		personnel_layer.add_child(card)
+
+		var name_label := _label(employee["name"], 18, COLOR_GOLD)
+		name_label.position = Vector2(8, 11)
+		name_label.size = Vector2(card.size.x - 16, 27)
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(name_label)
+
+		var role_label := _label(employee["role"], 13, COLOR_PARCHMENT)
+		role_label.position = Vector2(8, 42)
+		role_label.size = Vector2(card.size.x - 16, 22)
+		role_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		role_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(role_label)
+
+		var status_label := _label("", 12, COLOR_MUTED)
+		status_label.position = Vector2(8, 72)
+		status_label.size = Vector2(card.size.x - 16, 21)
+		status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(status_label)
+
+		var clasp: TextureRect = null
+		if index >= 3:
+			var clasp_rect := _personnel_guide_rect("CandidateClasp%dArea" % (index + 1))
+			clasp = TextureRect.new()
+			clasp.position = clasp_rect.position
+			clasp.size = clasp_rect.size
+			clasp.texture = CANDIDATE_CLASP_TEXTURE
+			clasp.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			clasp.stretch_mode = TextureRect.STRETCH_SCALE
+			clasp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			personnel_layer.add_child(clasp)
+
+		personnel_cards[employee_id] = {"button": card, "status": status_label, "clasp": clasp}
+
+	var portrait_clip_rect := _personnel_guide_rect("PortraitClipArea")
+	var portrait_image_rect := _personnel_guide_rect("PortraitImageArea")
+	var portrait_clip := Control.new()
+	portrait_clip.position = portrait_clip_rect.position
+	portrait_clip.size = portrait_clip_rect.size
+	portrait_clip.clip_contents = true
+	portrait_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	personnel_layer.add_child(portrait_clip)
+
+	personnel_portrait = TextureRect.new()
+	personnel_portrait.position = portrait_image_rect.position - portrait_clip_rect.position
+	personnel_portrait.size = portrait_image_rect.size
+	personnel_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	personnel_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	personnel_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_clip.add_child(personnel_portrait)
+
+	personnel_name = _personnel_label_from_guide("NameArea", 26, Color(0.25, 0.14, 0.055))
+	personnel_role = _personnel_label_from_guide("RoleArea", 19, Color(0.34, 0.22, 0.11))
+	personnel_description = _personnel_label_from_guide("DescriptionArea", 17, Color(0.24, 0.16, 0.09))
+	personnel_status = _personnel_label_from_guide("StatusArea", 16, Color(0.24, 0.16, 0.09))
+	personnel_strength = _personnel_label_from_guide("StrengthArea", 13, Color(0.24, 0.16, 0.09))
+	personnel_weakness = _personnel_label_from_guide("WeaknessArea", 13, Color(0.24, 0.16, 0.09))
+	personnel_traits = _personnel_label_from_guide("TraitsArea", 14, Color(0.24, 0.16, 0.09))
+	for label in [personnel_name, personnel_role, personnel_description, personnel_status, personnel_strength, personnel_weakness, personnel_traits]:
+		personnel_layer.add_child(label)
+
+	_refresh_personnel()
+
+
+func _personnel_label(label_position: Vector2, label_size: Vector2, font_size: int, color: Color) -> Label:
+	var label := _label("", font_size, color)
+	label.position = label_position
+	label.size = label_size
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	label.clip_text = true
+	label.add_theme_color_override("font_shadow_color", Color(1, 0.92, 0.72, 0.25))
+	return label
+
+
+func _personnel_label_from_guide(guide_name: String, font_size: int, color: Color) -> Label:
+	var guide_rect := _personnel_guide_rect(guide_name)
+	return _personnel_label(guide_rect.position, guide_rect.size, font_size, color)
+
+
+func _personnel_guide_rect(guide_name: String) -> Rect2:
+	var guide := get_node("PersonnelEditorPreview/%s" % guide_name) as Control
+	return Rect2(guide.position, guide.size)
 
 
 func _build_office_menu_button() -> void:
@@ -314,12 +457,21 @@ func _build_section_dialog() -> void:
 
 func _open_jobs() -> void:
 	hub_layer.visible = false
+	personnel_layer.visible = false
 	dashboard_layer.visible = true
 	_refresh()
 
 
+func _open_personnel() -> void:
+	hub_layer.visible = false
+	dashboard_layer.visible = false
+	personnel_layer.visible = true
+	_refresh_personnel()
+
+
 func _show_hub() -> void:
 	dashboard_layer.visible = false
+	personnel_layer.visible = false
 	hub_layer.visible = true
 	section_dialog.visible = false
 
@@ -336,6 +488,47 @@ func _refresh() -> void:
 	_rebuild_jobs()
 	_rebuild_employees()
 	_refresh_details()
+	if personnel_layer != null:
+		_refresh_personnel()
+
+
+func _select_personnel_employee(employee_id: StringName) -> void:
+	selected_employee_id = employee_id
+	_refresh_personnel()
+
+
+func _refresh_personnel() -> void:
+	if personnel_portrait == null or not game_state.employees.has(selected_employee_id):
+		return
+	for employee_id: StringName in personnel_cards:
+		var card_data: Dictionary = personnel_cards[employee_id]
+		var card: Button = card_data["button"]
+		var status_label: Label = card_data["status"]
+		var listed_employee: Dictionary = game_state.employees[employee_id]
+		var clasp: TextureRect = card_data["clasp"]
+		if clasp != null:
+			clasp.visible = not listed_employee["available"]
+		if not listed_employee["available"]:
+			status_label.text = "КАНДИДАТ"
+		elif not game_state.get_employee_job(employee_id).is_empty():
+			status_label.text = "НА ЗАЯВКЕ"
+		else:
+			status_label.text = listed_employee["status"].to_upper()
+		if employee_id == selected_employee_id:
+			card.add_theme_stylebox_override("normal", _style(Color(0.22, 0.145, 0.06, 0.30), COLOR_GOLD, 2, 5))
+			status_label.add_theme_color_override("font_color", COLOR_GOLD)
+		else:
+			card.add_theme_stylebox_override("normal", _style(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 5))
+			status_label.add_theme_color_override("font_color", COLOR_MUTED)
+	var employee: Dictionary = game_state.employees[selected_employee_id]
+	personnel_portrait.texture = load(employee["portrait"]) as Texture2D
+	personnel_name.text = employee["name"]
+	personnel_role.text = employee["role"]
+	personnel_description.text = employee["description"]
+	personnel_status.text = "СТАТУС: %s" % employee["status"]
+	personnel_strength.text = employee["strength"]
+	personnel_weakness.text = employee["weakness"]
+	personnel_traits.text = "ОСОБЕННОСТИ\n%s\n\nСПЕЦИАЛИЗАЦИЯ\n%s" % [employee["traits"], employee["core_actions"]]
 
 
 func _rebuild_jobs() -> void:
