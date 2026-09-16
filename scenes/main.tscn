@@ -22,3 +22,4 @@ mouse_filter = 2
 [node name="OfficeDashboard" parent="InterfaceLayer" instance=ExtResource("2_dashboard")]
 
 [node name="PauseMenu" parent="." instance=ExtResource("3_pause")]
+show_default_menu_button = false

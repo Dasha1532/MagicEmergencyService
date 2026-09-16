@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+@export var show_default_menu_button := true
+
 const COLOR_OVERLAY := Color(0.015, 0.012, 0.012, 0.76)
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.985)
 const COLOR_BUTTON := Color(0.13, 0.09, 0.055, 0.98)
@@ -49,6 +51,7 @@ func _build_interface() -> void:
 	menu_button.add_theme_stylebox_override("hover", _style(COLOR_HOVER, COLOR_GOLD, 2, 9))
 	menu_button.add_theme_stylebox_override("pressed", _style(Color(0.09, 0.15, 0.17), COLOR_GOLD, 3, 9))
 	menu_button.pressed.connect(_open_menu)
+	menu_button.visible = show_default_menu_button
 	add_child(menu_button)
 
 	overlay = Control.new()
@@ -173,6 +176,10 @@ func _toggle_menu() -> void:
 		_open_menu()
 
 
+func open_menu() -> void:
+	_open_menu()
+
+
 func _open_menu() -> void:
 	status_label.text = ""
 	load_button.disabled = not game_state.has_save()
@@ -185,7 +192,7 @@ func _open_menu() -> void:
 
 func _close_menu() -> void:
 	overlay.visible = false
-	menu_button.visible = true
+	menu_button.visible = show_default_menu_button
 	get_tree().paused = false
 
 

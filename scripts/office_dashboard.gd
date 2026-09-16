@@ -185,13 +185,61 @@ func _build_office_hub() -> void:
 	_connect_editable_hotspot($BookHotspots/IncidentArchive, "АРХИВ ПРОИСШЕСТВИЙ", "Так больше не делать.", _open_section.bind("АРХИВ ПРОИСШЕСТВИЙ", "Так больше не делать.", "Здесь будет сохраняться история решений, последствий и необычных аварий."))
 	_connect_editable_hotspot($ObjectHotspots/SupplyShop, "ЛАВКА СНАБЖЕНИЯ", "Очень нужные покупки", _open_section.bind("ЛАВКА СНАБЖЕНИЯ", "Очень нужные покупки", "Здесь можно будет покупать инструменты, магические предметы и учебные материалы."))
 
-	var hint := _label("Наведите курсор на предметы в офисе", 15, COLOR_PARCHMENT)
-	hint.position = Vector2(575, 852)
-	hint.size = Vector2(450, 30)
+	_build_office_menu_button()
+
+	var hint := _label("Наведите курсор. Кот занят важным, его не будите.", 19, COLOR_PARCHMENT)
+	hint.position = Vector2(470, 846)
+	hint.size = Vector2(660, 34)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hint.pivot_offset = hint.size * 0.5
+	hint.scale = Vector2(0.96, 0.96)
 	hub_layer.add_child(hint)
+	var pulse := create_tween().set_loops()
+	pulse.tween_property(hint, "scale", Vector2(1.04, 1.04), 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	pulse.tween_property(hint, "scale", Vector2(0.96, 0.96), 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	_build_section_dialog()
+
+
+func _build_office_menu_button() -> void:
+	var menu_texture := load("res://assets/ui/office_menu.png") as Texture2D
+	if menu_texture == null:
+		return
+
+	var button := TextureButton.new()
+	button.position = Vector2(-8, 650)
+	button.size = Vector2(350, 350)
+	button.texture_normal = menu_texture
+	button.ignore_texture_size = true
+	button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.tooltip_text = "Меню (Esc)"
+	button.pivot_offset = button.size * 0.5
+	button.z_index = 30
+
+	var image := menu_texture.get_image()
+	if image != null:
+		var click_mask := BitMap.new()
+		click_mask.create_from_image_alpha(image, 0.12)
+		button.texture_click_mask = click_mask
+
+	button.mouse_entered.connect(func() -> void:
+		var tween := create_tween()
+		tween.tween_property(button, "scale", Vector2(1.035, 1.035), 0.14)
+	)
+	button.mouse_exited.connect(func() -> void:
+		var tween := create_tween()
+		tween.tween_property(button, "scale", Vector2.ONE, 0.14)
+	)
+	button.pressed.connect(_open_pause_menu)
+	hub_layer.add_child(button)
+
+
+func _open_pause_menu() -> void:
+	var pause_menu := get_tree().current_scene.get_node_or_null("PauseMenu")
+	if pause_menu != null and pause_menu.has_method("open_menu"):
+		pause_menu.call("open_menu")
 
 
 func _add_hotspot(area: Rect2, title_text: String, subtitle_text: String, action: Callable) -> void:
