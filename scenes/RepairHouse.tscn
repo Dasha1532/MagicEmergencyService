@@ -1,29 +1,136 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://dcwngftrlv7p3"]
 
-[ext_resource type="Texture2D" path="res://assets/backgrounds/repair_house.png" id="1_house"]
+[ext_resource type="Texture2D" uid="uid://cwnu5ibpo6qmj" path="res://assets/backgrounds/repair_house.png" id="1_house"]
 [ext_resource type="PackedScene" path="res://scenes/ui/ToolBar.tscn" id="2_toolbar"]
 [ext_resource type="PackedScene" path="res://scenes/ui/RepairHUD.tscn" id="3_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="4_pause"]
+[ext_resource type="Texture2D" uid="uid://b185tabh6ktan" path="res://assets/objects/lava_faucet/faucet_normal.png" id="5_faucet_normal"]
+[ext_resource type="Texture2D" uid="uid://bmdxnerjnx4jk" path="res://assets/objects/lava_faucet/faucet_damaged.png" id="6_faucet_damaged"]
+[ext_resource type="Texture2D" uid="uid://cvaavce5gt0in" path="res://assets/objects/lava_faucet/lava_stream.png" id="7_lava_stream"]
+[ext_resource type="Script" uid="uid://bwf8yds8rjqdl" path="res://scripts/lava_faucet_object.gd" id="8_faucet_script"]
+[ext_resource type="Texture2D" uid="uid://c6j80jpcray8f" path="res://assets/backgrounds/bathroom_closeup.png" id="9_bathroom"]
+[ext_resource type="Script" uid="uid://ccxn3gc083ujx" path="res://scripts/repair_house.gd" id="10_repair_house"]
+[ext_resource type="Script" uid="uid://c1jf85t5ubqel" path="res://scripts/repair_editor_layout_switch.gd" id="11_editor_switch"]
 
-[node name="RepairHouse" type="Node2D"]
+[node name="RepairHouse" type="Node2D" unique_id=407365599]
+script = ExtResource("10_repair_house")
 
-[node name="Background" type="TextureRect" parent="."]
+[node name="Background" type="TextureRect" parent="." unique_id=1452718610]
+texture_filter = 1
 offset_right = 1600.0
 offset_bottom = 900.0
-texture_filter = 1
+mouse_filter = 2
+texture = ExtResource("1_house")
 expand_mode = 1
 stretch_mode = 6
-texture = ExtResource("1_house")
+
+[node name="BathroomPreviewBackdrop" type="ColorRect" parent="." unique_id=1125961363]
+offset_left = 1289.0
+offset_top = 4.0
+offset_right = 1599.0
+offset_bottom = 262.0
 mouse_filter = 2
+color = Color(0.055, 0.04, 0.025, 1)
 
-[node name="InteractiveObjects" type="Node2D" parent="."]
+[node name="BathroomPreview" type="TextureRect" parent="." unique_id=1435660915]
+texture_filter = 1
+offset_left = 1280.0
+offset_top = 34.0
+offset_right = 1599.0
+offset_bottom = 264.0
+mouse_filter = 2
+texture = ExtResource("9_bathroom")
+expand_mode = 1
 
-[node name="Effects" type="Node2D" parent="."]
+[node name="BathroomCloseup" type="TextureRect" parent="." unique_id=1515140181]
+visible = false
+texture_filter = 1
+offset_right = 1600.0
+offset_bottom = 900.0
+mouse_filter = 2
+texture = ExtResource("9_bathroom")
+expand_mode = 1
+stretch_mode = 6
 
-[node name="Interface" type="CanvasLayer" parent="."]
+[node name="BathroomHotspot" type="Button" parent="." unique_id=451442829]
+offset_left = 1283.0
+offset_right = 1596.0
+offset_bottom = 262.0
+tooltip_text = "Ванная • из крана течёт лава"
+mouse_default_cursor_shape = 2
 
-[node name="ToolBar" parent="Interface" instance=ExtResource("2_toolbar")]
+[node name="InteractiveObjects" type="Node2D" parent="." unique_id=843465227]
 
-[node name="RepairHUD" parent="Interface" instance=ExtResource("3_hud")]
+[node name="LavaFaucet" type="Control" parent="InteractiveObjects" unique_id=841803786]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+offset_left = 424.0
+offset_top = 374.0
+offset_right = 744.0
+offset_bottom = 580.0
+mouse_filter = 1
+script = ExtResource("8_faucet_script")
 
-[node name="PauseMenu" parent="." instance=ExtResource("4_pause")]
+[node name="NormalFaucet" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1560197138]
+layout_mode = 0
+offset_left = -175.0
+offset_top = -45.0
+offset_right = -22.0
+offset_bottom = 69.0
+mouse_filter = 2
+texture = ExtResource("5_faucet_normal")
+expand_mode = 1
+
+[node name="DamagedFaucet" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1738841380]
+layout_mode = 0
+offset_left = -172.0
+offset_top = -50.0
+offset_right = -24.0
+offset_bottom = 77.0
+mouse_filter = 2
+texture = ExtResource("6_faucet_damaged")
+expand_mode = 1
+
+[node name="LavaStream" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1665473835]
+layout_mode = 0
+offset_left = -112.0
+offset_top = 51.0
+offset_right = 15.0
+offset_bottom = 136.0
+mouse_filter = 2
+texture = ExtResource("7_lava_stream")
+expand_mode = 1
+
+[node name="HitArea" type="Button" parent="InteractiveObjects/LavaFaucet" unique_id=836482730]
+layout_mode = 0
+offset_right = 408.0
+offset_bottom = 576.0
+tooltip_text = "Аварийный кран: из трубы идёт лава"
+mouse_default_cursor_shape = 2
+
+[node name="Effects" type="Node2D" parent="." unique_id=1983280469]
+
+[node name="Interface" type="CanvasLayer" parent="." unique_id=659612193]
+
+[node name="ToolBar" parent="Interface" unique_id=900609496 instance=ExtResource("2_toolbar")]
+
+[node name="RepairHUD" parent="Interface" unique_id=158636053 instance=ExtResource("3_hud")]
+offset_left = -14.0
+offset_top = 4.0
+offset_bottom = 7.0
+
+[node name="BackToHouseButton" type="Button" parent="Interface" unique_id=1140171333]
+visible = false
+offset_left = 720.0
+offset_top = 24.0
+offset_right = 940.0
+offset_bottom = 78.0
+mouse_default_cursor_shape = 2
+text = "←  К ОБЗОРУ ДОМА"
+
+[node name="PauseMenu" parent="." unique_id=906320841 instance=ExtResource("4_pause")]
+show_default_menu_button = false
+
+[node name="RepairEditorLayoutSwitch" type="Node" parent="." unique_id=2081514589]
+script = ExtResource("11_editor_switch")

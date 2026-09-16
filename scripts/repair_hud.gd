@@ -9,12 +9,15 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 
 var selected_employee_id: StringName = &""
 var employee_box: VBoxContainer
+var employee_panel: Panel
+var complete_button: Button
 var tool_bar: MarginContainer
 @onready var game_state: Node = get_node("/root/GameState")
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tool_bar = get_node("../ToolBar")
 	if game_state.active_job_id.is_empty():
 		game_state.active_job_id = game_state.selected_job_id
@@ -45,23 +48,23 @@ func _build_job_header() -> void:
 
 
 func _build_employee_selector() -> void:
-	var panel := Panel.new()
-	panel.position = Vector2(20, 575)
-	panel.size = Vector2(286, 305)
-	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
-	add_child(panel)
+	employee_panel = Panel.new()
+	employee_panel.position = Vector2(20, 575)
+	employee_panel.size = Vector2(286, 305)
+	employee_panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
+	add_child(employee_panel)
 
 	var heading := _label("БРИГАДА", 19, COLOR_GOLD)
 	heading.position = Vector2(16, 12)
 	heading.size = Vector2(254, 28)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	panel.add_child(heading)
+	employee_panel.add_child(heading)
 
 	employee_box = VBoxContainer.new()
 	employee_box.position = Vector2(14, 49)
 	employee_box.size = Vector2(258, 238)
 	employee_box.add_theme_constant_override("separation", 8)
-	panel.add_child(employee_box)
+	employee_panel.add_child(employee_box)
 
 	var job: Dictionary = game_state.get_active_job()
 	var assigned: PackedStringArray = job.get("assigned", PackedStringArray())
@@ -116,16 +119,23 @@ func _build_return_button() -> void:
 
 
 func _build_complete_button() -> void:
-	var button := Button.new()
-	button.text = "ЗАВЕРШИТЬ РАБОТУ"
-	button.position = Vector2(1048, 24)
-	button.size = Vector2(255, 54)
-	button.add_theme_font_size_override("font_size", 17)
-	button.add_theme_color_override("font_color", COLOR_GOLD)
-	button.add_theme_stylebox_override("normal", _style(COLOR_SELECTED, COLOR_GOLD, 2, 8))
-	button.add_theme_stylebox_override("hover", _style(Color(0.18, 0.25, 0.20, 0.98), COLOR_GOLD, 3, 8))
-	button.pressed.connect(_complete_job)
-	add_child(button)
+	complete_button = Button.new()
+	complete_button.text = "ЗАВЕРШИТЬ РАБОТУ"
+	complete_button.position = Vector2(1048, 24)
+	complete_button.size = Vector2(255, 54)
+	complete_button.add_theme_font_size_override("font_size", 17)
+	complete_button.add_theme_color_override("font_color", COLOR_GOLD)
+	complete_button.add_theme_stylebox_override("normal", _style(COLOR_SELECTED, COLOR_GOLD, 2, 8))
+	complete_button.add_theme_stylebox_override("hover", _style(Color(0.18, 0.25, 0.20, 0.98), COLOR_GOLD, 3, 8))
+	complete_button.pressed.connect(_complete_job)
+	add_child(complete_button)
+
+
+func set_work_ui_visible(is_visible: bool) -> void:
+	if employee_panel != null:
+		employee_panel.visible = is_visible
+	if complete_button != null:
+		complete_button.visible = is_visible
 
 
 func _select_first_employee() -> void:
