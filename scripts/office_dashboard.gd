@@ -908,7 +908,9 @@ func _refresh_details() -> void:
 		assignment_label.text = "Бригада:\n%s" % ", ".join(names)
 
 	warning_label.text = ""
-	if not assigned.is_empty():
+	if game_state.get_job_repair_scene(selected_job_id).is_empty():
+		warning_label.text = "Объект этой заявки ещё готовится. Выезд пока недоступен."
+	elif not assigned.is_empty():
 		for other_job_id: StringName in game_state.jobs:
 			if other_job_id == selected_job_id:
 				continue
@@ -932,8 +934,12 @@ func _toggle_employee(employee_id: StringName) -> void:
 
 
 func _depart() -> void:
+	var repair_scene: String = game_state.get_job_repair_scene(selected_job_id)
+	if repair_scene.is_empty():
+		warning_label.text = "Для этой заявки ещё не подготовлена отдельная локация."
+		return
 	if game_state.begin_job(selected_job_id):
-		get_tree().change_scene_to_file("res://scenes/RepairHouse.tscn")
+		get_tree().change_scene_to_file(repair_scene)
 
 
 func _panel(panel_position: Vector2, panel_size: Vector2, radius: int) -> Panel:

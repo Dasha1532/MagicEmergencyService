@@ -4,7 +4,7 @@ signal state_changed
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 3
+const SAVE_VERSION: int = 4
 const SAVE_PATH: String = "user://savegame.json"
 const SUPPLY_ITEMS: Dictionary = {
 	&"animation_kit": {
@@ -35,6 +35,7 @@ var owned_supply_items: PackedStringArray = PackedStringArray()
 var completed_job_ids: PackedStringArray = PackedStringArray()
 var job_reports: Array = []
 var pending_job_report: Dictionary = {}
+var job_repair_states: Dictionary = {}
 
 var employees: Dictionary = {
 	&"liliya": {
@@ -132,6 +133,7 @@ var jobs: Dictionary = {
 		"time_left": 95,
 		"danger": "Огонь • давление",
 		"base_reward": 500,
+		"repair_scene": "res://scenes/RepairHouse.tscn",
 		"assigned": PackedStringArray(),
 	},
 	&"walking_wardrobe": {
@@ -143,6 +145,7 @@ var jobs: Dictionary = {
 		"time_left": 180,
 		"danger": "Магия • шум",
 		"base_reward": 420,
+		"repair_scene": "",
 		"assigned": PackedStringArray(),
 	},
 }
@@ -287,8 +290,35 @@ func get_active_job() -> Dictionary:
 	return {}
 
 
+func get_job_repair_scene(job_id: StringName) -> String:
+	if not jobs.has(job_id):
+		return ""
+	return str(jobs[job_id].get("repair_scene", ""))
+
+
+func get_active_job_repair_scene() -> String:
+	return get_job_repair_scene(active_job_id)
+
+
+func get_job_repair_state(job_id: StringName) -> Dictionary:
+	var state: Variant = job_repair_states.get(String(job_id), {})
+	if state is Dictionary:
+		var state_dictionary: Dictionary = state
+		return state_dictionary.duplicate(true)
+	return {}
+
+
+func set_job_repair_state(job_id: StringName, repair_state: Dictionary) -> void:
+	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
+		return
+	job_repair_states[String(job_id)] = repair_state.duplicate(true)
+	state_changed.emit()
+
+
 func begin_job(job_id: StringName) -> bool:
 	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
+		return false
+	if get_job_repair_scene(job_id).is_empty():
 		return false
 	var assigned: PackedStringArray = jobs[job_id]["assigned"]
 	if assigned.is_empty():
@@ -332,6 +362,7 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		"actions": result.get("actions", []),
 	}
 	job_reports.append(pending_job_report.duplicate(true))
+	job_repair_states.erase(String(completed_id))
 	active_job_id = &""
 	_update_employee_statuses()
 	state_changed.emit()
@@ -362,6 +393,7 @@ func start_new_game() -> void:
 	completed_job_ids = PackedStringArray()
 	job_reports = []
 	pending_job_report = {}
+	job_repair_states = {}
 
 	for job_id: StringName in jobs:
 		var job: Dictionary = jobs[job_id]
@@ -416,6 +448,7 @@ func save_game() -> Error:
 		"completed_job_ids": Array(completed_job_ids),
 		"job_reports": job_reports,
 		"pending_job_report": pending_job_report,
+		"job_repair_states": job_repair_states,
 		"job_assignments": job_assignments,
 		"employee_progress": employee_progress,
 	}
@@ -454,6 +487,8 @@ func load_game() -> Error:
 	selected_job_id = loaded_selected if jobs.has(loaded_selected) else &"lava_leak"
 	var loaded_active := StringName(save_data.get("active_job_id", ""))
 	active_job_id = loaded_active if jobs.has(loaded_active) else &""
+	if not active_job_id.is_empty() and get_active_job_repair_scene().is_empty():
+		active_job_id = &""
 
 	owned_supply_items = PackedStringArray()
 	var loaded_supply_items: Array = save_data.get("owned_supply_items", [])
@@ -482,6 +517,16 @@ func load_game() -> Error:
 		pending_job_report = pending_report.duplicate(true)
 	else:
 		pending_job_report = {}
+
+	job_repair_states = {}
+	var loaded_repair_states: Variant = save_data.get("job_repair_states", {})
+	if loaded_repair_states is Dictionary:
+		for loaded_job_id: Variant in loaded_repair_states:
+			var repair_job_id := StringName(str(loaded_job_id))
+			var loaded_state: Variant = loaded_repair_states[loaded_job_id]
+			if jobs.has(repair_job_id) and not completed_job_ids.has(String(repair_job_id)) and loaded_state is Dictionary:
+				var loaded_state_dictionary: Dictionary = loaded_state
+				job_repair_states[String(repair_job_id)] = loaded_state_dictionary.duplicate(true)
 
 	var job_assignments: Dictionary = save_data.get("job_assignments", {})
 	for job_id: StringName in jobs:

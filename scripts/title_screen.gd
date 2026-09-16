@@ -223,8 +223,9 @@ func _continue_game() -> void:
 		status_label.text = "Не удалось загрузить сохранение. Код ошибки: %d" % error
 		return
 	var target_scene := "res://scenes/main.tscn"
-	if not game_state.active_job_id.is_empty():
-		target_scene = "res://scenes/RepairHouse.tscn"
+	var repair_scene: String = game_state.get_active_job_repair_scene()
+	if not repair_scene.is_empty():
+		target_scene = repair_scene
 	get_tree().change_scene_to_file(target_scene)
 
 

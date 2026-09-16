@@ -17,6 +17,7 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 @onready var repair_hud: Control = $Interface/RepairHUD
 @onready var feedback_panel: Panel = $Interface/ActionFeedback
 @onready var feedback_label: Label = $Interface/ActionFeedback/Message
+@onready var game_state: Node = get_node("/root/GameState")
 
 var simulation: RepairSimulation
 var selected_tool_id: StringName = &"freeze"
@@ -24,7 +25,11 @@ var selected_employee_id: StringName = &""
 
 
 func _ready() -> void:
+	if game_state.active_job_id != &"lava_leak":
+		get_tree().change_scene_to_file("res://scenes/main.tscn")
+		return
 	simulation = RepairSimulationScript.new()
+	simulation.load_state(game_state.get_job_repair_state(game_state.active_job_id))
 	_configure_buttons()
 	bathroom_hotspot.pressed.connect(_open_bathroom)
 	back_to_house_button.pressed.connect(_show_house_overview)
@@ -34,7 +39,7 @@ func _ready() -> void:
 	lava_faucet.selected.connect(_apply_selected_action)
 	selected_tool_id = tool_bar.get_selected_tool_id()
 	selected_employee_id = repair_hud.get_selected_employee_id()
-	repair_hud.set_completion_ready(false)
+	_restore_repair_state()
 	_show_house_overview(false)
 
 
@@ -122,15 +127,29 @@ func _apply_selected_action() -> void:
 		lava_faucet.show_overheated_state()
 	_show_feedback(str(result["message"]), not bool(result["applied"]))
 	repair_hud.set_completion_ready(bool(result["resolved"]))
+	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 
 
 func _attempt_complete_job() -> void:
 	if not simulation.is_resolved():
 		_show_feedback("Работу нельзя завершить: лава всё ещё течёт.", true)
 		return
-	var game_state: Node = get_node("/root/GameState")
 	if game_state.complete_active_job(simulation.get_completion_result()):
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+
+func _restore_repair_state() -> void:
+	var visual_state: StringName = simulation.world_object.get("visual_state", &"emergency")
+	if visual_state == &"repaired":
+		lava_faucet.show_repaired_state()
+		_show_feedback("Кран исправен. Работу можно завершить.")
+	elif visual_state == &"overheated":
+		lava_faucet.show_overheated_state()
+		_show_feedback("Кран перегрет. Остановите поток лавы перед завершением работы.", true)
+	else:
+		lava_faucet.show_emergency_state()
+		_show_feedback("Выберите действие сотрудника и примените его к аварийному крану.")
+	repair_hud.set_completion_ready(simulation.is_resolved())
 
 
 func _show_feedback(message: String, is_warning: bool = false) -> void:

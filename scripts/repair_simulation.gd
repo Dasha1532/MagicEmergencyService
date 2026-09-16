@@ -32,6 +32,39 @@ var world_object: Dictionary = {
 var action_log: Array[Dictionary] = []
 
 
+func load_state(saved_state: Dictionary) -> void:
+	if saved_state.is_empty():
+		return
+	var saved_object: Variant = saved_state.get("world_object", {})
+	if saved_object is Dictionary:
+		var saved_object_dictionary: Dictionary = saved_object
+		var restored_object: Dictionary = saved_object_dictionary.duplicate(true)
+		var restored_tags := PackedStringArray()
+		for tag: Variant in restored_object.get("tags", []):
+			restored_tags.append(str(tag))
+		restored_object["tags"] = restored_tags
+		restored_object["definition_id"] = StringName(str(restored_object.get("definition_id", "lava_faucet")))
+		restored_object["visual_state"] = StringName(str(restored_object.get("visual_state", "emergency")))
+		world_object.merge(restored_object, true)
+
+	action_log.clear()
+	var saved_actions: Variant = saved_state.get("action_log", [])
+	if saved_actions is Array:
+		for saved_action: Variant in saved_actions:
+			if saved_action is Dictionary:
+				var saved_action_dictionary: Dictionary = saved_action
+				action_log.append(saved_action_dictionary.duplicate(true))
+
+
+func get_state() -> Dictionary:
+	var saved_object := world_object.duplicate(true)
+	saved_object["tags"] = Array(_tags())
+	return {
+		"world_object": saved_object,
+		"action_log": action_log.duplicate(true),
+	}
+
+
 func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
 	for rule: Dictionary in REACTION_RULES:
 		if rule["action_id"] != action_id or not _matches(rule):
