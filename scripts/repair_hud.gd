@@ -1,5 +1,8 @@
 extends Control
 
+signal employee_selected(employee_id: StringName)
+signal completion_requested
+
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
 const COLOR_CARD := Color(0.13, 0.09, 0.055, 0.96)
 const COLOR_SELECTED := Color(0.10, 0.16, 0.18, 0.98)
@@ -138,6 +141,17 @@ func set_work_ui_visible(is_visible: bool) -> void:
 		complete_button.visible = is_visible
 
 
+func set_completion_ready(is_ready: bool) -> void:
+	if complete_button == null:
+		return
+	complete_button.disabled = not is_ready
+	complete_button.tooltip_text = "" if is_ready else "Сначала устраните причину аварии"
+
+
+func get_selected_employee_id() -> StringName:
+	return selected_employee_id
+
+
 func _select_first_employee() -> void:
 	var job: Dictionary = game_state.get_active_job()
 	var assigned: PackedStringArray = job.get("assigned", PackedStringArray())
@@ -157,6 +171,7 @@ func _select_employee(employee_id: StringName) -> void:
 	var employee: Dictionary = game_state.employees[employee_id]
 	tool_bar.visible = true
 	tool_bar.configure_for_employee(employee["name"], employee["abilities"], employee["core_actions"])
+	employee_selected.emit(employee_id)
 
 
 func _return_to_office() -> void:
@@ -165,8 +180,7 @@ func _return_to_office() -> void:
 
 
 func _complete_job() -> void:
-	if game_state.complete_active_job():
-		get_tree().change_scene_to_file("res://scenes/main.tscn")
+	completion_requested.emit()
 
 
 func _label(text_value: String, font_size: int, color: Color) -> Label:

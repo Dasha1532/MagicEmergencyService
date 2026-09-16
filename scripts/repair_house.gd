@@ -1,5 +1,7 @@
 extends Node2D
 
+const RepairSimulationScript := preload("res://scripts/repair_simulation.gd")
+
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
 const COLOR_GOLD := Color(0.96, 0.78, 0.46)
 const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
@@ -13,12 +15,26 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 @onready var back_to_house_button: Button = $Interface/BackToHouseButton
 @onready var tool_bar: Control = $Interface/ToolBar
 @onready var repair_hud: Control = $Interface/RepairHUD
+@onready var feedback_panel: Panel = $Interface/ActionFeedback
+@onready var feedback_label: Label = $Interface/ActionFeedback/Message
+
+var simulation: RepairSimulation
+var selected_tool_id: StringName = &"freeze"
+var selected_employee_id: StringName = &""
 
 
 func _ready() -> void:
+	simulation = RepairSimulationScript.new()
 	_configure_buttons()
 	bathroom_hotspot.pressed.connect(_open_bathroom)
 	back_to_house_button.pressed.connect(_show_house_overview)
+	tool_bar.tool_selected.connect(_on_tool_selected)
+	repair_hud.employee_selected.connect(_on_employee_selected)
+	repair_hud.completion_requested.connect(_attempt_complete_job)
+	lava_faucet.selected.connect(_apply_selected_action)
+	selected_tool_id = tool_bar.get_selected_tool_id()
+	selected_employee_id = repair_hud.get_selected_employee_id()
+	repair_hud.set_completion_ready(false)
 	_show_house_overview(false)
 
 
@@ -40,6 +56,7 @@ func _open_bathroom() -> void:
 	tool_bar.visible = true
 	if repair_hud.has_method("set_work_ui_visible"):
 		repair_hud.call("set_work_ui_visible", true)
+	feedback_panel.visible = true
 
 
 func _show_house_overview(animated: bool = true) -> void:
@@ -52,6 +69,7 @@ func _show_house_overview(animated: bool = true) -> void:
 	tool_bar.visible = false
 	if repair_hud.has_method("set_work_ui_visible"):
 		repair_hud.call("set_work_ui_visible", false)
+	feedback_panel.visible = false
 	if not animated:
 		closeup_background.visible = false
 		return
@@ -78,6 +96,46 @@ func _configure_buttons() -> void:
 	back_to_house_button.add_theme_color_override("font_color", COLOR_PARCHMENT)
 	back_to_house_button.add_theme_stylebox_override("normal", _button_style(COLOR_PANEL, Color(0.76, 0.54, 0.27), 2))
 	back_to_house_button.add_theme_stylebox_override("hover", _button_style(Color(0.21, 0.14, 0.075, 0.98), COLOR_GOLD, 3))
+	feedback_panel.add_theme_stylebox_override("panel", _button_style(COLOR_PANEL, Color(0.76, 0.54, 0.27), 2))
+
+
+func _on_tool_selected(tool_id: StringName) -> void:
+	selected_tool_id = tool_id
+
+
+func _on_employee_selected(employee_id: StringName) -> void:
+	selected_employee_id = employee_id
+
+
+func _apply_selected_action() -> void:
+	if selected_employee_id.is_empty():
+		_show_feedback("Сначала выберите сотрудника из бригады.", true)
+		return
+	if selected_tool_id.is_empty():
+		_show_feedback("У выбранного сотрудника нет подходящего действия для этого объекта.", true)
+		return
+	var result: Dictionary = simulation.apply_action(selected_employee_id, selected_tool_id)
+	var visual_state: StringName = result.get("visual_state", &"emergency")
+	if visual_state == &"repaired":
+		lava_faucet.show_repaired_state()
+	elif visual_state == &"overheated":
+		lava_faucet.show_overheated_state()
+	_show_feedback(str(result["message"]), not bool(result["applied"]))
+	repair_hud.set_completion_ready(bool(result["resolved"]))
+
+
+func _attempt_complete_job() -> void:
+	if not simulation.is_resolved():
+		_show_feedback("Работу нельзя завершить: лава всё ещё течёт.", true)
+		return
+	var game_state: Node = get_node("/root/GameState")
+	if game_state.complete_active_job(simulation.get_completion_result()):
+		get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+
+func _show_feedback(message: String, is_warning: bool = false) -> void:
+	feedback_label.text = message
+	feedback_label.add_theme_color_override("font_color", Color(1.0, 0.58, 0.35) if is_warning else COLOR_PARCHMENT)
 
 
 func _button_style(background: Color, border: Color, width: int) -> StyleBoxFlat:

@@ -104,8 +104,10 @@ expand_mode = 1
 
 [node name="HitArea" type="Button" parent="InteractiveObjects/LavaFaucet" unique_id=836482730]
 layout_mode = 0
-offset_right = 408.0
-offset_bottom = 576.0
+offset_left = -190.0
+offset_top = -62.0
+offset_right = 34.0
+offset_bottom = 158.0
 tooltip_text = "Аварийный кран: из трубы идёт лава"
 mouse_default_cursor_shape = 2
 
@@ -128,6 +130,32 @@ offset_right = 940.0
 offset_bottom = 78.0
 mouse_default_cursor_shape = 2
 text = "←  К ОБЗОРУ ДОМА"
+
+[node name="ActionFeedback" type="Panel" parent="Interface"]
+visible = false
+offset_left = 572.0
+offset_top = 174.0
+offset_right = 1152.0
+offset_bottom = 232.0
+mouse_filter = 2
+
+[node name="Message" type="Label" parent="Interface/ActionFeedback"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = 8.0
+offset_right = -14.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.92, 0.84, 0.69, 1)
+theme_override_font_sizes/font_size = 16
+text = "Выберите действие сотрудника и примените его к аварийному крану."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
 
 [node name="PauseMenu" parent="." unique_id=906320841 instance=ExtResource("4_pause")]
 show_default_menu_button = false

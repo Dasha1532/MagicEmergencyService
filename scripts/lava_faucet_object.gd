@@ -24,6 +24,14 @@ func show_repaired_state() -> void:
 	normal_faucet.visible = true
 	damaged_faucet.visible = false
 	lava_stream.visible = false
+	modulate = Color.WHITE
+
+
+func show_overheated_state() -> void:
+	normal_faucet.visible = false
+	damaged_faucet.visible = true
+	lava_stream.visible = true
+	modulate = Color(1.22, 0.72, 0.52, 1.0)
 
 
 func _configure_hit_area() -> void:

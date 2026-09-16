@@ -18,6 +18,7 @@ const TOOL_NAMES: Dictionary = {
 	%AnimateButton,
 	%AntimagicButton,
 ]
+var current_tool_id: StringName = &"freeze"
 
 
 func _ready() -> void:
@@ -40,7 +41,13 @@ func configure_for_employee(employee_name: String, ability_ids: PackedStringArra
 	if first_available != null:
 		first_available.button_pressed = true
 	else:
+		current_tool_id = &""
 		title_label.text = "%s  •  %s" % [employee_name, core_actions]
+		tool_selected.emit(current_tool_id)
+
+
+func get_selected_tool_id() -> StringName:
+	return current_tool_id
 
 
 func _on_button_toggled(is_pressed: bool, button: Button) -> void:
@@ -48,5 +55,6 @@ func _on_button_toggled(is_pressed: bool, button: Button) -> void:
 		return
 
 	var tool_data: Array = TOOL_NAMES[button.name]
+	current_tool_id = tool_data[0]
 	title_label.text = "Набор инструментов  •  выбран: %s" % tool_data[1]
-	tool_selected.emit(tool_data[0])
+	tool_selected.emit(current_tool_id)

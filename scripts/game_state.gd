@@ -303,14 +303,14 @@ func leave_active_job() -> void:
 	state_changed.emit()
 
 
-func complete_active_job() -> bool:
+func complete_active_job(result: Dictionary = {}) -> bool:
 	if active_job_id.is_empty() or not jobs.has(active_job_id):
 		return false
 	var completed_id: StringName = active_job_id
 	if completed_job_ids.has(String(completed_id)):
 		return false
 	var job: Dictionary = jobs[completed_id]
-	var reward: int = maxi(0, int(job.get("base_reward", 0)))
+	var reward: int = maxi(0, int(job.get("base_reward", 0)) + int(result.get("reward_adjustment", 0)))
 	var assigned: PackedStringArray = job["assigned"]
 	var crew_names: PackedStringArray = PackedStringArray()
 	for employee_id: String in assigned:
@@ -318,6 +318,7 @@ func complete_active_job() -> bool:
 		if employees.has(employee_key):
 			crew_names.append(str(employees[employee_key]["name"]))
 	money += reward
+	reputation = maxi(0, reputation + int(result.get("reputation_change", 0)))
 	completed_job_ids.append(String(completed_id))
 	job["assigned"] = PackedStringArray()
 	jobs[completed_id] = job
@@ -327,7 +328,8 @@ func complete_active_job() -> bool:
 		"resident": str(job["resident"]),
 		"reward": reward,
 		"crew": Array(crew_names),
-		"summary": "Аварийные работы приняты. Подробная оценка ущерба появится после подключения системы объектов.",
+		"summary": str(result.get("summary", "Аварийные работы приняты.")),
+		"actions": result.get("actions", []),
 	}
 	job_reports.append(pending_job_report.duplicate(true))
 	active_job_id = &""
