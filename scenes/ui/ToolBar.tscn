@@ -1,9 +1,10 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/tool_bar.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/icons/tools/tool_freeze.png" id="2_freeze"]
 [ext_resource type="Texture2D" path="res://assets/icons/tools/tool_heat.png" id="3_heat"]
 [ext_resource type="Texture2D" path="res://assets/icons/tools/tool_move.png" id="4_move"]
+[ext_resource type="Texture2D" path="res://assets/icons/tools/tool_physical_move.png" id="4_physical_move"]
 [ext_resource type="Texture2D" path="res://assets/icons/tools/tool_animate.png" id="5_animate"]
 [ext_resource type="Texture2D" path="res://assets/icons/tools/tool_antimagic.png" id="6_antimagic"]
 
@@ -175,7 +176,7 @@ stretch_mode = 5
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 84)
 layout_mode = 2
-tooltip_text = "Перемещение — переносит объект в допустимую точку"
+tooltip_text = "Телекинез — магически переносит объект в допустимую точку"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_tools")
 theme_override_styles/normal = SubResource("StyleBox_normal")
@@ -197,6 +198,35 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("4_move")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PhysicalMoveButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 84)
+layout_mode = 2
+tooltip_text = "Силовая работа — позволяет физически удержать, сдвинуть или демонтировать объект"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_tools")
+theme_override_styles/normal = SubResource("StyleBox_normal")
+theme_override_styles/hover = SubResource("StyleBox_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pressed")
+theme_override_styles/hover_pressed = SubResource("StyleBox_pressed")
+theme_override_styles/focus = SubResource("StyleBox_hover")
+
+[node name="Icon" type="TextureRect" parent="Panel/ContentMargin/Content/Buttons/PhysicalMoveButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_physical_move")
 expand_mode = 1
 stretch_mode = 5
 

@@ -11,7 +11,7 @@ const COLOR_GOLD := Color(0.96, 0.78, 0.46)
 const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 
 var selected_employee_id: StringName = &""
-var employee_box: VBoxContainer
+var employee_box: HBoxContainer
 var employee_panel: Panel
 var complete_button: Button
 var tool_bar: MarginContainer
@@ -52,22 +52,28 @@ func _build_job_header() -> void:
 
 func _build_employee_selector() -> void:
 	employee_panel = Panel.new()
-	employee_panel.position = Vector2(20, 575)
-	employee_panel.size = Vector2(286, 305)
+	employee_panel.position = Vector2(20, 745)
+	employee_panel.size = Vector2(930, 135)
 	employee_panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
 	add_child(employee_panel)
 
 	var heading := _label("БРИГАДА", 19, COLOR_GOLD)
-	heading.position = Vector2(16, 12)
-	heading.size = Vector2(254, 28)
+	heading.position = Vector2(16, 6)
+	heading.size = Vector2(898, 28)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	employee_panel.add_child(heading)
 
-	employee_box = VBoxContainer.new()
-	employee_box.position = Vector2(14, 49)
-	employee_box.size = Vector2(258, 238)
-	employee_box.add_theme_constant_override("separation", 8)
-	employee_panel.add_child(employee_box)
+	var employee_scroll := ScrollContainer.new()
+	employee_scroll.position = Vector2(12, 38)
+	employee_scroll.size = Vector2(906, 87)
+	employee_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	employee_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	employee_panel.add_child(employee_scroll)
+
+	employee_box = HBoxContainer.new()
+	employee_box.custom_minimum_size = Vector2(906, 76)
+	employee_box.add_theme_constant_override("separation", 7)
+	employee_scroll.add_child(employee_box)
 
 	var job: Dictionary = game_state.get_active_job()
 	var assigned: PackedStringArray = job.get("assigned", PackedStringArray())
@@ -78,11 +84,7 @@ func _build_employee_selector() -> void:
 func _add_employee_button(employee_id: StringName) -> void:
 	var employee: Dictionary = game_state.employees[employee_id]
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(258, 70)
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.text = "              %s\n              %s" % [employee["name"], employee["core_actions"]]
-	button.add_theme_font_size_override("font_size", 14)
-	button.add_theme_color_override("font_color", COLOR_PARCHMENT)
+	button.custom_minimum_size = Vector2(297, 76)
 	button.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_BRASS, 2, 7))
 	button.add_theme_stylebox_override("hover", _style(Color(0.21, 0.14, 0.075, 0.98), COLOR_GOLD, 2, 7))
 	button.add_theme_stylebox_override("pressed", _style(COLOR_SELECTED, COLOR_GOLD, 3, 7))
@@ -91,8 +93,8 @@ func _add_employee_button(employee_id: StringName) -> void:
 	button.set_meta("employee_id", employee_id)
 
 	var portrait_frame := Panel.new()
-	portrait_frame.position = Vector2(6, 5)
-	portrait_frame.size = Vector2(58, 60)
+	portrait_frame.position = Vector2(7, 5)
+	portrait_frame.size = Vector2(68, 66)
 	portrait_frame.clip_contents = true
 	portrait_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait_frame.add_theme_stylebox_override("panel", _style(Color(0.035, 0.03, 0.028, 1), COLOR_BRASS, 1, 5))
@@ -100,12 +102,27 @@ func _add_employee_button(employee_id: StringName) -> void:
 
 	var portrait := TextureRect.new()
 	portrait.position = Vector2(1, 1)
-	portrait.size = Vector2(56, 59)
+	portrait.size = Vector2(66, 64)
 	portrait.texture = _cropped_portrait(employee["portrait"])
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait_frame.add_child(portrait)
+
+	var name_label := _label(str(employee["name"]), 15, COLOR_GOLD)
+	name_label.position = Vector2(82, 6)
+	name_label.size = Vector2(203, 26)
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	button.add_child(name_label)
+
+	var role_label := _label(str(employee["core_actions"]), 13, COLOR_PARCHMENT)
+	role_label.position = Vector2(82, 30)
+	role_label.size = Vector2(203, 40)
+	role_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	role_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	role_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	button.add_child(role_label)
 
 
 func _build_return_button() -> void:

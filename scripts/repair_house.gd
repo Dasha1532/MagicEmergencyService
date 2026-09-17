@@ -53,6 +53,7 @@ func _ready() -> void:
 
 func _open_bathroom() -> void:
 	bathroom_hotspot.disabled = true
+	bathroom_hotspot.visible = false
 	problem_room_marker.visible = false
 	lower_floor_consequence.visible = false
 	closeup_background.visible = true
@@ -82,6 +83,7 @@ func _show_house_overview(animated: bool = true) -> void:
 	overview_background.visible = true
 	bathroom_preview_backdrop.visible = true
 	bathroom_preview.visible = true
+	bathroom_hotspot.visible = true
 	bathroom_hotspot.disabled = false
 	problem_room_marker.visible = not simulation.is_resolved()
 	lower_floor_consequence.visible = _has_damage()

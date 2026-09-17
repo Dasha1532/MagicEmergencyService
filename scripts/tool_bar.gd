@@ -5,7 +5,8 @@ signal tool_selected(tool_id: StringName)
 const TOOL_NAMES: Dictionary = {
 	"FreezeButton": [&"freeze", "Заморозка"],
 	"HeatButton": [&"heat", "Нагрев"],
-	"MoveButton": [&"move", "Перемещение"],
+	"MoveButton": [&"telekinesis", "Телекинез"],
+	"PhysicalMoveButton": [&"physical_move", "Силовая работа"],
 	"AnimateButton": [&"animate", "Оживление"],
 	"AntimagicButton": [&"antimagic", "Антимагия"],
 }
@@ -15,6 +16,7 @@ const TOOL_NAMES: Dictionary = {
 	%FreezeButton,
 	%HeatButton,
 	%MoveButton,
+	%PhysicalMoveButton,
 	%AnimateButton,
 	%AntimagicButton,
 ]

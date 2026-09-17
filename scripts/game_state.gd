@@ -4,7 +4,7 @@ signal state_changed
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 4
+const SAVE_VERSION: int = 5
 const SAVE_PATH: String = "user://savegame.json"
 const SUPPLY_ITEMS: Dictionary = {
 	&"animation_kit": {
@@ -68,7 +68,7 @@ var employees: Dictionary = {
 		"actor_work_pose_offset": Vector2.ZERO,
 		"status": "Свободен",
 		"idle_status": "Свободен",
-		"abilities": PackedStringArray(["move"]),
+		"abilities": PackedStringArray(["physical_move"]),
 		"training_categories": PackedStringArray(["physical"]),
 		"max_special_abilities": 2,
 		"core_actions": "Удержание и силовая работа",
@@ -409,7 +409,7 @@ func start_new_game() -> void:
 		jobs[job_id] = job
 
 	_reset_employee(&"liliya", true, PackedStringArray(["freeze", "heat"]), "Свободна")
-	_reset_employee(&"grog", true, PackedStringArray(["move"]), "Свободен")
+	_reset_employee(&"grog", true, PackedStringArray(["physical_move"]), "Свободен")
 	_reset_employee(&"boris", true, PackedStringArray(), "Свободен")
 	_reset_employee(&"nika", false, PackedStringArray(), "Не нанята")
 	_reset_employee(&"felix", false, PackedStringArray(["antimagic"]), "Не нанят")
@@ -557,6 +557,9 @@ func load_game() -> Error:
 		var loaded_employee: Dictionary = employee_progress[String(employee_id)]
 		employee["available"] = bool(loaded_employee.get("available", employee["available"]))
 		var loaded_abilities: Array = loaded_employee.get("abilities", Array(employee["abilities"]))
+		for ability_index in loaded_abilities.size():
+			if str(loaded_abilities[ability_index]) == "move":
+				loaded_abilities[ability_index] = "physical_move" if employee_id == &"grog" else "telekinesis"
 		employee["abilities"] = PackedStringArray(loaded_abilities)
 		var loaded_training_id := StringName(str(loaded_employee.get("training_id", "")))
 		employee["training_id"] = loaded_training_id if TRAINING_DEFINITIONS.has(loaded_training_id) else &""
