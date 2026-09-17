@@ -4,16 +4,45 @@ signal action_impact(action_id: StringName)
 signal action_finished
 
 @onready var neutral_pose: TextureRect = $NeutralPose
-@onready var cast_pose: TextureRect = $CastPose
+@onready var work_pose: TextureRect = $WorkPose
 
 var idle_tween: Tween
 var action_in_progress: bool = false
+var employee_id: StringName = &""
+var action_style: StringName = &"magic"
 
 
 func _ready() -> void:
 	pivot_offset = Vector2(size.x * 0.5, size.y)
+	_reset_pose_visibility()
 	if not Engine.is_editor_hint():
 		_start_idle_motion()
+
+
+func configure_employee(new_employee_id: StringName, employee_data: Dictionary) -> bool:
+	var neutral_path := str(employee_data.get("actor_neutral_pose", ""))
+	var work_path := str(employee_data.get("actor_work_pose", ""))
+	if neutral_path.is_empty() or work_path.is_empty():
+		employee_id = &""
+		return false
+	employee_id = new_employee_id
+	action_style = StringName(str(employee_data.get("actor_action_style", "magic")))
+	neutral_pose.texture = load(neutral_path)
+	work_pose.texture = load(work_path)
+	var work_offset: Vector2 = employee_data.get("actor_work_pose_offset", Vector2.ZERO)
+	work_pose.offset_left = work_offset.x
+	work_pose.offset_top = work_offset.y
+	work_pose.offset_right = work_offset.x
+	work_pose.offset_bottom = work_offset.y
+	_reset_pose_visibility()
+	return neutral_pose.texture != null and work_pose.texture != null
+
+
+func _reset_pose_visibility() -> void:
+	neutral_pose.visible = true
+	neutral_pose.modulate = Color.WHITE
+	work_pose.visible = false
+	work_pose.modulate = Color(1, 1, 1, 0)
 
 
 func _start_idle_motion() -> void:
@@ -34,13 +63,33 @@ func play_action(action_id: StringName, target_global_position: Vector2) -> void
 		idle_tween.pause()
 	rotation = 0.0
 	scale = Vector2.ONE
-	cast_pose.visible = true
-	cast_pose.modulate = Color(1, 1, 1, 0)
+	work_pose.visible = true
+	work_pose.modulate = Color(1, 1, 1, 0)
 	var pose_tween := create_tween().set_parallel(true)
 	pose_tween.tween_property(neutral_pose, "modulate", Color(1, 1, 1, 0), 0.18)
-	pose_tween.tween_property(cast_pose, "modulate", Color.WHITE, 0.18)
+	pose_tween.tween_property(work_pose, "modulate", Color.WHITE, 0.18)
 	await pose_tween.finished
 
+	if action_style == &"magic":
+		await _play_magic_impact(action_id, target_global_position)
+	else:
+		await get_tree().create_timer(0.38).timeout
+		action_impact.emit(action_id)
+		await get_tree().create_timer(0.16).timeout
+
+	var return_tween := create_tween().set_parallel(true)
+	return_tween.tween_property(work_pose, "modulate", Color(1, 1, 1, 0), 0.22)
+	return_tween.tween_property(neutral_pose, "modulate", Color.WHITE, 0.22)
+	await return_tween.finished
+	work_pose.visible = false
+	neutral_pose.modulate = Color.WHITE
+	action_in_progress = false
+	if idle_tween != null:
+		idle_tween.play()
+	action_finished.emit()
+
+
+func _play_magic_impact(action_id: StringName, target_global_position: Vector2) -> void:
 	var charge := _create_charge_effect(action_id)
 	var charge_tween := create_tween().set_parallel(true)
 	charge_tween.tween_property(charge, "scale", Vector2(1.15, 1.15), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -61,17 +110,6 @@ func play_action(action_id: StringName, target_global_position: Vector2) -> void
 	flash.tween_property(projectile, "modulate", Color(1, 1, 1, 0), 0.13)
 	await flash.finished
 	projectile.queue_free()
-
-	var return_tween := create_tween().set_parallel(true)
-	return_tween.tween_property(cast_pose, "modulate", Color(1, 1, 1, 0), 0.22)
-	return_tween.tween_property(neutral_pose, "modulate", Color.WHITE, 0.22)
-	await return_tween.finished
-	cast_pose.visible = false
-	neutral_pose.modulate = Color.WHITE
-	action_in_progress = false
-	if idle_tween != null:
-		idle_tween.play()
-	action_finished.emit()
 
 
 func _create_projectile(action_id: StringName, target_global_position: Vector2) -> Node2D:

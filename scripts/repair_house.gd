@@ -46,6 +46,7 @@ func _ready() -> void:
 	employee_actor.action_finished.connect(_on_employee_action_finished)
 	selected_tool_id = tool_bar.get_selected_tool_id()
 	selected_employee_id = repair_hud.get_selected_employee_id()
+	_configure_employee_actor()
 	_restore_repair_state()
 	_show_house_overview(false)
 
@@ -59,7 +60,7 @@ func _open_bathroom() -> void:
 	closeup_background.scale = Vector2.ONE
 	lava_faucet.visible = true
 	lava_faucet.self_modulate = Color(1, 1, 1, 0)
-	employee_actor.visible = selected_employee_id == &"liliya"
+	employee_actor.visible = _configure_employee_actor()
 	employee_actor.self_modulate = Color(1, 1, 1, 0)
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(closeup_background, "modulate", Color.WHITE, 0.24)
@@ -135,7 +136,7 @@ func _on_tool_selected(tool_id: StringName) -> void:
 func _on_employee_selected(employee_id: StringName) -> void:
 	selected_employee_id = employee_id
 	if closeup_background.visible and not overview_background.visible:
-		employee_actor.visible = employee_id == &"liliya"
+		employee_actor.visible = _configure_employee_actor()
 		employee_actor.self_modulate = Color.WHITE
 
 
@@ -148,12 +149,18 @@ func _apply_selected_action() -> void:
 	if selected_tool_id.is_empty():
 		_show_feedback("У выбранного сотрудника нет подходящего действия для этого объекта.", true)
 		return
-	if selected_employee_id == &"liliya":
+	if employee_actor.visible:
 		action_in_progress = true
 		lava_faucet.set_interaction_enabled(false)
 		employee_actor.play_action(selected_tool_id, _faucet_target_global())
 		return
 	_resolve_action(selected_tool_id)
+
+
+func _configure_employee_actor() -> bool:
+	if selected_employee_id.is_empty() or not game_state.employees.has(selected_employee_id):
+		return false
+	return employee_actor.configure_employee(selected_employee_id, game_state.employees[selected_employee_id])
 
 
 func _on_employee_action_impact(action_id: StringName) -> void:

@@ -201,7 +201,7 @@ texture = ExtResource("12_liliya_full")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="CastPose" type="TextureRect" parent="EmployeeActor"]
+[node name="WorkPose" type="TextureRect" parent="EmployeeActor"]
 visible = false
 modulate = Color(1, 1, 1, 0)
 layout_mode = 1
