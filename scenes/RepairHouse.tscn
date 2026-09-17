@@ -13,6 +13,7 @@
 [ext_resource type="Script" uid="uid://c1jf85t5ubqel" path="res://scripts/repair_editor_layout_switch.gd" id="11_editor_switch"]
 [ext_resource type="Texture2D" uid="uid://ux6tluh1w5yw" path="res://assets/characters/employees/liliya/full_body.png" id="12_liliya_full"]
 [ext_resource type="Script" uid="uid://dbtb4v0j5rv65" path="res://scripts/employee_actor.gd" id="13_employee_actor"]
+[ext_resource type="Texture2D" path="res://assets/characters/employees/liliya/cast_pose.png" id="14_liliya_cast"]
 
 [node name="RepairHouse" type="Node2D" unique_id=407365599]
 script = ExtResource("10_repair_house")
@@ -188,7 +189,7 @@ offset_bottom = 889.0
 mouse_filter = 2
 script = ExtResource("13_employee_actor")
 
-[node name="Character" type="TextureRect" parent="EmployeeActor" unique_id=465622945]
+[node name="NeutralPose" type="TextureRect" parent="EmployeeActor" unique_id=465622945]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -197,6 +198,24 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("12_liliya_full")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CastPose" type="TextureRect" parent="EmployeeActor"]
+visible = false
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -36.0
+offset_top = -8.0
+offset_right = -36.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("14_liliya_cast")
 expand_mode = 1
 stretch_mode = 5
 

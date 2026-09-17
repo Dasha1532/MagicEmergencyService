@@ -40,6 +40,10 @@ func set_damage_visible(is_visible: bool) -> void:
 	overheat_damage.visible = is_visible
 
 
+func set_interaction_enabled(is_enabled: bool) -> void:
+	hit_area.disabled = not is_enabled
+
+
 func _configure_hit_area() -> void:
 	var empty_style := StyleBoxEmpty.new()
 	hit_area.add_theme_stylebox_override("normal", empty_style)

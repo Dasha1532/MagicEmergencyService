@@ -26,6 +26,7 @@ var simulation: RepairSimulation
 var selected_tool_id: StringName = &"freeze"
 var selected_employee_id: StringName = &""
 var feedback_revision: int = 0
+var action_in_progress: bool = false
 
 
 func _ready() -> void:
@@ -41,6 +42,8 @@ func _ready() -> void:
 	repair_hud.employee_selected.connect(_on_employee_selected)
 	repair_hud.completion_requested.connect(_attempt_complete_job)
 	lava_faucet.selected.connect(_apply_selected_action)
+	employee_actor.action_impact.connect(_on_employee_action_impact)
+	employee_actor.action_finished.connect(_on_employee_action_finished)
 	selected_tool_id = tool_bar.get_selected_tool_id()
 	selected_employee_id = repair_hud.get_selected_employee_id()
 	_restore_repair_state()
@@ -137,13 +140,33 @@ func _on_employee_selected(employee_id: StringName) -> void:
 
 
 func _apply_selected_action() -> void:
+	if action_in_progress:
+		return
 	if selected_employee_id.is_empty():
 		_show_feedback("Сначала выберите сотрудника из бригады.", true)
 		return
 	if selected_tool_id.is_empty():
 		_show_feedback("У выбранного сотрудника нет подходящего действия для этого объекта.", true)
 		return
-	var result: Dictionary = simulation.apply_action(selected_employee_id, selected_tool_id)
+	if selected_employee_id == &"liliya":
+		action_in_progress = true
+		lava_faucet.set_interaction_enabled(false)
+		employee_actor.play_action(selected_tool_id, _faucet_target_global())
+		return
+	_resolve_action(selected_tool_id)
+
+
+func _on_employee_action_impact(action_id: StringName) -> void:
+	_resolve_action(action_id)
+
+
+func _on_employee_action_finished() -> void:
+	action_in_progress = false
+	lava_faucet.set_interaction_enabled(true)
+
+
+func _resolve_action(action_id: StringName) -> void:
+	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
 	var visual_state: StringName = result.get("visual_state", &"emergency")
 	if visual_state == &"repaired":
 		lava_faucet.show_repaired_state()
@@ -153,6 +176,10 @@ func _apply_selected_action() -> void:
 	_show_feedback(str(result["message"]), not bool(result["applied"]))
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+
+
+func _faucet_target_global() -> Vector2:
+	return lava_faucet.global_position + Vector2(-96, 34)
 
 
 func _attempt_complete_job() -> void:
