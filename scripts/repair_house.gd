@@ -14,6 +14,7 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 @onready var problem_room_marker: Panel = $ProblemRoomMarker
 @onready var lower_floor_consequence: Panel = $LowerFloorConsequence
 @onready var lava_faucet: Control = $InteractiveObjects/LavaFaucet
+@onready var employee_actor: Control = $EmployeeActor
 @onready var back_to_house_button: Button = $Interface/BackToHouseButton
 @onready var tool_bar: Control = $Interface/ToolBar
 @onready var repair_hud: Control = $Interface/RepairHUD
@@ -24,6 +25,7 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 var simulation: RepairSimulation
 var selected_tool_id: StringName = &"freeze"
 var selected_employee_id: StringName = &""
+var feedback_revision: int = 0
 
 
 func _ready() -> void:
@@ -54,9 +56,13 @@ func _open_bathroom() -> void:
 	closeup_background.scale = Vector2.ONE
 	lava_faucet.visible = true
 	lava_faucet.self_modulate = Color(1, 1, 1, 0)
+	employee_actor.visible = selected_employee_id == &"liliya"
+	employee_actor.self_modulate = Color(1, 1, 1, 0)
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(closeup_background, "modulate", Color.WHITE, 0.24)
 	tween.tween_property(lava_faucet, "self_modulate", Color.WHITE, 0.24)
+	if employee_actor.visible:
+		tween.tween_property(employee_actor, "self_modulate", Color.WHITE, 0.24)
 	await tween.finished
 	overview_background.visible = false
 	bathroom_preview_backdrop.visible = false
@@ -65,7 +71,7 @@ func _open_bathroom() -> void:
 	tool_bar.visible = true
 	if repair_hud.has_method("set_work_ui_visible"):
 		repair_hud.call("set_work_ui_visible", true)
-	feedback_panel.visible = true
+	feedback_panel.visible = false
 
 
 func _show_house_overview(animated: bool = true) -> void:
@@ -76,6 +82,7 @@ func _show_house_overview(animated: bool = true) -> void:
 	problem_room_marker.visible = not simulation.is_resolved()
 	lower_floor_consequence.visible = _has_damage()
 	lava_faucet.visible = false
+	employee_actor.visible = false
 	back_to_house_button.visible = false
 	tool_bar.visible = false
 	if repair_hud.has_method("set_work_ui_visible"):
@@ -124,6 +131,9 @@ func _on_tool_selected(tool_id: StringName) -> void:
 
 func _on_employee_selected(employee_id: StringName) -> void:
 	selected_employee_id = employee_id
+	if closeup_background.visible and not overview_background.visible:
+		employee_actor.visible = employee_id == &"liliya"
+		employee_actor.self_modulate = Color.WHITE
 
 
 func _apply_selected_action() -> void:
@@ -173,8 +183,14 @@ func _has_damage() -> bool:
 
 
 func _show_feedback(message: String, is_warning: bool = false) -> void:
+	feedback_revision += 1
+	var shown_revision := feedback_revision
 	feedback_label.text = message
 	feedback_label.add_theme_color_override("font_color", Color(1.0, 0.58, 0.35) if is_warning else COLOR_PARCHMENT)
+	feedback_panel.visible = true
+	await get_tree().create_timer(3.2).timeout
+	if shown_revision == feedback_revision:
+		feedback_panel.visible = false
 
 
 func _button_style(background: Color, border: Color, width: int) -> StyleBoxFlat:

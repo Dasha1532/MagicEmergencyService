@@ -11,6 +11,8 @@
 [ext_resource type="Texture2D" uid="uid://c6j80jpcray8f" path="res://assets/backgrounds/bathroom_closeup.png" id="9_bathroom"]
 [ext_resource type="Script" uid="uid://ccxn3gc083ujx" path="res://scripts/repair_house.gd" id="10_repair_house"]
 [ext_resource type="Script" uid="uid://c1jf85t5ubqel" path="res://scripts/repair_editor_layout_switch.gd" id="11_editor_switch"]
+[ext_resource type="Texture2D" uid="uid://ux6tluh1w5yw" path="res://assets/characters/employees/liliya/full_body.png" id="12_liliya_full"]
+[ext_resource type="Script" uid="uid://dbtb4v0j5rv65" path="res://scripts/employee_actor.gd" id="13_employee_actor"]
 
 [node name="RepairHouse" type="Node2D" unique_id=407365599]
 script = ExtResource("10_repair_house")
@@ -59,20 +61,19 @@ offset_bottom = 262.0
 tooltip_text = "Ванная • из крана течёт лава"
 mouse_default_cursor_shape = 2
 
-[node name="ProblemRoomMarker" type="Panel" parent="."]
+[node name="ProblemRoomMarker" type="Panel" parent="." unique_id=1440761099]
 offset_left = 1282.0
 offset_top = 2.0
 offset_right = 1597.0
 offset_bottom = 263.0
 mouse_filter = 2
 
-[node name="Label" type="Label" parent="ProblemRoomMarker"]
+[node name="Label" type="Label" parent="ProblemRoomMarker" unique_id=340401023]
 layout_mode = 0
 offset_left = 10.0
 offset_top = 219.0
 offset_right = 305.0
 offset_bottom = 251.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.78, 0.38, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.035, 0.015, 0.95)
 theme_override_constants/outline_size = 5
@@ -81,7 +82,7 @@ text = "АВАРИЯ • ЛАВОВЫЙ КРАН"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="LowerFloorConsequence" type="Panel" parent="."]
+[node name="LowerFloorConsequence" type="Panel" parent="." unique_id=627284256]
 visible = false
 offset_left = 1282.0
 offset_top = 326.0
@@ -89,13 +90,12 @@ offset_right = 1596.0
 offset_bottom = 592.0
 mouse_filter = 2
 
-[node name="Label" type="Label" parent="LowerFloorConsequence"]
+[node name="Label" type="Label" parent="LowerFloorConsequence" unique_id=384898457]
 layout_mode = 0
 offset_left = 10.0
 offset_top = 10.0
 offset_right = 304.0
 offset_bottom = 42.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.69, 0.34, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 1
@@ -117,18 +117,18 @@ offset_bottom = 580.0
 mouse_filter = 1
 script = ExtResource("8_faucet_script")
 
-[node name="OverheatDamage" type="Node2D" parent="InteractiveObjects/LavaFaucet"]
+[node name="OverheatDamage" type="Node2D" parent="InteractiveObjects/LavaFaucet" unique_id=994038503]
 visible = false
 
-[node name="WallGlow" type="Polygon2D" parent="InteractiveObjects/LavaFaucet/OverheatDamage"]
-polygon = PackedVector2Array(-190, -58, -82, -72, 20, -18, 36, 82, 8, 150, -88, 164, -176, 112, -205, 30)
+[node name="WallGlow" type="Polygon2D" parent="InteractiveObjects/LavaFaucet/OverheatDamage" unique_id=983194840]
 color = Color(0.96, 0.16, 0.035, 0.14)
+polygon = PackedVector2Array(-190, -58, -82, -72, 20, -18, 36, 82, 8, 150, -88, 164, -176, 112, -205, 30)
 
-[node name="Scorch" type="Polygon2D" parent="InteractiveObjects/LavaFaucet/OverheatDamage"]
-polygon = PackedVector2Array(-169, -30, -111, -45, -50, -16, -31, 39, -58, 85, -126, 76, -178, 34)
+[node name="Scorch" type="Polygon2D" parent="InteractiveObjects/LavaFaucet/OverheatDamage" unique_id=831210397]
 color = Color(0.11, 0.035, 0.018, 0.42)
+polygon = PackedVector2Array(-169, -30, -111, -45, -50, -16, -31, 39, -58, 85, -126, 76, -178, 34)
 
-[node name="PipeGlow" type="Line2D" parent="InteractiveObjects/LavaFaucet/OverheatDamage"]
+[node name="PipeGlow" type="Line2D" parent="InteractiveObjects/LavaFaucet/OverheatDamage" unique_id=1559737215]
 points = PackedVector2Array(-170, 28, -112, 18, -57, 27, -28, 58, -17, 111)
 width = 11.0
 default_color = Color(1, 0.22, 0.035, 0.5)
@@ -177,6 +177,29 @@ mouse_default_cursor_shape = 2
 
 [node name="Effects" type="Node2D" parent="." unique_id=1983280469]
 
+[node name="EmployeeActor" type="Control" parent="." unique_id=195162173]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+offset_left = 748.0
+offset_top = 208.0
+offset_right = 1254.0
+offset_bottom = 889.0
+mouse_filter = 2
+script = ExtResource("13_employee_actor")
+
+[node name="Character" type="TextureRect" parent="EmployeeActor" unique_id=465622945]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("12_liliya_full")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Interface" type="CanvasLayer" parent="." unique_id=659612193]
 
 [node name="ToolBar" parent="Interface" unique_id=900609496 instance=ExtResource("2_toolbar")]
@@ -195,15 +218,15 @@ offset_bottom = 78.0
 mouse_default_cursor_shape = 2
 text = "←  К ОБЗОРУ ДОМА"
 
-[node name="ActionFeedback" type="Panel" parent="Interface"]
+[node name="ActionFeedback" type="Panel" parent="Interface" unique_id=262883948]
 visible = false
-offset_left = 572.0
-offset_top = 174.0
-offset_right = 1152.0
-offset_bottom = 232.0
+offset_left = 20.0
+offset_top = 120.0
+offset_right = 520.0
+offset_bottom = 178.0
 mouse_filter = 2
 
-[node name="Message" type="Label" parent="Interface/ActionFeedback"]
+[node name="Message" type="Label" parent="Interface/ActionFeedback" unique_id=1058269606]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
