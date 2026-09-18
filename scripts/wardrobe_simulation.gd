@@ -20,6 +20,7 @@ var world_object: Dictionary = {
 	"position_zone": &"entrance",
 	"requested_zone": &"left_wall",
 	"moving": true,
+	"frozen": false,
 	"brittle": false,
 	"burning": false,
 	"visual_state": &"walking",
@@ -88,6 +89,7 @@ func apply_action(employee_id: StringName, action_id: StringName, intent: String
 			applied = true
 		&"freeze":
 			world_object["temperature"] = int(world_object["temperature"]) - 5
+			world_object["frozen"] = true
 			world_object["brittle"] = int(world_object["temperature"]) <= -2
 			if int(world_object["temperature"]) <= 2:
 				world_object["burning"] = false
@@ -95,6 +97,7 @@ func apply_action(employee_id: StringName, action_id: StringName, intent: String
 			applied = true
 		&"heat":
 			world_object["temperature"] = int(world_object["temperature"]) + 5
+			world_object["frozen"] = false
 			world_object["burning"] = int(world_object["temperature"]) >= 7
 			if bool(world_object["burning"]):
 				world_object["damage"] = int(world_object["damage"]) + 2
@@ -145,7 +148,14 @@ func get_completion_result() -> Dictionary:
 	var damage := int(world_object["damage"])
 	var contents_damage := int(world_object["contents_damage"])
 	var correct_place: bool = world_object["position_zone"] == world_object["requested_zone"]
-	var adjustment := -120 * damage - 45 * contents_damage
+	var furniture_penalty: int
+	if int(world_object["mobility"]) <= 0:
+		# Сломанные ножки дают заметный, но не обнуляющий всю заявку штраф.
+		furniture_penalty = 150 + maxi(0, damage - 3) * 60
+	else:
+		furniture_penalty = mini(damage * 60, 240)
+	var contents_penalty: int = mini(contents_damage, 3) * 35
+	var adjustment: int = -furniture_penalty - contents_penalty
 	if not correct_place:
 		adjustment -= 60
 	if int(world_object["mobility"]) <= 0:

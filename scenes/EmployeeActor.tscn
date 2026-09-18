@@ -1,0 +1,50 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://dbtb4v0j5rv65" path="res://scripts/employee_actor.gd" id="1_actor"]
+[ext_resource type="Texture2D" uid="uid://ux6tluh1w5yw" path="res://assets/characters/employees/liliya/full_body.png" id="2_neutral"]
+[ext_resource type="Texture2D" uid="uid://bn7d6dl424ahy" path="res://assets/characters/employees/liliya/cast_pose.png" id="3_work"]
+
+[node name="EmployeeActor" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 506.0
+offset_bottom = 681.0
+mouse_filter = 2
+script = ExtResource("1_actor")
+
+[node name="NeutralPose" type="TextureRect" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 119.0
+offset_top = 47.0
+offset_right = 69.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_neutral")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WorkPose" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 119.0
+offset_top = 47.0
+offset_right = 69.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_work")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ActionOrigin" type="Marker2D" parent="."]
+position = Vector2(203, 125)
+gizmo_extents = 18.0

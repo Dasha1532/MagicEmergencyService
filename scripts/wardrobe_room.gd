@@ -18,6 +18,7 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 @onready var problem_room_marker: Panel = $ProblemRoomMarker
 @onready var closeup_background: TextureRect = $RoomCloseup
 @onready var wardrobe: Control = $Wardrobe
+@onready var wardrobe_status_effects: Node2D = $Wardrobe/StatusEffects
 @onready var left_wall_marker: Marker2D = $WardrobePositions/LeftWall
 @onready var kitchen_passage_marker: Marker2D = _find_kitchen_passage_marker()
 @onready var employee_actor: Control = $EmployeeActor
@@ -276,6 +277,7 @@ func _restore_visual_state() -> void:
 
 func _apply_visual_state() -> void:
 	wardrobe.show_state(StringName(str(simulation.world_object["visual_state"])))
+	wardrobe_status_effects.call("sync_from_state", simulation.world_object)
 	var zone: StringName = StringName(str(simulation.world_object["position_zone"]))
 	var target_position: Vector2 = {
 		&"entrance": entrance_position,
@@ -294,7 +296,7 @@ func _apply_visual_state() -> void:
 
 
 func _wardrobe_target_global() -> Vector2:
-	return wardrobe.get_global_transform() * (wardrobe.size * 0.5)
+	return wardrobe_status_effects.global_position
 
 
 func _attempt_complete_job() -> void:

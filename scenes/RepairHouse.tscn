@@ -11,9 +11,12 @@
 [ext_resource type="Texture2D" uid="uid://c6j80jpcray8f" path="res://assets/backgrounds/bathroom_closeup.png" id="9_bathroom"]
 [ext_resource type="Script" uid="uid://ccxn3gc083ujx" path="res://scripts/repair_house.gd" id="10_repair_house"]
 [ext_resource type="Script" uid="uid://c1jf85t5ubqel" path="res://scripts/repair_editor_layout_switch.gd" id="11_editor_switch"]
-[ext_resource type="Texture2D" uid="uid://ux6tluh1w5yw" path="res://assets/characters/employees/liliya/full_body.png" id="12_liliya_full"]
-[ext_resource type="Script" uid="uid://dbtb4v0j5rv65" path="res://scripts/employee_actor.gd" id="13_employee_actor"]
-[ext_resource type="Texture2D" uid="uid://bn7d6dl424ahy" path="res://assets/characters/employees/liliya/cast_pose.png" id="14_liliya_cast"]
+[ext_resource type="PackedScene" path="res://scenes/EmployeeActor.tscn" id="12_employee_actor"]
+[ext_resource type="PackedScene" path="res://scenes/ObjectStatusEffects.tscn" id="15_status_effects"]
+[ext_resource type="Shader" path="res://shaders/faucet_melt.gdshader" id="16_faucet_melt"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_faucet_melt"]
+shader = ExtResource("16_faucet_melt")
 
 [node name="RepairHouse" type="Node2D" unique_id=407365599]
 script = ExtResource("10_repair_house")
@@ -154,6 +157,7 @@ offset_top = -50.0
 offset_right = -24.0
 offset_bottom = 77.0
 mouse_filter = 2
+material = SubResource("ShaderMaterial_faucet_melt")
 texture = ExtResource("6_faucet_damaged")
 expand_mode = 1
 
@@ -175,48 +179,20 @@ offset_right = 34.0
 offset_bottom = 158.0
 mouse_default_cursor_shape = 2
 
+[node name="StatusEffects" parent="InteractiveObjects/LavaFaucet" instance=ExtResource("15_status_effects")]
+position = Vector2(-96, 34)
+visual_size = 150.0
+frost_offset = Vector2(0, 4)
+fire_offset = Vector2(0, -8)
+
 [node name="Effects" type="Node2D" parent="." unique_id=1983280469]
 
-[node name="EmployeeActor" type="Control" parent="." unique_id=195162173]
+[node name="EmployeeActor" parent="." instance=ExtResource("12_employee_actor")]
 visible = false
-layout_mode = 3
-anchors_preset = 0
 offset_left = 748.0
 offset_top = 208.0
 offset_right = 1254.0
 offset_bottom = 889.0
-mouse_filter = 2
-script = ExtResource("13_employee_actor")
-
-[node name="NeutralPose" type="TextureRect" parent="EmployeeActor" unique_id=465622945]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("12_liliya_full")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="WorkPose" type="TextureRect" parent="EmployeeActor" unique_id=301564678]
-visible = false
-modulate = Color(1, 1, 1, 0)
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("14_liliya_cast")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="ActionOrigin" type="Marker2D" parent="EmployeeActor"]
-position = Vector2(350, 180)
-gizmo_extents = 18.0
 
 [node name="Interface" type="CanvasLayer" parent="." unique_id=659612193]
 

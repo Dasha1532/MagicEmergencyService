@@ -14,6 +14,7 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 @onready var problem_room_marker: Panel = $ProblemRoomMarker
 @onready var lower_floor_consequence: Panel = $LowerFloorConsequence
 @onready var lava_faucet: Control = $InteractiveObjects/LavaFaucet
+@onready var faucet_status_effects: Node2D = $InteractiveObjects/LavaFaucet/StatusEffects
 @onready var employee_actor: Control = $EmployeeActor
 @onready var back_to_house_button: Button = $Interface/BackToHouseButton
 @onready var tool_bar: Control = $Interface/ToolBar
@@ -180,20 +181,28 @@ func _resolve_action(action_id: StringName) -> void:
 	if visual_state == &"repaired":
 		lava_faucet.show_repaired_state()
 	elif visual_state == &"overheated":
-		lava_faucet.show_overheated_state()
+		lava_faucet.show_overheated_state(_is_lava_flowing())
+	elif visual_state == &"melted":
+		lava_faucet.show_melted_state(_is_lava_flowing())
+	else:
+		lava_faucet.show_emergency_state(_is_lava_flowing())
 	lava_faucet.set_damage_visible(_has_damage())
+	faucet_status_effects.call("sync_from_state", simulation.world_object)
 	_show_feedback(str(result["message"]), not bool(result["applied"]))
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 
 
 func _faucet_target_global() -> Vector2:
-	return lava_faucet.global_position + Vector2(-96, 34)
+	return faucet_status_effects.global_position
 
 
 func _attempt_complete_job() -> void:
 	if not simulation.is_resolved():
-		_show_feedback("Работу нельзя завершить: лава всё ещё течёт.", true)
+		if _is_lava_flowing():
+			_show_feedback("Работу нельзя завершить: лава всё ещё течёт.", true)
+		else:
+			_show_feedback("Работу нельзя завершить: кран находится в опасном состоянии.", true)
 		return
 	if game_state.complete_active_job(simulation.get_completion_result()):
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
@@ -205,17 +214,29 @@ func _restore_repair_state() -> void:
 		lava_faucet.show_repaired_state()
 		_show_feedback("Кран исправен. Работу можно завершить.")
 	elif visual_state == &"overheated":
-		lava_faucet.show_overheated_state()
-		_show_feedback("Кран перегрет. Остановите поток лавы перед завершением работы.", true)
+		lava_faucet.show_overheated_state(_is_lava_flowing())
+		if _is_lava_flowing():
+			_show_feedback("Кран перегрет. Остановите поток лавы перед завершением работы.", true)
+		else:
+			_show_feedback("Кран перегрет и деформируется, но остановленная лава не возобновилась.", true)
+	elif visual_state == &"melted":
+		lava_faucet.show_melted_state(_is_lava_flowing())
+		_show_feedback("Кран расплавлен и полностью сломан. Это конечный исход заявки.", true)
 	else:
-		lava_faucet.show_emergency_state()
+		lava_faucet.show_emergency_state(_is_lava_flowing())
 		_show_feedback("Выберите действие сотрудника и примените его к аварийному крану.")
 	lava_faucet.set_damage_visible(_has_damage())
+	faucet_status_effects.call("sync_from_state", simulation.world_object)
 	repair_hud.set_completion_ready(simulation.is_resolved())
 
 
 func _has_damage() -> bool:
 	return int(simulation.world_object.get("damage", 0)) > 0
+
+
+func _is_lava_flowing() -> bool:
+	var tags: PackedStringArray = PackedStringArray(simulation.world_object.get("tags", PackedStringArray()))
+	return tags.has("lava_flowing")
 
 
 func _show_feedback(message: String, is_warning: bool = false) -> void:

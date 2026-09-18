@@ -10,10 +10,9 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/ToolBar.tscn" id="8_toolbar"]
 [ext_resource type="PackedScene" path="res://scenes/ui/RepairHUD.tscn" id="9_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="10_pause"]
-[ext_resource type="Script" uid="uid://dbtb4v0j5rv65" path="res://scripts/employee_actor.gd" id="11_actor"]
-[ext_resource type="Texture2D" uid="uid://ux6tluh1w5yw" path="res://assets/characters/employees/liliya/full_body.png" id="12_liliya"]
-[ext_resource type="Texture2D" uid="uid://bn7d6dl424ahy" path="res://assets/characters/employees/liliya/cast_pose.png" id="13_liliya_cast"]
+[ext_resource type="PackedScene" path="res://scenes/EmployeeActor.tscn" id="11_actor"]
 [ext_resource type="Script" uid="uid://sts7qj3hdadg" path="res://scripts/wardrobe_editor_layout_switch.gd" id="14_editor_switch"]
+[ext_resource type="PackedScene" path="res://scenes/ObjectStatusEffects.tscn" id="15_status_effects"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_wardrobe_placement"]
 bg_color = Color(0.025, 0.018, 0.012, 0.48)
@@ -225,52 +224,17 @@ grow_vertical = 2
 mouse_default_cursor_shape = 2
 flat = true
 
-[node name="EmployeeActor" type="Control" parent="." unique_id=1648378895]
-layout_mode = 3
-anchors_preset = 0
+[node name="StatusEffects" parent="Wardrobe" instance=ExtResource("15_status_effects")]
+position = Vector2(254, 260)
+visual_size = 210.0
+frost_offset = Vector2(0, 10)
+fire_offset = Vector2(0, -18)
+
+[node name="EmployeeActor" parent="." instance=ExtResource("11_actor")]
 offset_left = 650.0
 offset_top = 208.0
 offset_right = 1156.0
 offset_bottom = 889.0
-mouse_filter = 2
-script = ExtResource("11_actor")
-
-[node name="NeutralPose" type="TextureRect" parent="EmployeeActor" unique_id=1354792857]
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 119.0
-offset_top = 47.0
-offset_right = 69.0
-offset_bottom = -52.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("12_liliya")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="WorkPose" type="TextureRect" parent="EmployeeActor" unique_id=1647441608]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 119.0
-offset_top = 47.0
-offset_right = 69.0
-offset_bottom = -52.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("13_liliya_cast")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="ActionOrigin" type="Marker2D" parent="EmployeeActor" unique_id=1725584488]
-position = Vector2(203, 125)
-gizmo_extents = 18.0
 
 [node name="Interface" type="CanvasLayer" parent="." unique_id=960509458]
 

@@ -15,10 +15,12 @@ func _ready() -> void:
 	_start_lava_motion()
 
 
-func show_emergency_state() -> void:
+func show_emergency_state(show_lava: bool = true) -> void:
 	normal_faucet.visible = false
 	damaged_faucet.visible = true
-	lava_stream.visible = true
+	lava_stream.visible = show_lava
+	_set_melt_parameters(0.0, 0.0)
+	modulate = Color.WHITE
 
 
 func show_repaired_state() -> void:
@@ -26,13 +28,24 @@ func show_repaired_state() -> void:
 	damaged_faucet.visible = false
 	lava_stream.visible = false
 	modulate = Color.WHITE
+	_set_melt_parameters(0.0, 0.0)
 
 
-func show_overheated_state() -> void:
+func show_overheated_state(show_lava: bool) -> void:
 	normal_faucet.visible = false
 	damaged_faucet.visible = true
-	lava_stream.visible = true
-	modulate = Color(1.22, 0.72, 0.52, 1.0)
+	lava_stream.visible = show_lava
+	modulate = Color.WHITE
+	_set_melt_parameters(0.72, 0.55)
+	overheat_damage.visible = true
+
+
+func show_melted_state(show_lava: bool) -> void:
+	normal_faucet.visible = false
+	damaged_faucet.visible = true
+	lava_stream.visible = show_lava
+	modulate = Color.WHITE
+	_set_melt_parameters(1.0, 1.0)
 	overheat_damage.visible = true
 
 
@@ -60,3 +73,11 @@ func _start_lava_motion() -> void:
 	tween.parallel().tween_property(lava_stream, "position", base_position + Vector2(0, 4), 0.75).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(lava_stream, "modulate", Color.WHITE, 0.75).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.parallel().tween_property(lava_stream, "position", base_position, 0.75).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _set_melt_parameters(heat: float, melt: float) -> void:
+	var shader_material: ShaderMaterial = damaged_faucet.material as ShaderMaterial
+	if shader_material == null:
+		return
+	shader_material.set_shader_parameter("heat", heat)
+	shader_material.set_shader_parameter("melt", melt)
