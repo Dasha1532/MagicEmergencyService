@@ -66,17 +66,10 @@ shadow_color = Color(1, 0.713726, 0.270588, 0.38)
 shadow_size = 7
 
 [node name="ToolBar" type="MarginContainer"]
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -146.0
-offset_top = -292.0
-offset_right = -18.0
-offset_bottom = 292.0
-grow_horizontal = 0
-grow_vertical = 2
+offset_left = 20.0
+offset_top = 466.0
+offset_right = 602.0
+offset_bottom = 615.0
 mouse_filter = 1
 script = ExtResource("1_script")
 
@@ -109,14 +102,14 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="Buttons" type="VBoxContainer" parent="Panel/ContentMargin/Content"]
+[node name="Buttons" type="HBoxContainer" parent="Panel/ContentMargin/Content"]
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
 [node name="FreezeButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 84)
+custom_minimum_size = Vector2(84, 84)
 layout_mode = 2
 tooltip_text = "Заморозка — сильно снижает температуру объекта"
 toggle_mode = true
@@ -145,7 +138,7 @@ stretch_mode = 5
 
 [node name="HeatButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 84)
+custom_minimum_size = Vector2(84, 84)
 layout_mode = 2
 tooltip_text = "Нагрев — повышает температуру объекта"
 toggle_mode = true
@@ -174,7 +167,7 @@ stretch_mode = 5
 
 [node name="MoveButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 84)
+custom_minimum_size = Vector2(84, 84)
 layout_mode = 2
 tooltip_text = "Телекинез — магически переносит объект в допустимую точку"
 toggle_mode = true
@@ -203,7 +196,7 @@ stretch_mode = 5
 
 [node name="PhysicalMoveButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 84)
+custom_minimum_size = Vector2(84, 84)
 layout_mode = 2
 tooltip_text = "Силовая работа — позволяет физически удержать, сдвинуть или демонтировать объект"
 toggle_mode = true
@@ -232,7 +225,7 @@ stretch_mode = 5
 
 [node name="AnimateButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 84)
+custom_minimum_size = Vector2(84, 84)
 layout_mode = 2
 tooltip_text = "Оживление — пробуждает простое поведение предмета"
 toggle_mode = true
@@ -261,7 +254,7 @@ stretch_mode = 5
 
 [node name="AntimagicButton" type="Button" parent="Panel/ContentMargin/Content/Buttons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 84)
+custom_minimum_size = Vector2(84, 84)
 layout_mode = 2
 tooltip_text = "Антимагия — временно подавляет магические эффекты"
 toggle_mode = true

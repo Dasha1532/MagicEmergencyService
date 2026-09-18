@@ -5,11 +5,13 @@ signal action_finished
 
 @onready var neutral_pose: TextureRect = $NeutralPose
 @onready var work_pose: TextureRect = $WorkPose
+@onready var action_origin_marker: Marker2D = get_node_or_null("ActionOrigin") as Marker2D
 
 var idle_tween: Tween
 var action_in_progress: bool = false
 var employee_id: StringName = &""
 var action_style: StringName = &"magic"
+var action_origin: Vector2 = Vector2(45, 70)
 
 
 func _ready() -> void:
@@ -27,13 +29,16 @@ func configure_employee(new_employee_id: StringName, employee_data: Dictionary) 
 		return false
 	employee_id = new_employee_id
 	action_style = StringName(str(employee_data.get("actor_action_style", "magic")))
+	var configured_action_origin: Variant = employee_data.get("actor_action_origin", Vector2(45, 70))
+	if configured_action_origin is Vector2:
+		action_origin = configured_action_origin
 	neutral_pose.texture = load(neutral_path)
 	work_pose.texture = load(work_path)
-	var work_offset: Vector2 = employee_data.get("actor_work_pose_offset", Vector2.ZERO)
-	work_pose.offset_left = work_offset.x
-	work_pose.offset_top = work_offset.y
-	work_pose.offset_right = work_offset.x
-	work_pose.offset_bottom = work_offset.y
+	# Обе цельные позы используют одну область, масштаб и точку опоры.
+	work_pose.offset_left = neutral_pose.offset_left
+	work_pose.offset_top = neutral_pose.offset_top
+	work_pose.offset_right = neutral_pose.offset_right
+	work_pose.offset_bottom = neutral_pose.offset_bottom
 	_reset_pose_visibility()
 	return neutral_pose.texture != null and work_pose.texture != null
 
@@ -179,7 +184,9 @@ func _magic_color(action_id: StringName) -> Color:
 
 
 func _spell_origin_global() -> Vector2:
-	return global_position + Vector2(45, 70)
+	if action_origin_marker != null:
+		return action_origin_marker.global_position
+	return get_global_transform() * action_origin
 
 
 func _circle_points(radius: float, segments: int) -> PackedVector2Array:

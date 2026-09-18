@@ -51,32 +51,39 @@ func _build_job_header() -> void:
 
 
 func _build_employee_selector() -> void:
+	var job: Dictionary = game_state.get_active_job()
+	var assigned: PackedStringArray = job.get("assigned", PackedStringArray())
+	var employee_count: int = assigned.size()
+	var visible_count: int = clampi(employee_count, 1, 3)
+	var card_width: int = 297
+	var card_gap: int = 7
+	var viewport_width: int = visible_count * card_width + maxi(visible_count - 1, 0) * card_gap
+	var content_width: int = employee_count * card_width + maxi(employee_count - 1, 0) * card_gap
+
 	employee_panel = Panel.new()
 	employee_panel.position = Vector2(20, 745)
-	employee_panel.size = Vector2(930, 135)
+	employee_panel.size = Vector2(viewport_width + 24, 135)
 	employee_panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
 	add_child(employee_panel)
 
 	var heading := _label("БРИГАДА", 19, COLOR_GOLD)
 	heading.position = Vector2(16, 6)
-	heading.size = Vector2(898, 28)
+	heading.size = Vector2(viewport_width - 8, 28)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	employee_panel.add_child(heading)
 
 	var employee_scroll := ScrollContainer.new()
 	employee_scroll.position = Vector2(12, 38)
-	employee_scroll.size = Vector2(906, 87)
+	employee_scroll.size = Vector2(viewport_width, 87)
 	employee_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	employee_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	employee_panel.add_child(employee_scroll)
 
 	employee_box = HBoxContainer.new()
-	employee_box.custom_minimum_size = Vector2(906, 76)
+	employee_box.custom_minimum_size = Vector2(maxi(content_width, viewport_width), 76)
 	employee_box.add_theme_constant_override("separation", 7)
 	employee_scroll.add_child(employee_box)
 
-	var job: Dictionary = game_state.get_active_job()
-	var assigned: PackedStringArray = job.get("assigned", PackedStringArray())
 	for employee_id: String in assigned:
 		_add_employee_button(StringName(employee_id))
 

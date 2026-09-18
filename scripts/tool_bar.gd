@@ -59,10 +59,11 @@ func get_selected_tool_id() -> StringName:
 
 
 func _resize_for_action_count(action_count: int) -> void:
-	var visible_count := maxi(1, action_count)
-	var panel_height: float = 82.0 + visible_count * 84.0 + maxi(0, visible_count - 1) * 10.0
-	offset_top = -panel_height * 0.5
-	offset_bottom = panel_height * 0.5
+	var visible_count: int = maxi(1, action_count)
+	var panel_width: float = maxf(150.0, 28.0 + visible_count * 84.0 + maxi(0, visible_count - 1) * 10.0)
+	# Положение задаётся в конкретной сцене и может настраиваться мышкой.
+	# Скрипт меняет только размер под фактическое количество действий.
+	size = Vector2(panel_width, 149.0)
 
 
 func _on_button_toggled(is_pressed: bool, button: Button) -> void:

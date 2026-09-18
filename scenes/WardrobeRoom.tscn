@@ -1,0 +1,424 @@
+[gd_scene format=3 uid="uid://cado25rmtrsjv"]
+
+[ext_resource type="Texture2D" uid="uid://cwnu5ibpo6qmj" path="res://assets/backgrounds/repair_house.png" id="1_house"]
+[ext_resource type="Texture2D" uid="uid://dyakhodhhoxbs" path="res://assets/backgrounds/wardrobe_room.png" id="2_room"]
+[ext_resource type="Texture2D" uid="uid://busisyoca5yq2" path="res://assets/objects/walking_wardrobe/walking.png" id="3_walking"]
+[ext_resource type="Texture2D" uid="uid://dou7eomedqqtj" path="res://assets/objects/walking_wardrobe/idle.png" id="4_idle"]
+[ext_resource type="Texture2D" uid="uid://bf4cq8sqmd8oj" path="res://assets/objects/walking_wardrobe/broken_legs.png" id="5_broken"]
+[ext_resource type="Script" uid="uid://c1pj1v8meag5w" path="res://scripts/wardrobe_object.gd" id="6_object"]
+[ext_resource type="Script" uid="uid://blm5uogycosah" path="res://scripts/wardrobe_room.gd" id="7_room"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ToolBar.tscn" id="8_toolbar"]
+[ext_resource type="PackedScene" path="res://scenes/ui/RepairHUD.tscn" id="9_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="10_pause"]
+[ext_resource type="Script" uid="uid://dbtb4v0j5rv65" path="res://scripts/employee_actor.gd" id="11_actor"]
+[ext_resource type="Texture2D" uid="uid://ux6tluh1w5yw" path="res://assets/characters/employees/liliya/full_body.png" id="12_liliya"]
+[ext_resource type="Texture2D" uid="uid://bn7d6dl424ahy" path="res://assets/characters/employees/liliya/cast_pose.png" id="13_liliya_cast"]
+[ext_resource type="Script" uid="uid://sts7qj3hdadg" path="res://scripts/wardrobe_editor_layout_switch.gd" id="14_editor_switch"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_wardrobe_placement"]
+bg_color = Color(0.025, 0.018, 0.012, 0.48)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.92, 0.62, 0.22, 0.95)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="WardrobeRoom" type="Node2D" unique_id=1413137927]
+script = ExtResource("7_room")
+left_wall_scale = Vector2(0.8, 0.8)
+kitchen_passage_scale = Vector2(0.8, 0.8)
+
+[node name="Background" type="TextureRect" parent="." unique_id=827015141]
+visible = false
+offset_right = 1600.0
+offset_bottom = 900.0
+mouse_filter = 2
+texture = ExtResource("1_house")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="RoomPreviewBackdrop" type="ColorRect" parent="." unique_id=1338276949]
+visible = false
+offset_left = 475.0
+offset_top = 303.0
+offset_right = 946.0
+offset_bottom = 564.0
+mouse_filter = 2
+color = Color(0.055, 0.04, 0.025, 1)
+
+[node name="RoomPreview" type="TextureRect" parent="." unique_id=661783830]
+visible = false
+texture_filter = 1
+offset_left = 491.0
+offset_top = 297.0
+offset_right = 961.0
+offset_bottom = 563.0
+mouse_filter = 2
+texture = ExtResource("2_room")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="RoomHotspot" type="Button" parent="." unique_id=789869404]
+visible = false
+offset_left = 491.0
+offset_top = 297.0
+offset_right = 965.0
+offset_bottom = 560.0
+tooltip_text = "Гостиная • ходячий шкаф"
+mouse_default_cursor_shape = 2
+
+[node name="ProblemRoomMarker" type="Panel" parent="." unique_id=1918999178]
+visible = false
+offset_left = 481.0
+offset_top = 304.0
+offset_right = 956.0
+offset_bottom = 559.0
+mouse_filter = 2
+
+[node name="Label" type="Label" parent="ProblemRoomMarker" unique_id=237728949]
+layout_mode = 0
+offset_top = 192.0
+offset_right = 500.0
+offset_bottom = 224.0
+theme_override_colors/font_color = Color(1, 0.78, 0.38, 1)
+theme_override_colors/font_outline_color = Color(0.08, 0.035, 0.015, 0.95)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 14
+text = "ЗАЯВКА • ХОДЯЧИЙ ШКАФ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RoomCloseup" type="TextureRect" parent="." unique_id=60824115]
+offset_right = 1600.0
+offset_bottom = 900.0
+mouse_filter = 2
+texture = ExtResource("2_room")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="WardrobePositions" type="Node2D" parent="." unique_id=1687903231]
+
+[node name="LeftWall" type="Marker2D" parent="WardrobePositions" unique_id=896482027]
+position = Vector2(106, 214)
+gizmo_extents = 24.0
+
+[node name="PlacementGuide" type="Panel" parent="WardrobePositions/LeftWall" unique_id=224832107]
+offset_left = 76.0
+offset_top = 151.0
+offset_right = 433.0
+offset_bottom = 527.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_wardrobe_placement")
+
+[node name="Label" type="Label" parent="WardrobePositions/LeftWall/PlacementGuide" unique_id=1838315631]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 8.0
+offset_bottom = 38.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.5, 1)
+theme_override_colors/font_outline_color = Color(0.04, 0.025, 0.015, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 17
+text = "LEFTWALL • У ЛЕВОЙ СТЕНЫ"
+horizontal_alignment = 1
+
+[node name="CenterWall" type="Marker2D" parent="WardrobePositions" unique_id=764011033]
+position = Vector2(1051, 236)
+gizmo_extents = 24.0
+
+[node name="PlacementGuide" type="Panel" parent="WardrobePositions/CenterWall" unique_id=1288870608]
+offset_left = 76.0
+offset_top = 151.0
+offset_right = 433.0
+offset_bottom = 527.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_wardrobe_placement")
+
+[node name="Label" type="Label" parent="WardrobePositions/CenterWall/PlacementGuide" unique_id=733412986]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 8.0
+offset_bottom = 38.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.5, 1)
+theme_override_colors/font_outline_color = Color(0.04, 0.025, 0.015, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 17
+text = "CENTERWALL • ПРОХОД НА КУХНЮ"
+horizontal_alignment = 1
+
+[node name="Wardrobe" type="Control" parent="." unique_id=1381638692]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 374.0
+offset_top = 318.0
+offset_right = 883.0
+offset_bottom = 855.0
+mouse_filter = 1
+script = ExtResource("6_object")
+metadata/_edit_use_anchors_ = true
+
+[node name="Walking" type="TextureRect" parent="Wardrobe" unique_id=286667107]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -159.0
+offset_top = -201.0
+offset_right = 50.0
+offset_bottom = -19.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_walking")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Idle" type="TextureRect" parent="Wardrobe" unique_id=316769958]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -142.0
+offset_top = -354.0
+offset_right = 121.0
+offset_bottom = 161.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_idle")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Broken" type="TextureRect" parent="Wardrobe" unique_id=386352566]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -151.0
+offset_top = -395.0
+offset_right = 53.0
+offset_bottom = 147.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("5_broken")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HitArea" type="Button" parent="Wardrobe" unique_id=1210535640]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_default_cursor_shape = 2
+flat = true
+
+[node name="EmployeeActor" type="Control" parent="." unique_id=1648378895]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 650.0
+offset_top = 208.0
+offset_right = 1156.0
+offset_bottom = 889.0
+mouse_filter = 2
+script = ExtResource("11_actor")
+
+[node name="NeutralPose" type="TextureRect" parent="EmployeeActor" unique_id=1354792857]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 119.0
+offset_top = 47.0
+offset_right = 69.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("12_liliya")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WorkPose" type="TextureRect" parent="EmployeeActor" unique_id=1647441608]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 119.0
+offset_top = 47.0
+offset_right = 69.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("13_liliya_cast")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ActionOrigin" type="Marker2D" parent="EmployeeActor" unique_id=1725584488]
+position = Vector2(203, 125)
+gizmo_extents = 18.0
+
+[node name="Interface" type="CanvasLayer" parent="." unique_id=960509458]
+
+[node name="ToolBar" parent="Interface" unique_id=1118982531 instance=ExtResource("8_toolbar")]
+offset_left = 24.0
+offset_top = 567.0
+offset_right = 610.0
+offset_bottom = 720.0
+
+[node name="RepairHUD" parent="Interface" unique_id=1142102480 instance=ExtResource("9_hud")]
+offset_left = 3.0
+offset_top = 2.0
+offset_right = 3.0
+offset_bottom = 2.0
+
+[node name="BackToHouseButton" type="Button" parent="Interface" unique_id=1877080967]
+visible = false
+offset_left = 720.0
+offset_top = 24.0
+offset_right = 940.0
+offset_bottom = 78.0
+mouse_default_cursor_shape = 2
+text = "←  К ОБЗОРУ ДОМА"
+
+[node name="ResidentRequest" type="Panel" parent="Interface" unique_id=1491147401]
+visible = false
+offset_left = 20.0
+offset_top = 120.0
+offset_right = 760.0
+offset_bottom = 250.0
+mouse_filter = 2
+
+[node name="Message" type="Label" parent="Interface/ResidentRequest" unique_id=2140620780]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = 8.0
+offset_right = -14.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.96, 0.78, 0.46, 1)
+theme_override_font_sizes/font_size = 16
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="ActionFeedback" type="Panel" parent="Interface" unique_id=1190260879]
+visible = false
+offset_left = 20.0
+offset_top = 260.0
+offset_right = 760.0
+offset_bottom = 390.0
+mouse_filter = 2
+
+[node name="Message" type="Label" parent="Interface/ActionFeedback" unique_id=909157902]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = 8.0
+offset_right = -14.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.92, 0.84, 0.69, 1)
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="PhysicalIntentPanel" type="Panel" parent="Interface" unique_id=476210504]
+visible = false
+offset_left = 20.0
+offset_top = 590.0
+offset_right = 860.0
+offset_bottom = 700.0
+
+[node name="Title" type="Label" parent="Interface/PhysicalIntentPanel" unique_id=509805931]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = 828.0
+offset_bottom = 34.0
+theme_override_colors/font_color = Color(0.96, 0.78, 0.46, 1)
+theme_override_font_sizes/font_size = 16
+text = "ЧТО СДЕЛАТЬ СО ШКАФОМ?"
+horizontal_alignment = 1
+
+[node name="Choices" type="HBoxContainer" parent="Interface/PhysicalIntentPanel" unique_id=688379151]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 42.0
+offset_right = 828.0
+offset_bottom = 98.0
+theme_override_constants/separation = 6
+
+[node name="Hold" type="Button" parent="Interface/PhysicalIntentPanel/Choices" unique_id=2094163754]
+custom_minimum_size = Vector2(115, 54)
+layout_mode = 2
+text = "Удерживать"
+
+[node name="MoveLeft" type="Button" parent="Interface/PhysicalIntentPanel/Choices" unique_id=528901537]
+custom_minimum_size = Vector2(190, 54)
+layout_mode = 2
+text = "Поставить к левой стене"
+
+[node name="MoveCenter" type="Button" parent="Interface/PhysicalIntentPanel/Choices" unique_id=968437171]
+custom_minimum_size = Vector2(220, 54)
+layout_mode = 2
+text = "Поставить в проход на кухню"
+
+[node name="BreakLegs" type="Button" parent="Interface/PhysicalIntentPanel/Choices" unique_id=283544748]
+custom_minimum_size = Vector2(150, 54)
+layout_mode = 2
+text = "Сломать ножки"
+
+[node name="Back" type="Button" parent="Interface/PhysicalIntentPanel/Choices" unique_id=447628542]
+custom_minimum_size = Vector2(90, 54)
+layout_mode = 2
+text = "← Назад"
+
+[node name="CrewPlacementGuide" type="ColorRect" parent="." unique_id=988376643]
+offset_left = 20.0
+offset_top = 745.0
+offset_right = 950.0
+offset_bottom = 880.0
+mouse_filter = 2
+color = Color(0.72, 0.45, 0.12, 0.2)
+
+[node name="Label" type="Label" parent="CrewPlacementGuide" unique_id=1299556487]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.5, 1)
+theme_override_font_sizes/font_size = 18
+text = "ОБЛАСТЬ ПАНЕЛИ «БРИГАДА» (от 1 до 3 карточек)"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PauseMenu" parent="." unique_id=1999561435 instance=ExtResource("10_pause")]
+show_default_menu_button = false
+
+[node name="WardrobeEditorLayoutSwitch" type="Node" parent="." unique_id=531387528]
+script = ExtResource("14_editor_switch")
+edit_mode = 1
