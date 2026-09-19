@@ -85,9 +85,13 @@ var employees: Dictionary = {
 		"name": "Борис Медяк",
 		"role": "Мастер-сантехник",
 		"portrait": "res://assets/portraits/employees/boris.png",
+		"actor_neutral_pose": "res://assets/characters/employees/boris/full_body.png",
+		"actor_walk_pose": "res://assets/characters/employees/boris/walk_pose.png",
+		"actor_work_pose": "res://assets/characters/employees/boris/work_pose.png",
+		"actor_action_style": &"physical",
 		"status": "Свободен",
 		"idle_status": "Свободен",
-		"abilities": PackedStringArray(),
+		"abilities": PackedStringArray(["diagnose", "repair"]),
 		"training_categories": PackedStringArray(["technical"]),
 		"max_special_abilities": 2,
 		"core_actions": "Диагностика и точный ремонт",
@@ -137,7 +141,7 @@ var employees: Dictionary = {
 var jobs: Dictionary = {
 	&"lava_leak": {
 		"title": "Из крана течёт лава",
-		"address": "Каменная улица, 12",
+		"address": "Старый квартал, 5",
 		"resident": "Господин Рагнар",
 		"description": "В ванной демона из трубы идёт лава. Поток усиливается, а старая медная труба уже нагрелась.",
 		"urgency": "Срочно",
@@ -351,7 +355,9 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 	if completed_job_ids.has(String(completed_id)):
 		return false
 	var job: Dictionary = jobs[completed_id]
-	var reward: int = maxi(0, int(job.get("base_reward", 0)) + int(result.get("reward_adjustment", 0)))
+	var base_reward: int = int(job.get("base_reward", 0))
+	var reward_adjustment: int = int(result.get("reward_adjustment", 0))
+	var reward: int = maxi(0, base_reward + reward_adjustment)
 	var compensation: int = maxi(0, int(result.get("compensation_cost", 0)))
 	var assigned: PackedStringArray = job["assigned"]
 	var crew_names: PackedStringArray = PackedStringArray()
@@ -369,6 +375,9 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		"title": str(job["title"]),
 		"resident": str(job["resident"]),
 		"reward": reward,
+		"base_reward": base_reward,
+		"reward_adjustment": reward_adjustment,
+		"maximum_payment": reward_adjustment == 0 and compensation == 0,
 		"compensation": compensation,
 		"net_change": reward - compensation,
 		"crew": Array(crew_names),
@@ -416,7 +425,7 @@ func start_new_game() -> void:
 
 	_reset_employee(&"liliya", true, PackedStringArray(["freeze", "heat"]), "Свободна")
 	_reset_employee(&"grog", true, PackedStringArray(["physical_move"]), "Свободен")
-	_reset_employee(&"boris", true, PackedStringArray(), "Свободен")
+	_reset_employee(&"boris", true, PackedStringArray(["diagnose", "repair"]), "Свободен")
 	_reset_employee(&"nika", false, PackedStringArray(), "Не нанята")
 	_reset_employee(&"felix", false, PackedStringArray(["antimagic"]), "Не нанят")
 
@@ -567,6 +576,12 @@ func load_game() -> Error:
 			if str(loaded_abilities[ability_index]) == "move":
 				loaded_abilities[ability_index] = "physical_move" if employee_id == &"grog" else "telekinesis"
 		employee["abilities"] = PackedStringArray(loaded_abilities)
+		if employee_id == &"boris":
+			var boris_abilities: PackedStringArray = employee["abilities"]
+			for required_ability: String in PackedStringArray(["diagnose", "repair"]):
+				if not boris_abilities.has(required_ability):
+					boris_abilities.append(required_ability)
+			employee["abilities"] = boris_abilities
 		var loaded_training_id := StringName(str(loaded_employee.get("training_id", "")))
 		employee["training_id"] = loaded_training_id if TRAINING_DEFINITIONS.has(loaded_training_id) else &""
 		employee["training_end_day"] = int(loaded_employee.get("training_end_day", 0))

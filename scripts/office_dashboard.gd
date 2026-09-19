@@ -701,6 +701,8 @@ func _refresh_job_report() -> void:
 	var crew_text: String = ", ".join(PackedStringArray(crew)) if not crew.is_empty() else "бригада не указана"
 	var compensation: int = int(report.get("compensation", 0))
 	var finance_text: String = "Оплата: %d монет" % int(report.get("reward", 0))
+	if bool(report.get("maximum_payment", false)):
+		finance_text += " — максимальная по заявке\nОценка выполнения: отлично"
 	if compensation > 0:
 		finance_text += "\nКомпенсация жильцу: %d монет\nИзменение средств службы: %d монет" % [compensation, int(report.get("net_change", -compensation))]
 	job_report_body.text = "%s\n\nЗаказчик: %s\nБригада: %s\n\n%s\n\n%s" % [report.get("title", "Заявка"), report.get("resident", ""), crew_text, finance_text, report.get("summary", "")]

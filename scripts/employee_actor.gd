@@ -120,7 +120,11 @@ func play_action(
 		if physical_approach_position.is_finite() and walk_pose.texture != null:
 			await _walk_to(physical_approach_position)
 		z_index = physical_action_z_index
-		var selected_pose: TextureRect = hold_pose if physical_pose == &"hold" and hold_pose.texture != null else work_pose
+		var selected_pose: TextureRect = work_pose
+		if physical_pose == &"hold" and hold_pose.texture != null:
+			selected_pose = hold_pose
+		elif physical_pose == &"neutral":
+			selected_pose = neutral_pose
 		await _show_action_pose(selected_pose)
 		await get_tree().create_timer(0.38).timeout
 		action_impact.emit(action_id)

@@ -158,10 +158,18 @@ func _apply_selected_action() -> void:
 	if selected_tool_id.is_empty():
 		_show_feedback("У выбранного сотрудника нет подходящего действия для этого объекта.", true)
 		return
+	if not simulation.can_begin_action(selected_tool_id):
+		_resolve_action(selected_tool_id)
+		return
 	if employee_actor.visible:
 		action_in_progress = true
 		lava_faucet.set_interaction_enabled(false)
-		employee_actor.play_action(selected_tool_id, _faucet_target_global(), physical_approach.position)
+		employee_actor.play_action(
+			selected_tool_id,
+			_faucet_target_global(),
+			physical_approach.position,
+			&"neutral" if selected_tool_id == &"diagnose" else &"work"
+		)
 		return
 	_resolve_action(selected_tool_id)
 

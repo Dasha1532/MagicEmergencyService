@@ -83,14 +83,24 @@ func get_status_title() -> String:
 func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
 	var applied: bool = false
 	var message: String = "Это действие не меняет состояние крана."
-	if _tags().has("melted"):
-		message = "Кран уже расплавлен: температурные воздействия больше не могут его восстановить."
-	else:
-		match action_id:
-			&"freeze":
+	match action_id:
+		&"diagnose":
+			message = _diagnose_faucet()
+			applied = true
+		&"repair":
+			var repair_result: Dictionary = _apply_technical_repair()
+			message = str(repair_result["message"])
+			applied = bool(repair_result["applied"])
+		&"freeze":
+			if _tags().has("melted"):
+				message = "Кран уже расплавлен: температурные воздействия больше не могут его восстановить."
+			else:
 				message = _apply_freeze()
 				applied = true
-			&"heat":
+		&"heat":
+			if _tags().has("melted"):
+				message = "Кран уже расплавлен: температурные воздействия больше не могут его восстановить."
+			else:
 				message = _apply_heat()
 				applied = true
 
@@ -106,6 +116,43 @@ func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
 		"result": result.duplicate(true),
 	})
 	return result
+
+
+func can_begin_action(action_id: StringName) -> bool:
+	if action_id != &"repair":
+		return true
+	return not _tags().has("melted") and not _tags().has("lava_flowing") and int(world_object["temperature"]) < OVERHEAT_THRESHOLD
+
+
+func _diagnose_faucet() -> String:
+	if _tags().has("melted"):
+		return "Осмотр Бориса: корпус крана расплавлен. Нужна полная замена, полевой ремонт невозможен."
+	if _tags().has("lava_flowing"):
+		return "Осмотр Бориса: внутри идёт лава, давление %d, температура %d. Сначала необходимо остановить и охладить поток." % [int(world_object["pressure"]), int(world_object["temperature"])]
+	if int(world_object["temperature"]) >= OVERHEAT_THRESHOLD:
+		return "Осмотр Бориса: поток остановлен, но металл всё ещё раскалён. Прикасаться к крану пока опасно."
+	if int(world_object["damage"]) > 0:
+		return "Осмотр Бориса: кран безопасен, но перегрев повредил соединения. Можно выполнить обычный ремонт."
+	if _tags().has("repaired"):
+		return "Осмотр Бориса: давление сброшено, соединения герметичны, кран исправен."
+	return "Осмотр Бориса: магическая опасность устранена. Кран можно привести в рабочее состояние обычным ремонтом."
+
+
+func _apply_technical_repair() -> Dictionary:
+	if _tags().has("melted"):
+		return {"applied": false, "message": "Борис осмотрел расплавленный кран: ремонтировать уже нечего, требуется замена."}
+	if _tags().has("lava_flowing"):
+		return {"applied": false, "message": "Борис не стал прикасаться к крану: сначала нужно остановить поток лавы."}
+	if int(world_object["temperature"]) >= OVERHEAT_THRESHOLD:
+		return {"applied": false, "message": "Металл всё ещё раскалён. Борис отказывается начинать ремонт, пока кран не остынет."}
+	world_object["pressure"] = 0
+	world_object["damage"] = maxi(0, int(world_object["damage"]) - 2)
+	world_object["scorched"] = int(world_object["damage"]) > 0
+	_remove_tag("overheated")
+	_add_tag("stabilized")
+	_add_tag("repaired")
+	world_object["visual_state"] = &"repaired"
+	return {"applied": true, "message": "Борис заменил повреждённые уплотнения, подтянул соединения и восстановил кран."}
 
 
 func is_resolved() -> bool:

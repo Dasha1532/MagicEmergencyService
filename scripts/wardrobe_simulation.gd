@@ -87,12 +87,17 @@ func get_resident_request() -> String:
 
 
 func get_resident_message() -> String:
-	return ResidentReactionResolverScript.message_for(world_object, get_resident_request(), int(world_object["resident_voice_variant"]))
+	var current_message: String = get_resident_request()
+	if bool(world_object["anchored"]) and world_object["position_zone"] == world_object["requested_zone"]:
+		current_message = "Вот теперь шкаф стоит там, где нужно, и больше никуда не уйдёт. Спасибо, именно этого я и просила!"
+	return ResidentReactionResolverScript.message_for(world_object, current_message, int(world_object["resident_voice_variant"]))
 
 
 func get_status_title() -> String:
 	if bool(world_object["held"]):
 		return "Шкаф удерживается"
+	if bool(world_object["anchored"]):
+		return "Шкаф закреплён"
 	return ResidentReactionResolverScript.title_for(world_object, "Шкаф ходит по квартире", "Шкаф")
 
 
@@ -103,6 +108,13 @@ func apply_action(employee_id: StringName, action_id: StringName, intent: String
 		return _record_result(employee_id, action_id, intent, false, "От шкафа осталась только куча пепла. Воздействовать больше не на что.")
 
 	match action_id:
+		&"diagnose":
+			action_summary = _diagnose_wardrobe()
+			applied = true
+		&"repair":
+			var repair_result: Dictionary = _apply_technical_repair()
+			action_summary = str(repair_result["summary"])
+			applied = bool(repair_result["applied"])
 		&"physical_move":
 			var physical_result: Dictionary = _apply_physical_intent(intent)
 			action_summary = str(physical_result["summary"])
@@ -142,14 +154,13 @@ func apply_action(employee_id: StringName, action_id: StringName, intent: String
 			applied = true
 		&"animate":
 			world_object["magic_level"] = int(world_object["magic_level"]) + 3
-			if int(world_object["mobility"]) > 0:
+			if int(world_object["mobility"]) > 0 and not bool(world_object["anchored"]):
 				world_object["moving"] = true
 				world_object["noise"] = int(world_object["noise"]) + 2
 			action_summary = "Чары оживления усилились."
 			applied = true
 		&"telekinesis":
 			world_object["position_zone"] = world_object["requested_zone"]
-			_damage_contents(1)
 			action_summary = "Шкаф перенесён %s." % ZONE_NAMES[world_object["requested_zone"]]
 			applied = true
 
@@ -158,6 +169,16 @@ func apply_action(employee_id: StringName, action_id: StringName, intent: String
 	var message: String = _compose_result_message(action_summary, action_id, intent) if applied else action_summary
 
 	return _record_result(employee_id, action_id, intent, applied, message)
+
+
+func can_begin_action(action_id: StringName) -> bool:
+	if action_id != &"repair":
+		return true
+	if bool(world_object["destroyed"]) or bool(world_object["burning"]):
+		return false
+	if int(world_object["mobility"]) <= 0:
+		return true
+	return world_object["position_zone"] == world_object["requested_zone"]
 
 
 func advance_burning() -> Dictionary:
@@ -169,7 +190,6 @@ func advance_burning() -> Dictionary:
 	var max_fire_spots: int = int(world_object["max_fire_spots"])
 	if int(world_object["fire_spots"]) < max_fire_spots:
 		world_object["fire_spots"] = int(world_object["fire_spots"]) + 1
-		_damage_contents(1)
 		var spread_result: Dictionary = {
 			"changed": true,
 			"message": "Пламя распространяется по шкафу: очагов уже %d." % int(world_object["fire_spots"]),
@@ -229,7 +249,7 @@ func is_resolved() -> bool:
 		return false
 	var cannot_walk: bool = int(world_object["mobility"]) <= 0
 	var entrance_is_clear: bool = world_object["position_zone"] != &"entrance"
-	return not bool(world_object["moving"]) and not bool(world_object["burning"]) and (entrance_is_clear or cannot_walk)
+	return not bool(world_object["moving"]) and not bool(world_object["burning"]) and (entrance_is_clear or cannot_walk or bool(world_object["anchored"]))
 
 
 func get_completion_result() -> Dictionary:
@@ -263,11 +283,11 @@ func get_completion_result() -> Dictionary:
 			"summary": broken_reply,
 			"actions": action_log.duplicate(true),
 		}
-	var summary: String = "Шкаф остановлен и больше не ходит."
+	var summary: String = "Шкаф закреплён у стены и больше не ходит, хотя чары всё ещё действуют." if bool(world_object["anchored"]) else "Шкаф остановлен и больше не ходит."
 	if world_object["position_zone"] != &"entrance":
 		summary += " Проход освобождён."
 	if contents_damage > 0:
-		summary += " Хрупкая посуда внутри шкафа пострадала при перемещении."
+		summary += " Хрупкая посуда внутри шкафа повреждена."
 	if not correct_place:
 		summary += " Шкаф оставлен не там, где просила хозяйка."
 	return {
@@ -293,13 +313,13 @@ func _apply_physical_intent(intent: StringName) -> Dictionary:
 			return {"applied": true, "summary": "Грог отпустил шкаф."}
 		&"move_left":
 			_release_held_wardrobe()
+			world_object["anchored"] = false
 			world_object["position_zone"] = &"left_wall"
-			_damage_contents(1)
 			return {"applied": true, "summary": "Шкаф поставлен к левой стене."}
 		&"move_kitchen":
 			_release_held_wardrobe()
+			world_object["anchored"] = false
 			world_object["position_zone"] = &"kitchen_passage"
-			_damage_contents(1)
 			return {"applied": true, "summary": "Шкаф поставлен в проход на кухню."}
 		&"break_legs":
 			world_object["held"] = false
@@ -309,6 +329,48 @@ func _apply_physical_intent(intent: StringName) -> Dictionary:
 			world_object["damage"] = int(world_object["damage"]) + (4 if bool(world_object["brittle"]) else 3)
 			return {"applied": true, "summary": "Ножки шкафа сломаны."}
 	return {"applied": false, "summary": "Выберите, что именно Грог должен сделать со шкафом."}
+
+
+func _diagnose_wardrobe() -> String:
+	if bool(world_object["destroyed"]):
+		return "Осмотр Бориса: от шкафа остался пепел, восстановление невозможно."
+	if bool(world_object["burning"]):
+		return "Осмотр Бориса: шкаф горит. До тушения приближаться и ремонтировать его опасно."
+	if bool(world_object["anchored"]):
+		return "Осмотр Бориса: шкаф надёжно закреплён к стене. Чары действуют, но сдвинуть его уже не могут."
+	if int(world_object["mobility"]) <= 0:
+		return "Осмотр Бориса: ножки сломаны, но корпус ещё можно восстановить. Чары при этом никуда не исчезли."
+	if bool(world_object["held"]):
+		return "Осмотр Бориса: Грог удерживает шкаф, ножки целы, а оживляющие чары продолжают действовать."
+	if bool(world_object["moving"]):
+		return "Осмотр Бориса: механических поломок нет. Шкаф движется из-за чар, обычный ремонт их не снимет."
+	return "Осмотр Бориса: механическая часть шкафа исправна; оставшаяся проблема связана с магией."
+
+
+func _apply_technical_repair() -> Dictionary:
+	if bool(world_object["destroyed"]):
+		return {"applied": false, "summary": "Борис осмотрел пепел: шкаф восстановлению не подлежит."}
+	if bool(world_object["burning"]):
+		return {"applied": false, "summary": "Борис не станет ремонтировать горящий шкаф. Сначала потушите огонь."}
+	if bool(world_object["anchored"]):
+		return {"applied": false, "summary": "Шкаф уже закреплён к стене."}
+	if int(world_object["mobility"]) > 0:
+		if world_object["position_zone"] != world_object["requested_zone"]:
+			return {"applied": false, "summary": "Сначала поставьте шкаф к левой стене, чтобы Борис мог закрепить его."}
+		world_object["anchored"] = true
+		world_object["held"] = false
+		world_object["moving"] = false
+		world_object["noise"] = 0
+		return {"applied": true, "summary": "Борис закрепил шкаф к стене прочными скобами. Чары всё ещё действуют, но шкаф больше не сможет ходить."}
+	world_object["mobility"] = 5
+	world_object["damage"] = maxi(0, int(world_object["damage"]) - 3)
+	world_object["held"] = false
+	world_object["moving"] = int(world_object["magic_level"]) > 0
+	world_object["noise"] = 5 if bool(world_object["moving"]) else 0
+	return {
+		"applied": true,
+		"summary": "Борис заменил сломанные ножки и укрепил основание. Чары снова заставили шкаф двигаться." if bool(world_object["moving"]) else "Борис заменил сломанные ножки и восстановил шкаф.",
+	}
 
 
 func _compose_result_message(action_summary: String, action_id: StringName, intent: StringName) -> String:
@@ -349,12 +411,8 @@ func _sync_visual_state() -> void:
 		world_object["visual_state"] = &"idle"
 
 
-func _damage_contents(amount: int) -> void:
-	world_object["contents_damage"] = int(world_object["contents_damage"]) + amount
-
-
 func _release_held_wardrobe() -> void:
 	world_object["held"] = false
-	if int(world_object["mobility"]) > 0 and int(world_object["magic_level"]) > 0 and not bool(world_object["destroyed"]):
+	if int(world_object["mobility"]) > 0 and int(world_object["magic_level"]) > 0 and not bool(world_object["destroyed"]) and not bool(world_object["anchored"]):
 		world_object["moving"] = true
 		world_object["noise"] = maxi(1, int(world_object["noise"]))

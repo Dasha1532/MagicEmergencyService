@@ -9,6 +9,8 @@ const TOOL_NAMES: Dictionary = {
 	"PhysicalMoveButton": [&"physical_move", "Силовая работа"],
 	"AnimateButton": [&"animate", "Оживление"],
 	"AntimagicButton": [&"antimagic", "Антимагия"],
+	"DiagnoseButton": [&"diagnose", "Осмотр"],
+	"RepairButton": [&"repair", "Ремонт"],
 }
 
 @onready var title_label: Label = %TitleLabel
@@ -19,6 +21,8 @@ const TOOL_NAMES: Dictionary = {
 	%PhysicalMoveButton,
 	%AnimateButton,
 	%AntimagicButton,
+	%DiagnoseButton,
+	%RepairButton,
 ]
 var current_tool_id: StringName = &"freeze"
 

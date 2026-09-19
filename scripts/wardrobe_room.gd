@@ -261,14 +261,19 @@ func _close_physical_intent() -> void:
 func _start_action() -> void:
 	action_in_progress = true
 	wardrobe.set_interaction_enabled(false)
+	if not simulation.can_begin_action(selected_tool_id):
+		_resolve_action(selected_tool_id, pending_intent)
+		_on_employee_action_finished()
+		return
 	if employee_actor.visible:
 		var uses_hold_pose: bool = pending_intent in [&"hold", &"move_left", &"move_kitchen", &"release"]
 		var pushes_from_behind: bool = pending_intent in [&"move_left", &"move_kitchen"]
+		var action_pose: StringName = &"hold" if uses_hold_pose else (&"neutral" if selected_tool_id == &"diagnose" else &"work")
 		employee_actor.play_action(
 			selected_tool_id,
 			_wardrobe_target_global(),
 			_wardrobe_approach_position(pending_intent),
-			&"hold" if uses_hold_pose else &"work",
+			action_pose,
 			pending_intent == &"hold",
 			5 if pushes_from_behind else 20
 		)
