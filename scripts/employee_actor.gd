@@ -244,7 +244,7 @@ func _create_projectile(action_id: StringName, target_global_position: Vector2) 
 	projectile.add_child(glow)
 	var core := Polygon2D.new()
 	core.polygon = _circle_points(8.0, 20)
-	core.color = Color(0.92, 0.98, 1.0, 0.96) if action_id == &"freeze" else Color(1.0, 0.86, 0.48, 0.98)
+	core.color = _magic_core_color(action_id)
 	projectile.add_child(core)
 	return projectile
 
@@ -274,7 +274,7 @@ func _create_charge_effect(action_id: StringName) -> Node2D:
 
 	var core := Polygon2D.new()
 	core.polygon = _circle_points(9.0, 20)
-	core.color = Color(0.92, 0.98, 1.0, 0.96) if action_id == &"freeze" else Color(1.0, 0.86, 0.48, 0.98)
+	core.color = _magic_core_color(action_id)
 	charge.add_child(core)
 
 	for index in 4:
@@ -287,7 +287,17 @@ func _create_charge_effect(action_id: StringName) -> Node2D:
 
 
 func _magic_color(action_id: StringName) -> Color:
-	return Color(0.34, 0.86, 1.0, 1.0) if action_id == &"freeze" else Color(1.0, 0.34, 0.08, 1.0)
+	match action_id:
+		&"freeze":
+			return Color(0.34, 0.86, 1.0, 1.0)
+		&"antimagic":
+			return Color(0.68, 0.48, 1.0, 1.0)
+		_:
+			return Color(1.0, 0.34, 0.08, 1.0)
+
+
+func _magic_core_color(action_id: StringName) -> Color:
+	return Color(0.94, 0.90, 1.0, 0.98) if action_id == &"antimagic" else (Color(0.92, 0.98, 1.0, 0.96) if action_id == &"freeze" else Color(1.0, 0.86, 0.48, 0.98))
 
 
 func _spell_origin_global() -> Vector2:
