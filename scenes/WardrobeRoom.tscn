@@ -155,6 +155,7 @@ text = "CENTERWALL • ПРОХОД НА КУХНЮ"
 horizontal_alignment = 1
 
 [node name="Wardrobe" type="Control" parent="." unique_id=1381638692]
+z_index = 10
 layout_mode = 3
 anchors_preset = 0
 offset_left = 374.0
@@ -252,6 +253,10 @@ offset_left = 650.0
 offset_top = 208.0
 offset_right = 1156.0
 offset_bottom = 889.0
+
+[node name="PhysicalApproach" type="Marker2D" parent="."]
+position = Vector2(500, 208)
+gizmo_extents = 24.0
 
 [node name="Interface" type="CanvasLayer" parent="." unique_id=960509458]
 

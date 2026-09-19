@@ -16,6 +16,7 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 @onready var lava_faucet: Control = $InteractiveObjects/LavaFaucet
 @onready var faucet_status_effects: Node2D = $InteractiveObjects/LavaFaucet/StatusEffects
 @onready var employee_actor: Control = $EmployeeActor
+@onready var physical_approach: Marker2D = $PhysicalApproach
 @onready var back_to_house_button: Button = $Interface/BackToHouseButton
 @onready var tool_bar: Control = $Interface/ToolBar
 @onready var repair_hud: Control = $Interface/RepairHUD
@@ -160,7 +161,7 @@ func _apply_selected_action() -> void:
 	if employee_actor.visible:
 		action_in_progress = true
 		lava_faucet.set_interaction_enabled(false)
-		employee_actor.play_action(selected_tool_id, _faucet_target_global())
+		employee_actor.play_action(selected_tool_id, _faucet_target_global(), physical_approach.position)
 		return
 	_resolve_action(selected_tool_id)
 

@@ -65,6 +65,8 @@ var employees: Dictionary = {
 		"portrait": "res://assets/portraits/employees/grog.png",
 		"actor_neutral_pose": "res://assets/characters/employees/grog/full_body.png",
 		"actor_work_pose": "res://assets/characters/employees/grog/work_pose.png",
+		"actor_walk_pose": "res://assets/characters/employees/grog/walk_pose.png",
+		"actor_hold_pose": "res://assets/characters/employees/grog/hold_pose.png",
 		"actor_action_style": &"physical",
 		"actor_work_pose_offset": Vector2.ZERO,
 		"status": "Свободен",

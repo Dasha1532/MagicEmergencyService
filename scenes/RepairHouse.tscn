@@ -200,6 +200,10 @@ offset_top = 208.0
 offset_right = 1254.0
 offset_bottom = 889.0
 
+[node name="PhysicalApproach" type="Marker2D" parent="."]
+position = Vector2(208, 198)
+gizmo_extents = 24.0
+
 [node name="Interface" type="CanvasLayer" parent="." unique_id=659612193]
 
 [node name="ToolBar" parent="Interface" unique_id=900609496 instance=ExtResource("2_toolbar")]

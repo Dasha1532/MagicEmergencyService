@@ -5,6 +5,8 @@ signal action_finished
 
 @onready var neutral_pose: TextureRect = $NeutralPose
 @onready var work_pose: TextureRect = $WorkPose
+@onready var walk_pose: TextureRect = $WalkPose
+@onready var hold_pose: TextureRect = $HoldPose
 @onready var action_origin_marker: Marker2D = get_node_or_null("ActionOrigin") as Marker2D
 
 var idle_tween: Tween
@@ -12,10 +14,18 @@ var action_in_progress: bool = false
 var employee_id: StringName = &""
 var action_style: StringName = &"magic"
 var action_origin: Vector2 = Vector2(45, 70)
+var home_position: Vector2
+var walk_pose_base_position: Vector2
+var employee_positions: Dictionary = {}
+var walking_z_index: int
 
 
 func _ready() -> void:
+	home_position = position
+	walking_z_index = z_index
 	pivot_offset = Vector2(size.x * 0.5, size.y)
+	walk_pose_base_position = walk_pose.position
+	walk_pose.pivot_offset = walk_pose.size * 0.5
 	_reset_pose_visibility()
 	if not Engine.is_editor_hint():
 		_start_idle_motion()
@@ -27,19 +37,32 @@ func configure_employee(new_employee_id: StringName, employee_data: Dictionary) 
 	if neutral_path.is_empty() or work_path.is_empty():
 		employee_id = &""
 		return false
+	if not employee_id.is_empty():
+		employee_positions[employee_id] = position
 	employee_id = new_employee_id
 	action_style = StringName(str(employee_data.get("actor_action_style", "magic")))
+	position = employee_positions.get(employee_id, home_position) as Vector2
+	z_index = walking_z_index
 	var configured_action_origin: Variant = employee_data.get("actor_action_origin", Vector2(45, 70))
 	if configured_action_origin is Vector2:
 		action_origin = configured_action_origin
 	neutral_pose.texture = load(neutral_path)
 	work_pose.texture = load(work_path)
+	var walk_path := str(employee_data.get("actor_walk_pose", ""))
+	var hold_path := str(employee_data.get("actor_hold_pose", ""))
+	walk_pose.texture = load(walk_path) as Texture2D if not walk_path.is_empty() else null
+	hold_pose.texture = load(hold_path) as Texture2D if not hold_path.is_empty() else null
 	# Обе цельные позы используют одну область, масштаб и точку опоры.
 	work_pose.offset_left = neutral_pose.offset_left
 	work_pose.offset_top = neutral_pose.offset_top
 	work_pose.offset_right = neutral_pose.offset_right
 	work_pose.offset_bottom = neutral_pose.offset_bottom
+	_copy_pose_layout(neutral_pose, walk_pose)
+	_copy_pose_layout(neutral_pose, hold_pose)
+	walk_pose_base_position = walk_pose.position
 	_reset_pose_visibility()
+	if idle_tween != null:
+		idle_tween.play()
 	return neutral_pose.texture != null and work_pose.texture != null
 
 
@@ -48,6 +71,20 @@ func _reset_pose_visibility() -> void:
 	neutral_pose.modulate = Color.WHITE
 	work_pose.visible = false
 	work_pose.modulate = Color(1, 1, 1, 0)
+	walk_pose.visible = false
+	walk_pose.modulate = Color.WHITE
+	walk_pose.position = walk_pose_base_position
+	walk_pose.rotation = 0.0
+	walk_pose.scale = Vector2.ONE
+	hold_pose.visible = false
+	hold_pose.modulate = Color(1, 1, 1, 0)
+
+
+func _copy_pose_layout(source: TextureRect, target: TextureRect) -> void:
+	target.offset_left = source.offset_left
+	target.offset_top = source.offset_top
+	target.offset_right = source.offset_right
+	target.offset_bottom = source.offset_bottom
 
 
 func _start_idle_motion() -> void:
@@ -60,38 +97,100 @@ func _start_idle_motion() -> void:
 	idle_tween.parallel().tween_property(self, "rotation", -0.0025, 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
-func play_action(action_id: StringName, target_global_position: Vector2) -> void:
+func play_action(
+	action_id: StringName,
+	target_global_position: Vector2,
+	physical_approach_position: Vector2 = Vector2.INF,
+	physical_pose: StringName = &"work",
+	stay_near_target: bool = false,
+	physical_action_z_index: int = 20
+) -> void:
 	if action_in_progress:
 		return
 	action_in_progress = true
+	z_index = walking_z_index
 	if idle_tween != null:
 		idle_tween.pause()
 	rotation = 0.0
 	scale = Vector2.ONE
-	work_pose.visible = true
-	work_pose.modulate = Color(1, 1, 1, 0)
-	var pose_tween := create_tween().set_parallel(true)
-	pose_tween.tween_property(neutral_pose, "modulate", Color(1, 1, 1, 0), 0.18)
-	pose_tween.tween_property(work_pose, "modulate", Color.WHITE, 0.18)
-	await pose_tween.finished
-
 	if action_style == &"magic":
+		await _show_action_pose(work_pose)
 		await _play_magic_impact(action_id, target_global_position)
 	else:
+		if physical_approach_position.is_finite() and walk_pose.texture != null:
+			await _walk_to(physical_approach_position)
+		z_index = physical_action_z_index
+		var selected_pose: TextureRect = hold_pose if physical_pose == &"hold" and hold_pose.texture != null else work_pose
+		await _show_action_pose(selected_pose)
 		await get_tree().create_timer(0.38).timeout
 		action_impact.emit(action_id)
 		await get_tree().create_timer(0.16).timeout
+		if stay_near_target:
+			action_in_progress = false
+			action_finished.emit()
+			return
 
-	var return_tween := create_tween().set_parallel(true)
-	return_tween.tween_property(work_pose, "modulate", Color(1, 1, 1, 0), 0.22)
-	return_tween.tween_property(neutral_pose, "modulate", Color.WHITE, 0.22)
-	await return_tween.finished
-	work_pose.visible = false
-	neutral_pose.modulate = Color.WHITE
+	_reset_pose_visibility()
+	if action_style == &"physical":
+		employee_positions[employee_id] = position
 	action_in_progress = false
 	if idle_tween != null:
 		idle_tween.play()
 	action_finished.emit()
+
+
+func _show_action_pose(pose: TextureRect) -> void:
+	for item: TextureRect in [neutral_pose, work_pose, walk_pose, hold_pose]:
+		if item != pose:
+			item.visible = false
+	pose.visible = true
+	pose.modulate = Color(1, 1, 1, 0)
+	var pose_tween: Tween = create_tween()
+	pose_tween.tween_property(pose, "modulate", Color.WHITE, 0.18)
+	await pose_tween.finished
+
+
+func _walk_to(target_position: Vector2) -> void:
+	var distance: float = position.distance_to(target_position)
+	if distance < 2.0:
+		return
+	neutral_pose.visible = false
+	work_pose.visible = false
+	hold_pose.visible = false
+	walk_pose.visible = true
+	walk_pose.modulate = Color.WHITE
+	walk_pose.pivot_offset = walk_pose.size * 0.5
+	walk_pose.scale = Vector2(-1.0, 1.0) if target_position.x > position.x else Vector2.ONE
+	var duration: float = clampf(distance / 260.0, 0.45, 1.45)
+	var movement: Tween = create_tween()
+	movement.tween_property(self, "position", target_position, duration).set_trans(Tween.TRANS_LINEAR)
+	var steps: Tween = create_tween().set_loops()
+	steps.tween_property(walk_pose, "position:y", walk_pose_base_position.y - 7.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	steps.parallel().tween_property(walk_pose, "rotation", 0.009, 0.16).set_trans(Tween.TRANS_SINE)
+	steps.tween_property(walk_pose, "position:y", walk_pose_base_position.y, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	steps.parallel().tween_property(walk_pose, "rotation", -0.007, 0.16).set_trans(Tween.TRANS_SINE)
+	await movement.finished
+	steps.kill()
+	walk_pose.position = walk_pose_base_position
+	walk_pose.rotation = 0.0
+	walk_pose.scale = Vector2.ONE
+
+
+func restore_hold_pose(target_position: Vector2, action_z_index: int = 20) -> void:
+	if action_style != &"physical" or hold_pose.texture == null:
+		return
+	if idle_tween != null:
+		idle_tween.pause()
+	position = target_position
+	employee_positions[employee_id] = position
+	rotation = 0.0
+	scale = Vector2.ONE
+	z_index = action_z_index
+	_reset_pose_visibility()
+	neutral_pose.visible = false
+	hold_pose.visible = true
+	hold_pose.modulate = Color.WHITE
+	action_in_progress = false
 
 
 func _play_magic_impact(action_id: StringName, target_global_position: Vector2) -> void:

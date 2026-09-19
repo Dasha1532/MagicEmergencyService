@@ -23,6 +23,7 @@ const FIRE_SPREAD_SECONDS: float = 3.0
 @onready var left_wall_marker: Marker2D = $WardrobePositions/LeftWall
 @onready var kitchen_passage_marker: Marker2D = _find_kitchen_passage_marker()
 @onready var employee_actor: Control = $EmployeeActor
+@onready var physical_approach: Marker2D = $PhysicalApproach
 @onready var back_to_house_button: Button = $Interface/BackToHouseButton
 @onready var tool_bar: Control = $Interface/ToolBar
 @onready var repair_hud: Control = $Interface/RepairHUD
@@ -31,6 +32,7 @@ const FIRE_SPREAD_SECONDS: float = 3.0
 @onready var request_panel: Panel = $Interface/ResidentRequest
 @onready var request_label: Label = $Interface/ResidentRequest/Message
 @onready var intent_panel: Panel = $Interface/PhysicalIntentPanel
+@onready var hold_button: Button = $Interface/PhysicalIntentPanel/Choices/Hold
 @onready var crew_placement_guide: Control = get_node_or_null("CrewPlacementGuide") as Control
 @onready var left_wall_guide: Control = get_node_or_null("WardrobePositions/LeftWall/PlacementGuide") as Control
 @onready var center_wall_guide: Control = get_node_or_null("WardrobePositions/CenterWall/PlacementGuide") as Control
@@ -75,7 +77,7 @@ func _ready() -> void:
 	repair_hud.completion_requested.connect(_attempt_complete_job)
 	employee_actor.action_impact.connect(_on_employee_action_impact)
 	employee_actor.action_finished.connect(_on_employee_action_finished)
-	$Interface/PhysicalIntentPanel/Choices/Hold.pressed.connect(_choose_physical_intent.bind(&"hold"))
+	hold_button.pressed.connect(_toggle_hold_intent)
 	$Interface/PhysicalIntentPanel/Choices/MoveLeft.pressed.connect(_choose_physical_intent.bind(&"move_left"))
 	var move_kitchen_button: Button = _find_move_kitchen_button()
 	move_kitchen_button.text = "Поставить в проход на кухню"
@@ -210,6 +212,8 @@ func _configure_employee_actor() -> bool:
 		employee_actor.visible = false
 		return false
 	employee_actor.visible = employee_actor.configure_employee(selected_employee_id, game_state.employees[selected_employee_id])
+	if employee_actor.visible and selected_employee_id == &"grog" and bool(simulation.world_object.get("held", false)):
+		employee_actor.call("restore_hold_pose", _wardrobe_approach_position(&"hold"), 20)
 	return employee_actor.visible
 
 
@@ -223,6 +227,7 @@ func _on_wardrobe_selected() -> void:
 		_show_feedback("У выбранного сотрудника нет доступного действия.", true)
 		return
 	if selected_tool_id == &"physical_move":
+		_refresh_hold_button()
 		intent_panel.position = tool_bar.position
 		tool_bar.visible = false
 		intent_panel.visible = true
@@ -240,6 +245,14 @@ func _choose_physical_intent(intent: StringName) -> void:
 	_start_action()
 
 
+func _toggle_hold_intent() -> void:
+	_choose_physical_intent(&"release" if bool(simulation.world_object.get("held", false)) else &"hold")
+
+
+func _refresh_hold_button() -> void:
+	hold_button.text = "Отпустить" if bool(simulation.world_object.get("held", false)) else "Удерживать"
+
+
 func _close_physical_intent() -> void:
 	intent_panel.visible = false
 	tool_bar.visible = true
@@ -249,7 +262,16 @@ func _start_action() -> void:
 	action_in_progress = true
 	wardrobe.set_interaction_enabled(false)
 	if employee_actor.visible:
-		employee_actor.play_action(selected_tool_id, _wardrobe_target_global())
+		var uses_hold_pose: bool = pending_intent in [&"hold", &"move_left", &"move_kitchen", &"release"]
+		var pushes_from_behind: bool = pending_intent in [&"move_left", &"move_kitchen"]
+		employee_actor.play_action(
+			selected_tool_id,
+			_wardrobe_target_global(),
+			_wardrobe_approach_position(pending_intent),
+			&"hold" if uses_hold_pose else &"work",
+			pending_intent == &"hold",
+			5 if pushes_from_behind else 20
+		)
 	else:
 		_resolve_action(selected_tool_id, pending_intent)
 		_on_employee_action_finished()
@@ -269,6 +291,7 @@ func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 	var was_burning: bool = bool(simulation.world_object["burning"])
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, intent)
 	_apply_visual_state()
+	_refresh_hold_button()
 	_show_feedback(str(result["message"]), not bool(result["applied"]))
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
@@ -329,6 +352,15 @@ func _apply_visual_state() -> void:
 
 func _wardrobe_target_global() -> Vector2:
 	return wardrobe_status_effects.global_position
+
+
+func _wardrobe_approach_position(intent: StringName) -> Vector2:
+	# Горизонтальная точка следует за текущим положением и масштабом шкафа.
+	# Для удержания и толкания ладони совмещаются с правой боковой стенкой.
+	# Для поломки Грог остаётся ближе к передней части и ножкам.
+	var wardrobe_width: float = wardrobe.size.x * wardrobe.scale.x
+	var contact_ratio: float = 0.53 if intent in [&"hold", &"release", &"move_left", &"move_kitchen"] else 0.25
+	return Vector2(wardrobe.position.x + wardrobe_width * contact_ratio, physical_approach.position.y)
 
 
 func _attempt_complete_job() -> void:

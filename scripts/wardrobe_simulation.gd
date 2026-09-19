@@ -22,6 +22,7 @@ var world_object: Dictionary = {
 	"position_zone": &"entrance",
 	"requested_zone": &"left_wall",
 	"moving": true,
+	"held": false,
 	"frozen": false,
 	"brittle": false,
 	"burning": false,
@@ -46,6 +47,8 @@ func initialize_variant(_seed_value: int) -> void:
 	# В этой заявке пожелание жильца фиксировано и прямо сообщается игроку.
 	world_object["requested_zone"] = &"left_wall"
 	world_object["contents_type"] = &"dishes"
+	if not world_object.has("held"):
+		world_object["held"] = false
 
 
 func load_state(saved_state: Dictionary) -> void:
@@ -88,6 +91,8 @@ func get_resident_message() -> String:
 
 
 func get_status_title() -> String:
+	if bool(world_object["held"]):
+		return "Шкаф удерживается"
 	return ResidentReactionResolverScript.title_for(world_object, "Шкаф ходит по квартире", "Шкаф")
 
 
@@ -175,6 +180,7 @@ func advance_burning() -> Dictionary:
 	world_object["destroyed"] = true
 	world_object["burning"] = false
 	world_object["moving"] = false
+	world_object["held"] = false
 	world_object["mobility"] = 0
 	world_object["noise"] = 0
 	world_object["fire_spots"] = 0
@@ -219,6 +225,8 @@ func _record_result(employee_id: StringName, action_id: StringName, intent: Stri
 func is_resolved() -> bool:
 	if bool(world_object["destroyed"]):
 		return true
+	if bool(world_object["held"]):
+		return false
 	var cannot_walk: bool = int(world_object["mobility"]) <= 0
 	var entrance_is_clear: bool = world_object["position_zone"] != &"entrance"
 	return not bool(world_object["moving"]) and not bool(world_object["burning"]) and (entrance_is_clear or cannot_walk)
@@ -273,16 +281,28 @@ func get_completion_result() -> Dictionary:
 func _apply_physical_intent(intent: StringName) -> Dictionary:
 	match intent:
 		&"hold":
+			if int(world_object["mobility"]) <= 0:
+				return {"applied": false, "summary": "Удерживать шкаф больше не требуется: его ножки сломаны."}
+			world_object["held"] = true
+			world_object["moving"] = false
 			return {"applied": true, "summary": "Грог удержал шкаф на месте."}
+		&"release":
+			if not bool(world_object["held"]):
+				return {"applied": false, "summary": "Грог сейчас не удерживает шкаф."}
+			_release_held_wardrobe()
+			return {"applied": true, "summary": "Грог отпустил шкаф."}
 		&"move_left":
+			_release_held_wardrobe()
 			world_object["position_zone"] = &"left_wall"
 			_damage_contents(1)
 			return {"applied": true, "summary": "Шкаф поставлен к левой стене."}
 		&"move_kitchen":
+			_release_held_wardrobe()
 			world_object["position_zone"] = &"kitchen_passage"
 			_damage_contents(1)
 			return {"applied": true, "summary": "Шкаф поставлен в проход на кухню."}
 		&"break_legs":
+			world_object["held"] = false
 			world_object["mobility"] = 0
 			world_object["moving"] = false
 			world_object["noise"] = 0
@@ -299,6 +319,8 @@ func _compose_result_message(action_summary: String, action_id: StringName, inte
 		if int(world_object["mobility"]) <= 0:
 			return "Удерживать шкаф больше не требуется: его ножки сломаны."
 		return "%s После освобождения он снова сможет двигаться." % action_summary
+	if action_id == &"physical_move" and intent == &"release":
+		return "%s Чары снова заставили его ходить." % action_summary if bool(world_object["moving"]) else "%s Шкаф остался неподвижен." % action_summary
 	return "%s %s" % [action_summary, _describe_current_hazard()]
 
 
@@ -319,6 +341,8 @@ func _sync_visual_state() -> void:
 		world_object["visual_state"] = &"destroyed"
 	elif int(world_object["mobility"]) <= 0:
 		world_object["visual_state"] = &"broken"
+	elif bool(world_object["held"]):
+		world_object["visual_state"] = &"idle"
 	elif bool(world_object["moving"]):
 		world_object["visual_state"] = &"walking"
 	else:
@@ -327,3 +351,10 @@ func _sync_visual_state() -> void:
 
 func _damage_contents(amount: int) -> void:
 	world_object["contents_damage"] = int(world_object["contents_damage"]) + amount
+
+
+func _release_held_wardrobe() -> void:
+	world_object["held"] = false
+	if int(world_object["mobility"]) > 0 and int(world_object["magic_level"]) > 0 and not bool(world_object["destroyed"]):
+		world_object["moving"] = true
+		world_object["noise"] = maxi(1, int(world_object["noise"]))
