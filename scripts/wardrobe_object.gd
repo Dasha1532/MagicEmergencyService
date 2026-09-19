@@ -5,6 +5,7 @@ signal selected
 @onready var walking_pose: TextureRect = $Walking
 @onready var idle_pose: TextureRect = $Idle
 @onready var broken_pose: TextureRect = $Broken
+@onready var ash_pile: Sprite2D = $AshPile
 @onready var hit_area: Button = $HitArea
 
 var motion_tween: Tween
@@ -30,6 +31,7 @@ func show_state(state: StringName) -> void:
 	walking_pose.visible = state == &"walking"
 	idle_pose.visible = state == &"idle"
 	broken_pose.visible = state == &"broken"
+	ash_pile.visible = state == &"destroyed"
 	if motion_tween != null:
 		motion_tween.kill()
 	rotation = 0.0

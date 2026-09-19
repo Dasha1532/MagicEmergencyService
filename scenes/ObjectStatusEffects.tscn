@@ -3,18 +3,24 @@
 [ext_resource type="Script" path="res://scripts/object_status_effects.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://chrmgeu0c11dy" path="res://assets/effects/status/frost.png" id="2_frost"]
 [ext_resource type="Texture2D" uid="uid://blwxqbnwme81y" path="res://assets/effects/status/fire.png" id="3_fire"]
+[ext_resource type="Texture2D" uid="uid://dq3115e00nogv" path="res://assets/effects/status/soot.png" id="4_soot"]
 
 [node name="StatusEffects" type="Node2D"]
-z_index = 20
 script = ExtResource("1_script")
+
+[node name="Soot" type="Sprite2D" parent="."]
+visible = false
+texture_filter = 1
+texture = ExtResource("4_soot")
 
 [node name="Frost" type="Sprite2D" parent="."]
 visible = false
 texture_filter = 1
+z_index = 20
 texture = ExtResource("2_frost")
 
 [node name="Fire" type="Sprite2D" parent="."]
 visible = false
 texture_filter = 1
-z_index = 1
+z_index = 21
 texture = ExtResource("3_fire")

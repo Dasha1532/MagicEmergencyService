@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" path="res://scenes/EmployeeActor.tscn" id="11_actor"]
 [ext_resource type="Script" uid="uid://sts7qj3hdadg" path="res://scripts/wardrobe_editor_layout_switch.gd" id="14_editor_switch"]
 [ext_resource type="PackedScene" path="res://scenes/ObjectStatusEffects.tscn" id="15_status_effects"]
+[ext_resource type="Texture2D" uid="uid://bkn238x6q58e0" path="res://assets/objects/walking_wardrobe/ash_pile.png" id="16_ash"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_wardrobe_placement"]
 bg_color = Color(0.025, 0.018, 0.012, 0.48)
@@ -165,6 +166,7 @@ script = ExtResource("6_object")
 metadata/_edit_use_anchors_ = true
 
 [node name="Walking" type="TextureRect" parent="Wardrobe" unique_id=286667107]
+z_index = 1
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -182,6 +184,7 @@ stretch_mode = 5
 
 [node name="Idle" type="TextureRect" parent="Wardrobe" unique_id=316769958]
 visible = false
+z_index = 1
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -199,6 +202,7 @@ stretch_mode = 5
 
 [node name="Broken" type="TextureRect" parent="Wardrobe" unique_id=386352566]
 visible = false
+z_index = 1
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -214,6 +218,14 @@ texture = ExtResource("5_broken")
 expand_mode = 1
 stretch_mode = 5
 
+[node name="AshPile" type="Sprite2D" parent="Wardrobe"]
+visible = false
+texture_filter = 1
+z_index = 1
+position = Vector2(254, 460)
+scale = Vector2(0.38, 0.38)
+texture = ExtResource("16_ash")
+
 [node name="HitArea" type="Button" parent="Wardrobe" unique_id=1210535640]
 layout_mode = 1
 anchors_preset = 15
@@ -227,7 +239,12 @@ flat = true
 [node name="StatusEffects" parent="Wardrobe" instance=ExtResource("15_status_effects")]
 position = Vector2(254, 260)
 visual_size = 210.0
+soot_size = 430.0
+soot_z_index = 2
+soot_modulate = Color(1, 1, 1, 0.72)
 frost_offset = Vector2(0, 10)
+soot_offset = Vector2(0, 20)
+fire_spot_offsets = PackedVector2Array(-90, 95, 88, 35, 0, -120)
 fire_offset = Vector2(0, -18)
 
 [node name="EmployeeActor" parent="." instance=ExtResource("11_actor")]

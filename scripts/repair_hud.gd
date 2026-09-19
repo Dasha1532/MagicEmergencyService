@@ -15,6 +15,7 @@ var employee_box: HBoxContainer
 var employee_panel: Panel
 var complete_button: Button
 var tool_bar: MarginContainer
+var job_title_label: Label
 @onready var game_state: Node = get_node("/root/GameState")
 
 
@@ -39,15 +40,20 @@ func _build_job_header() -> void:
 	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
 	add_child(panel)
 
-	var title := _label(job.get("title", "Ремонт"), 23, COLOR_GOLD)
-	title.position = Vector2(18, 12)
-	title.size = Vector2(464, 32)
-	panel.add_child(title)
+	job_title_label = _label(job.get("title", "Ремонт"), 23, COLOR_GOLD)
+	job_title_label.position = Vector2(18, 12)
+	job_title_label.size = Vector2(464, 32)
+	panel.add_child(job_title_label)
 
 	var address := _label("%s  •  %s" % [job.get("address", ""), job.get("danger", "")], 16, COLOR_PARCHMENT)
 	address.position = Vector2(18, 50)
 	address.size = Vector2(464, 28)
 	panel.add_child(address)
+
+
+func set_job_title(title: String) -> void:
+	if job_title_label != null:
+		job_title_label.text = title
 
 
 func _build_employee_selector() -> void:

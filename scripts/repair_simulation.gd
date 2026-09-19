@@ -1,6 +1,8 @@
 class_name RepairSimulation
 extends RefCounted
 
+const ResidentReactionResolverScript := preload("res://scripts/resident_reaction_resolver.gd")
+
 const FREEZE_STEP: int = 7
 const HEAT_STEP: int = 5
 const FROST_THRESHOLD: int = 2
@@ -13,8 +15,12 @@ var world_object: Dictionary = {
 	"temperature": 9,
 	"pressure": 8,
 	"damage": 0,
+	"durability": 5,
+	"replacement_value": 350,
+	"resident_voice_variant": 1,
 	"frozen": false,
 	"burning": false,
+	"scorched": false,
 	"visual_state": &"emergency",
 }
 var action_log: Array[Dictionary] = []
@@ -37,8 +43,10 @@ func load_state(saved_state: Dictionary) -> void:
 		# Миграция сохранений, созданных до появления универсальных эффектов.
 		if not restored_object.has("frozen"):
 			world_object["frozen"] = _tags().has("repaired")
-		if not restored_object.has("burning"):
-			world_object["burning"] = _tags().has("overheated")
+		# Металлический кран нагревается и плавится, но не получает состояние горения.
+		world_object["burning"] = false
+		if not restored_object.has("scorched"):
+			world_object["scorched"] = _tags().has("overheated") or _tags().has("melted") or int(world_object["damage"]) > 0
 		if world_object["visual_state"] == &"overheated":
 			world_object["temperature"] = maxi(OVERHEAT_THRESHOLD, int(world_object["temperature"]))
 
@@ -58,6 +66,18 @@ func get_state() -> Dictionary:
 		"world_object": saved_object,
 		"action_log": action_log.duplicate(true),
 	}
+
+
+func get_resident_request() -> String:
+	return "Остановите лаву и приведите кран в безопасное состояние. И осторожнее с ванной — сантехника здесь дорогая!"
+
+
+func get_resident_message() -> String:
+	return ResidentReactionResolverScript.message_for(world_object, get_resident_request(), int(world_object["resident_voice_variant"]))
+
+
+func get_status_title() -> String:
+	return ResidentReactionResolverScript.title_for(world_object, "Из крана течёт лава", "Кран")
 
 
 func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
@@ -96,8 +116,9 @@ func get_completion_result() -> Dictionary:
 	if _tags().has("melted"):
 		return {
 			"reward_adjustment": -500,
+			"compensation_cost": int(world_object["replacement_value"]),
 			"reputation_change": -6,
-			"summary": "Кран расплавлен и полностью выведен из строя. Оплата удержана в счёт замены оборудования и устранения последствий.",
+			"summary": "Кран расплавлен и полностью выведен из строя. Оплаты не будет, служба компенсирует жильцу стоимость замены оборудования.",
 			"actions": action_log.duplicate(true),
 		}
 	var damage: int = int(world_object.get("damage", 0))
@@ -150,6 +171,7 @@ func _apply_heat() -> String:
 		_add_tag("melted")
 		world_object["pressure"] = 0
 		world_object["damage"] = maxi(6, int(world_object["damage"]))
+		world_object["scorched"] = true
 		world_object["visual_state"] = &"melted"
 		return "Раскалённый металл не выдержал повторного нагрева: кран расплавился и полностью сломан."
 	if int(world_object["temperature"]) >= OVERHEAT_THRESHOLD:
@@ -158,6 +180,7 @@ func _apply_heat() -> String:
 		_add_tag("overheated")
 		world_object["pressure"] = 10
 		world_object["damage"] = int(world_object["damage"]) + 1
+		world_object["scorched"] = true
 		world_object["visual_state"] = &"overheated"
 		return "Кран раскалился докрасна и начал деформироваться. Ещё один нагрев расплавит металл."
 	if was_frozen:

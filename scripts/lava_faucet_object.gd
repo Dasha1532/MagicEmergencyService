@@ -37,7 +37,7 @@ func show_overheated_state(show_lava: bool) -> void:
 	lava_stream.visible = show_lava
 	modulate = Color.WHITE
 	_set_melt_parameters(0.72, 0.55)
-	overheat_damage.visible = true
+	overheat_damage.visible = false
 
 
 func show_melted_state(show_lava: bool) -> void:
@@ -46,11 +46,12 @@ func show_melted_state(show_lava: bool) -> void:
 	lava_stream.visible = show_lava
 	modulate = Color.WHITE
 	_set_melt_parameters(1.0, 1.0)
-	overheat_damage.visible = true
+	overheat_damage.visible = false
 
 
-func set_damage_visible(is_visible: bool) -> void:
-	overheat_damage.visible = is_visible
+func set_damage_visible(_is_visible: bool) -> void:
+	# Старый процедурный отблеск и пятно отключены: ущерб показывает PNG копоти.
+	overheat_damage.visible = false
 
 
 func set_interaction_enabled(is_enabled: bool) -> void:
@@ -63,6 +64,7 @@ func _configure_hit_area() -> void:
 	hit_area.add_theme_stylebox_override("hover", empty_style)
 	hit_area.add_theme_stylebox_override("pressed", empty_style)
 	hit_area.add_theme_stylebox_override("focus", empty_style)
+	hit_area.add_theme_stylebox_override("disabled", empty_style)
 
 
 func _start_lava_motion() -> void:

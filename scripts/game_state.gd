@@ -350,13 +350,14 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		return false
 	var job: Dictionary = jobs[completed_id]
 	var reward: int = maxi(0, int(job.get("base_reward", 0)) + int(result.get("reward_adjustment", 0)))
+	var compensation: int = maxi(0, int(result.get("compensation_cost", 0)))
 	var assigned: PackedStringArray = job["assigned"]
 	var crew_names: PackedStringArray = PackedStringArray()
 	for employee_id: String in assigned:
 		var employee_key: StringName = StringName(employee_id)
 		if employees.has(employee_key):
 			crew_names.append(str(employees[employee_key]["name"]))
-	money += reward
+	money += reward - compensation
 	reputation = maxi(0, reputation + int(result.get("reputation_change", 0)))
 	completed_job_ids.append(String(completed_id))
 	job["assigned"] = PackedStringArray()
@@ -366,6 +367,8 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		"title": str(job["title"]),
 		"resident": str(job["resident"]),
 		"reward": reward,
+		"compensation": compensation,
+		"net_change": reward - compensation,
 		"crew": Array(crew_names),
 		"summary": str(result.get("summary", "Аварийные работы приняты.")),
 		"actions": result.get("actions", []),

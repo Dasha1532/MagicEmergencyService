@@ -141,6 +141,7 @@ begin_cap_mode = 2
 end_cap_mode = 2
 
 [node name="NormalFaucet" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1560197138]
+z_index = 1
 layout_mode = 0
 offset_left = -175.0
 offset_top = -45.0
@@ -151,6 +152,7 @@ texture = ExtResource("5_faucet_normal")
 expand_mode = 1
 
 [node name="DamagedFaucet" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1738841380]
+z_index = 1
 layout_mode = 0
 offset_left = -172.0
 offset_top = -50.0
@@ -162,6 +164,7 @@ texture = ExtResource("6_faucet_damaged")
 expand_mode = 1
 
 [node name="LavaStream" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1665473835]
+z_index = 2
 layout_mode = 0
 offset_left = -112.0
 offset_top = 51.0
@@ -178,12 +181,15 @@ offset_top = -62.0
 offset_right = 34.0
 offset_bottom = 158.0
 mouse_default_cursor_shape = 2
+flat = true
 
 [node name="StatusEffects" parent="InteractiveObjects/LavaFaucet" instance=ExtResource("15_status_effects")]
 position = Vector2(-96, 34)
 visual_size = 150.0
+soot_size = 235.0
 frost_offset = Vector2(0, 4)
 fire_offset = Vector2(0, -8)
+soot_offset = Vector2(0, -4)
 
 [node name="Effects" type="Node2D" parent="." unique_id=1983280469]
 
@@ -212,12 +218,36 @@ offset_bottom = 78.0
 mouse_default_cursor_shape = 2
 text = "←  К ОБЗОРУ ДОМА"
 
-[node name="ActionFeedback" type="Panel" parent="Interface" unique_id=262883948]
+[node name="ResidentRequest" type="Panel" parent="Interface"]
 visible = false
 offset_left = 20.0
 offset_top = 120.0
-offset_right = 520.0
-offset_bottom = 178.0
+offset_right = 660.0
+offset_bottom = 226.0
+mouse_filter = 2
+
+[node name="Message" type="Label" parent="Interface/ResidentRequest"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = 8.0
+offset_right = -14.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.96, 0.78, 0.46, 1)
+theme_override_font_sizes/font_size = 16
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="ActionFeedback" type="Panel" parent="Interface" unique_id=262883948]
+visible = false
+offset_left = 20.0
+offset_top = 236.0
+offset_right = 660.0
+offset_bottom = 318.0
 mouse_filter = 2
 
 [node name="Message" type="Label" parent="Interface/ActionFeedback" unique_id=1058269606]

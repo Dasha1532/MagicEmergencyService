@@ -119,6 +119,7 @@ func _play_magic_impact(action_id: StringName, target_global_position: Vector2) 
 
 func _create_projectile(action_id: StringName, target_global_position: Vector2) -> Node2D:
 	var projectile := Node2D.new()
+	projectile.z_index = 100
 	get_parent().add_child(projectile)
 	projectile.global_position = _spell_origin_global()
 	projectile.rotation = (target_global_position - projectile.global_position).angle()
@@ -145,6 +146,7 @@ func _create_projectile(action_id: StringName, target_global_position: Vector2) 
 
 func _create_charge_effect(action_id: StringName) -> Node2D:
 	var charge := Node2D.new()
+	charge.z_index = 100
 	get_parent().add_child(charge)
 	charge.global_position = _spell_origin_global()
 	charge.scale = Vector2(0.18, 0.18)

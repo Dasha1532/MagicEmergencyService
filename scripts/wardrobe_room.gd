@@ -5,6 +5,7 @@ const WardrobeSimulationScript := preload("res://scripts/wardrobe_simulation.gd"
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
 const COLOR_GOLD := Color(0.96, 0.78, 0.46)
 const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
+const FIRE_SPREAD_SECONDS: float = 3.0
 
 @export_group("Положение и размер шкафа")
 @export var entrance_scale: Vector2 = Vector2.ONE
@@ -42,6 +43,7 @@ var pending_intent: StringName = &""
 var action_in_progress: bool = false
 var feedback_revision: int = 0
 var entrance_position: Vector2
+var fire_progression_revision: int = 0
 
 
 func _ready() -> void:
@@ -87,8 +89,9 @@ func _ready() -> void:
 	selected_tool_id = tool_bar.get_selected_tool_id()
 	selected_employee_id = repair_hud.get_selected_employee_id()
 	_configure_employee_actor()
-	request_label.text = simulation.get_resident_request()
 	_restore_visual_state()
+	if bool(simulation.world_object["burning"]):
+		_start_fire_progression()
 	_show_house_overview(false)
 
 
@@ -263,11 +266,37 @@ func _on_employee_action_finished() -> void:
 
 
 func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
+	var was_burning: bool = bool(simulation.world_object["burning"])
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, intent)
 	_apply_visual_state()
 	_show_feedback(str(result["message"]), not bool(result["applied"]))
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+	var is_burning: bool = bool(simulation.world_object["burning"])
+	if is_burning and not was_burning:
+		_start_fire_progression()
+	elif not is_burning and was_burning:
+		fire_progression_revision += 1
+
+
+func _start_fire_progression() -> void:
+	fire_progression_revision += 1
+	_schedule_fire_step(fire_progression_revision)
+
+
+func _schedule_fire_step(revision: int) -> void:
+	await get_tree().create_timer(FIRE_SPREAD_SECONDS).timeout
+	if revision != fire_progression_revision or not bool(simulation.world_object["burning"]):
+		return
+	var result: Dictionary = simulation.advance_burning()
+	if not bool(result.get("changed", false)):
+		return
+	_apply_visual_state()
+	_show_feedback(str(result["message"]), true)
+	repair_hud.set_completion_ready(bool(result["resolved"]))
+	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+	if bool(simulation.world_object["burning"]):
+		_schedule_fire_step(revision)
 
 
 func _restore_visual_state() -> void:
@@ -278,6 +307,9 @@ func _restore_visual_state() -> void:
 func _apply_visual_state() -> void:
 	wardrobe.show_state(StringName(str(simulation.world_object["visual_state"])))
 	wardrobe_status_effects.call("sync_from_state", simulation.world_object)
+	request_label.text = simulation.get_resident_message()
+	if repair_hud.has_method("set_job_title"):
+		repair_hud.call("set_job_title", simulation.get_status_title())
 	var zone: StringName = StringName(str(simulation.world_object["position_zone"]))
 	var target_position: Vector2 = {
 		&"entrance": entrance_position,

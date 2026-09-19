@@ -21,6 +21,8 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 @onready var repair_hud: Control = $Interface/RepairHUD
 @onready var feedback_panel: Panel = $Interface/ActionFeedback
 @onready var feedback_label: Label = $Interface/ActionFeedback/Message
+@onready var request_panel: Panel = $Interface/ResidentRequest
+@onready var request_label: Label = $Interface/ResidentRequest/Message
 @onready var game_state: Node = get_node("/root/GameState")
 
 var simulation: RepairSimulation
@@ -78,6 +80,7 @@ func _open_bathroom() -> void:
 	if repair_hud.has_method("set_work_ui_visible"):
 		repair_hud.call("set_work_ui_visible", true)
 	feedback_panel.visible = false
+	request_panel.visible = true
 
 
 func _show_house_overview(animated: bool = true) -> void:
@@ -95,6 +98,7 @@ func _show_house_overview(animated: bool = true) -> void:
 	if repair_hud.has_method("set_work_ui_visible"):
 		repair_hud.call("set_work_ui_visible", false)
 	feedback_panel.visible = false
+	request_panel.visible = false
 	if not animated:
 		closeup_background.visible = false
 		return
@@ -122,6 +126,7 @@ func _configure_buttons() -> void:
 	back_to_house_button.add_theme_stylebox_override("normal", _button_style(COLOR_PANEL, Color(0.76, 0.54, 0.27), 2))
 	back_to_house_button.add_theme_stylebox_override("hover", _button_style(Color(0.21, 0.14, 0.075, 0.98), COLOR_GOLD, 3))
 	feedback_panel.add_theme_stylebox_override("panel", _button_style(COLOR_PANEL, Color(0.76, 0.54, 0.27), 2))
+	request_panel.add_theme_stylebox_override("panel", _button_style(Color(0.07, 0.045, 0.03, 0.88), Color(0.76, 0.54, 0.27), 2))
 	var problem_style := _button_style(Color(0.15, 0.08, 0.025, 0.08), COLOR_GOLD, 3)
 	problem_style.shadow_color = Color(1.0, 0.58, 0.12, 0.24)
 	problem_style.shadow_size = 10
@@ -188,6 +193,7 @@ func _resolve_action(action_id: StringName) -> void:
 		lava_faucet.show_emergency_state(_is_lava_flowing())
 	lava_faucet.set_damage_visible(_has_damage())
 	faucet_status_effects.call("sync_from_state", simulation.world_object)
+	_update_resident_reaction()
 	_show_feedback(str(result["message"]), not bool(result["applied"]))
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
@@ -227,7 +233,14 @@ func _restore_repair_state() -> void:
 		_show_feedback("Выберите действие сотрудника и примените его к аварийному крану.")
 	lava_faucet.set_damage_visible(_has_damage())
 	faucet_status_effects.call("sync_from_state", simulation.world_object)
+	_update_resident_reaction()
 	repair_hud.set_completion_ready(simulation.is_resolved())
+
+
+func _update_resident_reaction() -> void:
+	request_label.text = simulation.get_resident_message()
+	if repair_hud.has_method("set_job_title"):
+		repair_hud.call("set_job_title", simulation.get_status_title())
 
 
 func _has_damage() -> bool:
