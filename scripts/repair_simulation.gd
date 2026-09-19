@@ -2,6 +2,7 @@ class_name RepairSimulation
 extends RefCounted
 
 const ResidentReactionResolverScript := preload("res://scripts/resident_reaction_resolver.gd")
+const ObjectInteractionRulesScript := preload("res://scripts/object_interaction_rules.gd")
 
 const FREEZE_STEP: int = 7
 const HEAT_STEP: int = 5
@@ -16,6 +17,9 @@ var world_object: Dictionary = {
 	"pressure": 8,
 	"damage": 0,
 	"durability": 5,
+	"mass": 8,
+	"anchored": true,
+	"movable": true,
 	"replacement_value": 350,
 	"resident_voice_variant": 1,
 	"frozen": false,
@@ -103,6 +107,10 @@ func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
 			else:
 				message = _apply_heat()
 				applied = true
+		&"telekinesis":
+			var telekinesis_result: Dictionary = ObjectInteractionRulesScript.apply_telekinesis(world_object)
+			message = str(telekinesis_result["summary"])
+			applied = bool(telekinesis_result["applied"])
 
 	var result := {
 		"applied": applied,

@@ -2,6 +2,7 @@ class_name WardrobeSimulation
 extends RefCounted
 
 const ResidentReactionResolverScript := preload("res://scripts/resident_reaction_resolver.gd")
+const ObjectInteractionRulesScript := preload("res://scripts/object_interaction_rules.gd")
 
 const ZONE_NAMES: Dictionary = {
 	&"entrance": "у входной двери",
@@ -19,6 +20,7 @@ var world_object: Dictionary = {
 	"mobility": 5,
 	"noise": 7,
 	"anchored": false,
+	"movable": true,
 	"position_zone": &"entrance",
 	"requested_zone": &"left_wall",
 	"moving": true,
@@ -160,9 +162,15 @@ func apply_action(employee_id: StringName, action_id: StringName, intent: String
 			action_summary = "Чары оживления усилились."
 			applied = true
 		&"telekinesis":
-			world_object["position_zone"] = world_object["requested_zone"]
-			action_summary = "Шкаф перенесён %s." % ZONE_NAMES[world_object["requested_zone"]]
-			applied = true
+			var target_zone: StringName = {
+				&"move_left": &"left_wall",
+				&"move_kitchen": &"kitchen_passage",
+			}.get(intent, &"")
+			var telekinesis_result: Dictionary = ObjectInteractionRulesScript.apply_telekinesis(world_object, target_zone)
+			action_summary = str(telekinesis_result["summary"])
+			if bool(telekinesis_result["applied"]):
+				action_summary = "Шкаф аккуратно перенесён %s. Шкаф и посуда не повреждены." % ZONE_NAMES[world_object["position_zone"]]
+			applied = bool(telekinesis_result["applied"])
 
 	if applied:
 		_sync_visual_state()

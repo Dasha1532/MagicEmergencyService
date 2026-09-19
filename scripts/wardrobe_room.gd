@@ -32,7 +32,10 @@ const FIRE_SPREAD_SECONDS: float = 3.0
 @onready var request_panel: Panel = $Interface/ResidentRequest
 @onready var request_label: Label = $Interface/ResidentRequest/Message
 @onready var intent_panel: Panel = $Interface/PhysicalIntentPanel
+@onready var intent_title: Label = $Interface/PhysicalIntentPanel/Title
 @onready var hold_button: Button = $Interface/PhysicalIntentPanel/Choices/Hold
+@onready var move_left_button: Button = $Interface/PhysicalIntentPanel/Choices/MoveLeft
+@onready var break_legs_button: Button = $Interface/PhysicalIntentPanel/Choices/BreakLegs
 @onready var crew_placement_guide: Control = get_node_or_null("CrewPlacementGuide") as Control
 @onready var left_wall_guide: Control = get_node_or_null("WardrobePositions/LeftWall/PlacementGuide") as Control
 @onready var center_wall_guide: Control = get_node_or_null("WardrobePositions/CenterWall/PlacementGuide") as Control
@@ -78,15 +81,15 @@ func _ready() -> void:
 	employee_actor.action_impact.connect(_on_employee_action_impact)
 	employee_actor.action_finished.connect(_on_employee_action_finished)
 	hold_button.pressed.connect(_toggle_hold_intent)
-	$Interface/PhysicalIntentPanel/Choices/MoveLeft.pressed.connect(_choose_physical_intent.bind(&"move_left"))
+	move_left_button.pressed.connect(_choose_move_intent.bind(&"move_left"))
 	var move_kitchen_button: Button = _find_move_kitchen_button()
 	move_kitchen_button.text = "Поставить в проход на кухню"
 	move_kitchen_button.custom_minimum_size = Vector2(220.0, 54.0)
-	move_kitchen_button.pressed.connect(_choose_physical_intent.bind(&"move_kitchen"))
-	$Interface/PhysicalIntentPanel/Choices/MoveLeft.text = "Поставить к левой стене"
-	$Interface/PhysicalIntentPanel/Choices/MoveLeft.custom_minimum_size = Vector2(190.0, 54.0)
-	$Interface/PhysicalIntentPanel/Choices/BreakLegs.text = "Сломать ножки"
-	$Interface/PhysicalIntentPanel/Choices/BreakLegs.pressed.connect(_choose_physical_intent.bind(&"break_legs"))
+	move_kitchen_button.pressed.connect(_choose_move_intent.bind(&"move_kitchen"))
+	move_left_button.text = "Поставить к левой стене"
+	move_left_button.custom_minimum_size = Vector2(190.0, 54.0)
+	break_legs_button.text = "Сломать ножки"
+	break_legs_button.pressed.connect(_choose_physical_intent.bind(&"break_legs"))
 	$Interface/PhysicalIntentPanel/Choices/Back.pressed.connect(_close_physical_intent)
 	selected_tool_id = tool_bar.get_selected_tool_id()
 	selected_employee_id = repair_hud.get_selected_employee_id()
@@ -226,8 +229,9 @@ func _on_wardrobe_selected() -> void:
 	if selected_tool_id.is_empty():
 		_show_feedback("У выбранного сотрудника нет доступного действия.", true)
 		return
-	if selected_tool_id == &"physical_move":
+	if selected_tool_id in [&"physical_move", &"telekinesis"]:
 		_refresh_hold_button()
+		_configure_intent_panel(selected_tool_id)
 		intent_panel.position = tool_bar.position
 		tool_bar.visible = false
 		intent_panel.visible = true
@@ -243,6 +247,17 @@ func _choose_physical_intent(intent: StringName) -> void:
 	intent_panel.visible = false
 	tool_bar.visible = true
 	_start_action()
+
+
+func _choose_move_intent(intent: StringName) -> void:
+	_choose_physical_intent(intent)
+
+
+func _configure_intent_panel(action_id: StringName) -> void:
+	var is_telekinesis: bool = action_id == &"telekinesis"
+	intent_title.text = "КУДА ПЕРЕМЕСТИТЬ ШКАФ?" if is_telekinesis else "ЧТО СДЕЛАТЬ СО ШКАФОМ?"
+	hold_button.visible = not is_telekinesis
+	break_legs_button.visible = not is_telekinesis
 
 
 func _toggle_hold_intent() -> void:

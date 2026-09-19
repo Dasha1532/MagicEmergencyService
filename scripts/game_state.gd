@@ -103,17 +103,23 @@ var employees: Dictionary = {
 	},
 	&"nika": {
 		"name": "Ника Искра",
-		"role": "Универсальный ученик",
+		"role": "Маг-телекинетик",
 		"portrait": "res://assets/portraits/employees/nika.png",
+		"portrait_region": Rect2(0, 0, 1254, 1254),
+		"actor_neutral_pose": "res://assets/characters/employees/nika/full_body.png",
+		"actor_work_pose": "res://assets/characters/employees/nika/telekinesis_pose.png",
+		"actor_action_style": &"magic",
+		"actor_action_origin": Vector2(166, 151),
+		"actor_action_origin_from_data": true,
 		"status": "Не нанята",
 		"idle_status": "Свободна",
 		"hire_cost": 350,
-		"abilities": PackedStringArray(),
+		"abilities": PackedStringArray(["telekinesis"]),
 		"training_categories": PackedStringArray(["magic", "technical"]),
 		"max_special_abilities": 2,
-		"core_actions": "Быстрое обучение",
-		"description": "Младший специалист широкого профиля. Быстро осваивает новые инструменты и охотно берётся за незнакомые задачи.",
-		"strength": "Сильная сторона: гибкость и скорость обучения",
+		"core_actions": "Дистанционный телекинез",
+		"description": "Маг-телекинетик. Аккуратно перемещает незакреплённые объекты на расстоянии и быстро осваивает новые инструменты.",
+		"strength": "Сильная сторона: дистанционное и бережное перемещение",
 		"weakness": "Ограничение: мало полевого опыта",
 		"traits": "Любознательна • энергична • ведёт слишком подробные записи",
 		"available": false,
@@ -426,7 +432,7 @@ func start_new_game() -> void:
 	_reset_employee(&"liliya", true, PackedStringArray(["freeze", "heat"]), "Свободна")
 	_reset_employee(&"grog", true, PackedStringArray(["physical_move"]), "Свободен")
 	_reset_employee(&"boris", true, PackedStringArray(["diagnose", "repair"]), "Свободен")
-	_reset_employee(&"nika", false, PackedStringArray(), "Не нанята")
+	_reset_employee(&"nika", false, PackedStringArray(["telekinesis"]), "Не нанята")
 	_reset_employee(&"felix", false, PackedStringArray(["antimagic"]), "Не нанят")
 
 	_update_employee_statuses()
@@ -582,6 +588,11 @@ func load_game() -> Error:
 				if not boris_abilities.has(required_ability):
 					boris_abilities.append(required_ability)
 			employee["abilities"] = boris_abilities
+		if employee_id == &"nika":
+			var nika_abilities: PackedStringArray = employee["abilities"]
+			if not nika_abilities.has("telekinesis"):
+				nika_abilities.append("telekinesis")
+			employee["abilities"] = nika_abilities
 		var loaded_training_id := StringName(str(loaded_employee.get("training_id", "")))
 		employee["training_id"] = loaded_training_id if TRAINING_DEFINITIONS.has(loaded_training_id) else &""
 		employee["training_end_day"] = int(loaded_employee.get("training_end_day", 0))

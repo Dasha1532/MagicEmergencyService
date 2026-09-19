@@ -116,7 +116,7 @@ func _add_employee_button(employee_id: StringName) -> void:
 	var portrait := TextureRect.new()
 	portrait.position = Vector2(1, 1)
 	portrait.size = Vector2(66, 64)
-	portrait.texture = _cropped_portrait(employee["portrait"])
+	portrait.texture = _cropped_portrait(employee)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -243,9 +243,10 @@ func _style(background: Color, border: Color, width: int, radius: int) -> StyleB
 	return style
 
 
-func _cropped_portrait(path: String) -> AtlasTexture:
+func _cropped_portrait(employee: Dictionary) -> AtlasTexture:
 	var portrait := AtlasTexture.new()
-	portrait.atlas = load(path)
-	portrait.region = Rect2(177, 0, 900, 932)
+	portrait.atlas = load(str(employee["portrait"]))
+	var configured_region: Variant = employee.get("portrait_region", Rect2(177, 0, 900, 932))
+	portrait.region = configured_region if configured_region is Rect2 else Rect2(177, 0, 900, 932)
 	portrait.filter_clip = true
 	return portrait

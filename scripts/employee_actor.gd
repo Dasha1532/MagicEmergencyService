@@ -14,6 +14,7 @@ var action_in_progress: bool = false
 var employee_id: StringName = &""
 var action_style: StringName = &"magic"
 var action_origin: Vector2 = Vector2(45, 70)
+var action_origin_from_data: bool = false
 var home_position: Vector2
 var walk_pose_base_position: Vector2
 var employee_positions: Dictionary = {}
@@ -46,6 +47,7 @@ func configure_employee(new_employee_id: StringName, employee_data: Dictionary) 
 	var configured_action_origin: Variant = employee_data.get("actor_action_origin", Vector2(45, 70))
 	if configured_action_origin is Vector2:
 		action_origin = configured_action_origin
+	action_origin_from_data = bool(employee_data.get("actor_action_origin_from_data", false))
 	neutral_pose.texture = load(neutral_path)
 	work_pose.texture = load(work_path)
 	var walk_path := str(employee_data.get("actor_walk_pose", ""))
@@ -289,7 +291,7 @@ func _magic_color(action_id: StringName) -> Color:
 
 
 func _spell_origin_global() -> Vector2:
-	if action_origin_marker != null:
+	if action_origin_marker != null and not action_origin_from_data:
 		return action_origin_marker.global_position
 	return get_global_transform() * action_origin
 
