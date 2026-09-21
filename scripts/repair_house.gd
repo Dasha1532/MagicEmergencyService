@@ -1,6 +1,7 @@
 extends Node2D
 
 const RepairSimulationScript := preload("res://scripts/repair_simulation.gd")
+const EmployeeReactionResolverScript := preload("res://scripts/employee_reaction_resolver.gd")
 
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
 const COLOR_GOLD := Color(0.96, 0.78, 0.46)
@@ -21,7 +22,6 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 @onready var tool_bar: Control = $Interface/ToolBar
 @onready var repair_hud: Control = $Interface/RepairHUD
 @onready var feedback_panel: Panel = $Interface/ActionFeedback
-@onready var feedback_label: Label = $Interface/ActionFeedback/Message
 @onready var request_panel: Panel = $Interface/ResidentRequest
 @onready var request_label: Label = $Interface/ResidentRequest/Message
 @onready var game_state: Node = get_node("/root/GameState")
@@ -29,7 +29,6 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 var simulation: RepairSimulation
 var selected_tool_id: StringName = &"freeze"
 var selected_employee_id: StringName = &""
-var feedback_revision: int = 0
 var action_in_progress: bool = false
 
 
@@ -77,11 +76,17 @@ func _open_bathroom() -> void:
 	bathroom_preview_backdrop.visible = false
 	bathroom_preview.visible = false
 	back_to_house_button.visible = true
-	tool_bar.visible = true
+	tool_bar.visible = false
 	if repair_hud.has_method("set_work_ui_visible"):
 		repair_hud.call("set_work_ui_visible", true)
+	repair_hud.clear_all_dialogues()
 	feedback_panel.visible = false
-	request_panel.visible = true
+	request_panel.visible = false
+	if not bool(simulation.world_object.get("resident_intro_seen", false)):
+		simulation.world_object["resident_intro_seen"] = true
+		game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+		var job: Dictionary = game_state.get_active_job()
+		repair_hud.show_dialogue(str(job.get("resident", "Жилец")), simulation.get_resident_request())
 
 
 func _show_house_overview(animated: bool = true) -> void:
@@ -140,10 +145,13 @@ func _configure_buttons() -> void:
 
 func _on_tool_selected(tool_id: StringName) -> void:
 	selected_tool_id = tool_id
+	tool_bar.visible = false
+	_begin_selected_action()
 
 
 func _on_employee_selected(employee_id: StringName) -> void:
 	selected_employee_id = employee_id
+	tool_bar.visible = false
 	if closeup_background.visible and not overview_background.visible:
 		employee_actor.visible = _configure_employee_actor()
 		employee_actor.self_modulate = Color.WHITE
@@ -155,6 +163,10 @@ func _apply_selected_action() -> void:
 	if selected_employee_id.is_empty():
 		_show_feedback("Сначала выберите сотрудника из бригады.", true)
 		return
+	tool_bar.show_for_object("Кран", _faucet_target_global())
+
+
+func _begin_selected_action() -> void:
 	if selected_tool_id.is_empty():
 		_show_feedback("У выбранного сотрудника нет подходящего действия для этого объекта.", true)
 		return
@@ -190,6 +202,9 @@ func _on_employee_action_finished() -> void:
 
 
 func _resolve_action(action_id: StringName) -> void:
+	var previous_resident_message: String = simulation.get_resident_reaction()
+	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
+	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object)
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
 	var visual_state: StringName = result.get("visual_state", &"emergency")
 	if visual_state == &"repaired":
@@ -203,7 +218,20 @@ func _resolve_action(action_id: StringName) -> void:
 	lava_faucet.set_damage_visible(_has_damage())
 	faucet_status_effects.call("sync_from_state", simulation.world_object)
 	_update_resident_reaction()
-	_show_feedback(str(result["message"]), not bool(result["applied"]))
+	var resident_message: String = simulation.get_resident_reaction()
+	if action_id == &"diagnose":
+		repair_hud.show_dialogue("РЕЗУЛЬТАТ ОСМОТРА", str(result["message"]))
+	elif bool(result["applied"]):
+		_show_feedback(str(result["message"]), false)
+		if resident_message == previous_resident_message and not reaction.is_empty():
+			repair_hud.queue_employee_reaction(selected_employee_id, reaction)
+	elif not reaction.is_empty():
+		repair_hud.show_employee_reaction(selected_employee_id, reaction)
+	else:
+		_show_feedback(str(result["message"]), true)
+	if resident_message != previous_resident_message:
+		var job: Dictionary = game_state.get_active_job()
+		repair_hud.queue_dialogue(str(job.get("resident", "Жилец")), resident_message)
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 
@@ -248,8 +276,6 @@ func _restore_repair_state() -> void:
 
 func _update_resident_reaction() -> void:
 	request_label.text = simulation.get_resident_message()
-	if repair_hud.has_method("set_job_title"):
-		repair_hud.call("set_job_title", simulation.get_status_title())
 
 
 func _has_damage() -> bool:
@@ -262,14 +288,8 @@ func _is_lava_flowing() -> bool:
 
 
 func _show_feedback(message: String, is_warning: bool = false) -> void:
-	feedback_revision += 1
-	var shown_revision := feedback_revision
-	feedback_label.text = message
-	feedback_label.add_theme_color_override("font_color", Color(1.0, 0.58, 0.35) if is_warning else COLOR_PARCHMENT)
-	feedback_panel.visible = true
-	await get_tree().create_timer(3.2).timeout
-	if shown_revision == feedback_revision:
-		feedback_panel.visible = false
+	feedback_panel.visible = false
+	repair_hud.show_system_message(message, is_warning)
 
 
 func _button_style(background: Color, border: Color, width: int) -> StyleBoxFlat:

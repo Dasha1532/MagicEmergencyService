@@ -1,11 +1,12 @@
 extends Node2D
 
 const WardrobeSimulationScript := preload("res://scripts/wardrobe_simulation.gd")
+const EmployeeReactionResolverScript := preload("res://scripts/employee_reaction_resolver.gd")
 
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
 const COLOR_GOLD := Color(0.96, 0.78, 0.46)
 const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
-const FIRE_SPREAD_SECONDS: float = 3.0
+const FIRE_SPREAD_SECONDS: float = 10.0
 
 @export_group("Положение и размер шкафа")
 @export var entrance_scale: Vector2 = Vector2.ONE
@@ -28,14 +29,8 @@ const FIRE_SPREAD_SECONDS: float = 3.0
 @onready var tool_bar: Control = $Interface/ToolBar
 @onready var repair_hud: Control = $Interface/RepairHUD
 @onready var feedback_panel: Panel = $Interface/ActionFeedback
-@onready var feedback_label: Label = $Interface/ActionFeedback/Message
 @onready var request_panel: Panel = $Interface/ResidentRequest
 @onready var request_label: Label = $Interface/ResidentRequest/Message
-@onready var intent_panel: Panel = $Interface/PhysicalIntentPanel
-@onready var intent_title: Label = $Interface/PhysicalIntentPanel/Title
-@onready var hold_button: Button = $Interface/PhysicalIntentPanel/Choices/Hold
-@onready var move_left_button: Button = $Interface/PhysicalIntentPanel/Choices/MoveLeft
-@onready var break_legs_button: Button = $Interface/PhysicalIntentPanel/Choices/BreakLegs
 @onready var crew_placement_guide: Control = get_node_or_null("CrewPlacementGuide") as Control
 @onready var left_wall_guide: Control = get_node_or_null("WardrobePositions/LeftWall/PlacementGuide") as Control
 @onready var center_wall_guide: Control = get_node_or_null("WardrobePositions/CenterWall/PlacementGuide") as Control
@@ -46,7 +41,6 @@ var selected_tool_id: StringName = &""
 var selected_employee_id: StringName = &""
 var pending_intent: StringName = &""
 var action_in_progress: bool = false
-var feedback_revision: int = 0
 var entrance_position: Vector2
 var fire_progression_revision: int = 0
 
@@ -69,28 +63,17 @@ func _ready() -> void:
 		left_wall_guide.visible = false
 	if center_wall_guide != null:
 		center_wall_guide.visible = false
-	intent_panel.position = tool_bar.position
-	intent_panel.size = Vector2(840, 110)
+	$Interface/PhysicalIntentPanel.visible = false
 	_configure_room_button()
 	room_hotspot.pressed.connect(_open_room)
 	back_to_house_button.pressed.connect(_show_house_overview)
 	wardrobe.selected.connect(_on_wardrobe_selected)
 	tool_bar.tool_selected.connect(_on_tool_selected)
+	tool_bar.intent_selected.connect(_on_context_intent_selected)
 	repair_hud.employee_selected.connect(_on_employee_selected)
 	repair_hud.completion_requested.connect(_attempt_complete_job)
 	employee_actor.action_impact.connect(_on_employee_action_impact)
 	employee_actor.action_finished.connect(_on_employee_action_finished)
-	hold_button.pressed.connect(_toggle_hold_intent)
-	move_left_button.pressed.connect(_choose_move_intent.bind(&"move_left"))
-	var move_kitchen_button: Button = _find_move_kitchen_button()
-	move_kitchen_button.text = "Поставить в проход на кухню"
-	move_kitchen_button.custom_minimum_size = Vector2(220.0, 54.0)
-	move_kitchen_button.pressed.connect(_choose_move_intent.bind(&"move_kitchen"))
-	move_left_button.text = "Поставить к левой стене"
-	move_left_button.custom_minimum_size = Vector2(190.0, 54.0)
-	break_legs_button.text = "Сломать ножки"
-	break_legs_button.pressed.connect(_choose_physical_intent.bind(&"break_legs"))
-	$Interface/PhysicalIntentPanel/Choices/Back.pressed.connect(_close_physical_intent)
 	selected_tool_id = tool_bar.get_selected_tool_id()
 	selected_employee_id = repair_hud.get_selected_employee_id()
 	_configure_employee_actor()
@@ -105,13 +88,6 @@ func _find_kitchen_passage_marker() -> Marker2D:
 	if marker == null:
 		marker = get_node("WardrobePositions/CenterWall") as Marker2D
 	return marker
-
-
-func _find_move_kitchen_button() -> Button:
-	var button: Button = get_node_or_null("Interface/PhysicalIntentPanel/Choices/MoveKitchen") as Button
-	if button == null:
-		button = get_node("Interface/PhysicalIntentPanel/Choices/MoveCenter") as Button
-	return button
 
 
 func _open_room() -> void:
@@ -134,11 +110,17 @@ func _open_room() -> void:
 	room_preview_backdrop.visible = false
 	room_preview.visible = false
 	back_to_house_button.visible = true
-	tool_bar.visible = true
-	intent_panel.visible = false
+	tool_bar.visible = false
+	$Interface/PhysicalIntentPanel.visible = false
 	if repair_hud.has_method("set_work_ui_visible"):
 		repair_hud.call("set_work_ui_visible", true)
-	request_panel.visible = true
+	repair_hud.clear_all_dialogues()
+	request_panel.visible = false
+	if not bool(simulation.world_object.get("resident_intro_seen", false)):
+		simulation.world_object["resident_intro_seen"] = true
+		game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+		var job: Dictionary = game_state.get_active_job()
+		repair_hud.show_dialogue(str(job.get("resident", "Жилец")), simulation.get_resident_request())
 	feedback_panel.visible = false
 
 
@@ -157,7 +139,7 @@ func _show_house_overview(animated: bool = true) -> void:
 		repair_hud.call("set_work_ui_visible", false)
 	request_panel.visible = false
 	feedback_panel.visible = false
-	intent_panel.visible = false
+	$Interface/PhysicalIntentPanel.visible = false
 	if not animated:
 		closeup_background.visible = false
 		return
@@ -200,13 +182,28 @@ func _panel_style(background: Color, border: Color, width: int) -> StyleBoxFlat:
 
 func _on_tool_selected(tool_id: StringName) -> void:
 	selected_tool_id = tool_id
-	intent_panel.visible = false
+	if tool_id == &"physical_move":
+		tool_bar.show_intents("Силовая работа", [
+			{"id": &"hold", "label": "Отпустить" if bool(simulation.world_object.get("held", false)) else "Удерживать"},
+			{"id": &"move_left", "label": "Поставить к левой стене"},
+			{"id": &"move_kitchen", "label": "Поставить в проход на кухню"},
+			{"id": &"break_legs", "label": "Сломать ножки"},
+		])
+		return
+	if tool_id == &"telekinesis":
+		tool_bar.show_intents("Куда переместить?", [
+			{"id": &"move_left", "label": "К левой стене"},
+			{"id": &"move_kitchen", "label": "В проход на кухню"},
+		])
+		return
+	tool_bar.visible = false
+	pending_intent = &""
+	_start_action()
 
 
 func _on_employee_selected(employee_id: StringName) -> void:
 	selected_employee_id = employee_id
-	intent_panel.visible = false
-	tool_bar.visible = true
+	tool_bar.visible = false
 	_configure_employee_actor()
 
 
@@ -226,51 +223,17 @@ func _on_wardrobe_selected() -> void:
 	if selected_employee_id.is_empty():
 		_show_feedback("Сначала выберите сотрудника из бригады.", true)
 		return
-	if selected_tool_id.is_empty():
-		_show_feedback("У выбранного сотрудника нет доступного действия.", true)
-		return
-	if selected_tool_id in [&"physical_move", &"telekinesis"]:
-		_refresh_hold_button()
-		_configure_intent_panel(selected_tool_id)
-		intent_panel.position = tool_bar.position
-		tool_bar.visible = false
-		intent_panel.visible = true
-		return
-	pending_intent = &""
+	var contextual_actions: Array[Dictionary] = []
+	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
+	var abilities: PackedStringArray = employee.get("abilities", PackedStringArray())
+	if abilities.has("repair"):
+		contextual_actions.append({"id": &"anchor", "label": "Закрепить у стены"})
+	tool_bar.show_for_object("Шкаф", _wardrobe_target_global(), {}, contextual_actions)
+
+
+func _on_context_intent_selected(intent: StringName) -> void:
+	pending_intent = &"release" if selected_tool_id == &"physical_move" and intent == &"hold" and bool(simulation.world_object.get("held", false)) else intent
 	_start_action()
-
-
-func _choose_physical_intent(intent: StringName) -> void:
-	if action_in_progress:
-		return
-	pending_intent = intent
-	intent_panel.visible = false
-	tool_bar.visible = true
-	_start_action()
-
-
-func _choose_move_intent(intent: StringName) -> void:
-	_choose_physical_intent(intent)
-
-
-func _configure_intent_panel(action_id: StringName) -> void:
-	var is_telekinesis: bool = action_id == &"telekinesis"
-	intent_title.text = "КУДА ПЕРЕМЕСТИТЬ ШКАФ?" if is_telekinesis else "ЧТО СДЕЛАТЬ СО ШКАФОМ?"
-	hold_button.visible = not is_telekinesis
-	break_legs_button.visible = not is_telekinesis
-
-
-func _toggle_hold_intent() -> void:
-	_choose_physical_intent(&"release" if bool(simulation.world_object.get("held", false)) else &"hold")
-
-
-func _refresh_hold_button() -> void:
-	hold_button.text = "Отпустить" if bool(simulation.world_object.get("held", false)) else "Удерживать"
-
-
-func _close_physical_intent() -> void:
-	intent_panel.visible = false
-	tool_bar.visible = true
 
 
 func _start_action() -> void:
@@ -309,10 +272,25 @@ func _on_employee_action_finished() -> void:
 
 func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 	var was_burning: bool = bool(simulation.world_object["burning"])
+	var previous_resident_message: String = simulation.get_resident_reaction()
+	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
+	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, intent)
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, intent)
 	_apply_visual_state()
-	_refresh_hold_button()
-	_show_feedback(str(result["message"]), not bool(result["applied"]))
+	var resident_message: String = simulation.get_resident_reaction()
+	if action_id == &"diagnose":
+		repair_hud.show_dialogue("РЕЗУЛЬТАТ ОСМОТРА", str(result["message"]))
+	elif bool(result["applied"]):
+		_show_feedback(str(result["message"]), false)
+		if resident_message == previous_resident_message and not reaction.is_empty():
+			repair_hud.queue_employee_reaction(selected_employee_id, reaction)
+	elif not reaction.is_empty():
+		repair_hud.show_employee_reaction(selected_employee_id, reaction)
+	else:
+		_show_feedback(str(result["message"]), true)
+	if resident_message != previous_resident_message:
+		var job: Dictionary = game_state.get_active_job()
+		repair_hud.queue_dialogue(str(job.get("resident", "Жилец")), resident_message)
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	var is_burning: bool = bool(simulation.world_object["burning"])
@@ -331,11 +309,17 @@ func _schedule_fire_step(revision: int) -> void:
 	await get_tree().create_timer(FIRE_SPREAD_SECONDS).timeout
 	if revision != fire_progression_revision or not bool(simulation.world_object["burning"]):
 		return
+	var previous_resident_message: String = simulation.get_resident_reaction()
 	var result: Dictionary = simulation.advance_burning()
 	if not bool(result.get("changed", false)):
 		return
 	_apply_visual_state()
-	_show_feedback(str(result["message"]), true)
+	if bool(simulation.world_object["destroyed"]):
+		_show_feedback(str(result["message"]), true)
+		var resident_message: String = simulation.get_resident_reaction()
+		if resident_message != previous_resident_message:
+			var job: Dictionary = game_state.get_active_job()
+			repair_hud.queue_dialogue(str(job.get("resident", "Жилец")), resident_message)
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	if bool(simulation.world_object["burning"]):
@@ -351,8 +335,6 @@ func _apply_visual_state() -> void:
 	wardrobe.show_state(StringName(str(simulation.world_object["visual_state"])))
 	wardrobe_status_effects.call("sync_from_state", simulation.world_object)
 	request_label.text = simulation.get_resident_message()
-	if repair_hud.has_method("set_job_title"):
-		repair_hud.call("set_job_title", simulation.get_status_title())
 	var zone: StringName = StringName(str(simulation.world_object["position_zone"]))
 	var target_position: Vector2 = {
 		&"entrance": entrance_position,
@@ -392,11 +374,5 @@ func _attempt_complete_job() -> void:
 
 
 func _show_feedback(message: String, is_warning: bool = false) -> void:
-	feedback_revision += 1
-	var shown_revision: int = feedback_revision
-	feedback_label.text = message
-	feedback_label.add_theme_color_override("font_color", Color(1.0, 0.58, 0.35) if is_warning else Color(0.92, 0.84, 0.69))
-	feedback_panel.visible = true
-	await get_tree().create_timer(6.0).timeout
-	if shown_revision == feedback_revision:
-		feedback_panel.visible = false
+	feedback_panel.visible = false
+	repair_hud.show_system_message(message, is_warning)

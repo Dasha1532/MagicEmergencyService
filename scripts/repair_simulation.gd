@@ -22,6 +22,7 @@ var world_object: Dictionary = {
 	"movable": true,
 	"replacement_value": 350,
 	"resident_voice_variant": 1,
+	"resident_intro_seen": false,
 	"frozen": false,
 	"burning": false,
 	"scorched": false,
@@ -80,6 +81,12 @@ func get_resident_message() -> String:
 	return ResidentReactionResolverScript.message_for(world_object, get_resident_request(), int(world_object["resident_voice_variant"]))
 
 
+func get_resident_reaction() -> String:
+	# Пустая строка означает, что нового высказывания нет. Начальная просьба
+	# показывается комнатой отдельно и никогда не используется как реакция.
+	return ResidentReactionResolverScript.message_for(world_object, "", int(world_object["resident_voice_variant"]))
+
+
 func get_status_title() -> String:
 	return ResidentReactionResolverScript.title_for(world_object, "Из крана течёт лава", "Кран")
 
@@ -134,16 +141,16 @@ func can_begin_action(action_id: StringName) -> bool:
 
 func _diagnose_faucet() -> String:
 	if _tags().has("melted"):
-		return "Осмотр Бориса: корпус крана расплавлен. Нужна полная замена, полевой ремонт невозможен."
+		return "Корпус крана расплавлен. Нужна полная замена, полевой ремонт невозможен."
 	if _tags().has("lava_flowing"):
-		return "Осмотр Бориса: внутри идёт лава, давление %d, температура %d. Сначала необходимо остановить и охладить поток." % [int(world_object["pressure"]), int(world_object["temperature"])]
+		return "Внутри идёт лава, давление %d, температура %d. Сначала необходимо остановить и охладить поток." % [int(world_object["pressure"]), int(world_object["temperature"])]
 	if int(world_object["temperature"]) >= OVERHEAT_THRESHOLD:
-		return "Осмотр Бориса: поток остановлен, но металл всё ещё раскалён. Прикасаться к крану пока опасно."
+		return "Поток остановлен, но металл всё ещё раскалён. Прикасаться к крану пока опасно."
 	if int(world_object["damage"]) > 0:
-		return "Осмотр Бориса: кран безопасен, но перегрев повредил соединения. Можно выполнить обычный ремонт."
+		return "Кран безопасен, но перегрев повредил соединения. Можно выполнить обычный ремонт."
 	if _tags().has("repaired"):
-		return "Осмотр Бориса: давление сброшено, соединения герметичны, кран исправен."
-	return "Осмотр Бориса: магическая опасность устранена. Кран можно привести в рабочее состояние обычным ремонтом."
+		return "Давление сброшено, соединения герметичны, кран исправен."
+	return "Магическая опасность устранена. Кран можно привести в рабочее состояние обычным ремонтом."
 
 
 func _apply_technical_repair() -> Dictionary:

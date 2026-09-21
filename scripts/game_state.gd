@@ -52,11 +52,15 @@ var employees: Dictionary = {
 		"abilities": PackedStringArray(["freeze", "heat"]),
 		"training_categories": PackedStringArray(["magic"]),
 		"max_special_abilities": 2,
-		"core_actions": "Магическая диагностика",
+		"core_actions": "Заморозка и магия огня",
 		"description": "Полевой маг широкого профиля. Определяет природу чар и аккуратно меняет температуру повреждённых объектов.",
 		"strength": "Сильная сторона: диагностика и контроль стихий",
 		"weakness": "Ограничение: силовой ремонт требует напарника",
 		"traits": "Наблюдательна • осторожна • любит точные формулировки",
+		"action_reactions": [
+			{"action_ids": ["heat"], "object_equals": {"burning": true}, "text": "Возражаю: нагрев усилит пожар."},
+			{"action_ids": ["freeze"], "object_equals": {"burning": true}, "text": "Потушу холодом, но древесина станет хрупкой."},
+		],
 		"available": true,
 	},
 	&"grog": {
@@ -99,6 +103,10 @@ var employees: Dictionary = {
 		"strength": "Сильная сторона: аккуратный обычный ремонт",
 		"weakness": "Ограничение: не работает с чарами напрямую",
 		"traits": "Практичен • экономен • не доверяет говорящим вентилям",
+		"action_reactions": [
+			{"action_ids": ["repair", "anchor"], "object_equals": {"burning": true}, "text": "Горящее не ремонтируют. Сначала тушим."},
+			{"action_ids": ["repair"], "required_tags": ["lava_flowing"], "text": "Сначала остановите поток лавы."},
+		],
 		"available": true,
 	},
 	&"nika": {
@@ -122,6 +130,10 @@ var employees: Dictionary = {
 		"strength": "Сильная сторона: дистанционное и бережное перемещение",
 		"weakness": "Ограничение: мало полевого опыта",
 		"traits": "Любознательна • энергична • ведёт слишком подробные записи",
+		"action_reactions": [
+			{"action_ids": ["telekinesis"], "object_equals": {"destroyed": true}, "text": "Перемещать уже нечего."},
+			{"action_ids": ["telekinesis"], "object_equals": {"anchored": true}, "text": "Объект закреплён. Тянуть опасно."},
+		],
 		"available": false,
 	},
 	&"felix": {
@@ -145,6 +157,12 @@ var employees: Dictionary = {
 		"strength": "Сильная сторона: антимагия и безопасность",
 		"weakness": "Ограничение: действует медленно и по инструкции",
 		"traits": "Методичен • невозмутим • замечает нарушения с порога",
+		"action_reactions": [
+			{"action_ids": ["antimagic"], "object_equals": {"destroyed": true}, "text": "Подавлять уже нечего. Оформляю акт."},
+			{"action_ids": ["antimagic"], "object_equals": {"burning": true}, "text": "Возражаю: антимагия пожар не тушит."},
+			{"action_ids": ["antimagic"], "object_max": {"magic_level": 0}, "text": "Магического фона нет."},
+			{"action_ids": ["antimagic"], "text": "Подавление чар — не ремонт."},
+		],
 		"available": false,
 	},
 }
@@ -152,6 +170,7 @@ var employees: Dictionary = {
 var jobs: Dictionary = {
 	&"lava_leak": {
 		"title": "Из крана течёт лава",
+		"objective": "Остановить лаву из крана",
 		"address": "Старый квартал, 5",
 		"resident": "Господин Рагнар",
 		"description": "В ванной демона из трубы идёт лава. Поток усиливается, а старая медная труба уже нагрелась.",
@@ -164,6 +183,7 @@ var jobs: Dictionary = {
 	},
 	&"walking_wardrobe": {
 		"title": "Шкаф ходит по квартире",
+		"objective": "Остановить шкаф и поставить к левой стене",
 		"address": "Старый квартал, 5",
 		"resident": "Госпожа Элеонора",
 		"description": "Зачарованный шкаф ходит по комнатам, гремит хрупкой посудой и не позволяет хозяйке открыть входную дверь.",
@@ -593,6 +613,12 @@ func load_game() -> Error:
 				if not boris_abilities.has(required_ability):
 					boris_abilities.append(required_ability)
 			employee["abilities"] = boris_abilities
+		if employee_id == &"liliya":
+			var liliya_abilities: PackedStringArray = employee["abilities"]
+			var diagnose_index: int = liliya_abilities.find("diagnose")
+			if diagnose_index >= 0:
+				liliya_abilities.remove_at(diagnose_index)
+			employee["abilities"] = liliya_abilities
 		if employee_id == &"nika":
 			var nika_abilities: PackedStringArray = employee["abilities"]
 			if not nika_abilities.has("telekinesis"):

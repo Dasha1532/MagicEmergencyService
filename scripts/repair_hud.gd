@@ -16,6 +16,13 @@ var employee_panel: Panel
 var complete_button: Button
 var tool_bar: MarginContainer
 var job_title_label: Label
+var employee_reaction_panel: Panel
+var employee_reaction_label: Label
+var employee_reaction_heading: Label
+var dialogue_portrait_frame: Panel
+var dialogue_portrait: TextureRect
+var work_ui_visible: bool = true
+var queued_dialogues: Array[Dictionary] = []
 @onready var game_state: Node = get_node("/root/GameState")
 
 
@@ -29,6 +36,7 @@ func _ready() -> void:
 	_build_employee_selector()
 	_build_return_button()
 	_build_complete_button()
+	_build_employee_reaction_panel()
 	_select_first_employee()
 
 
@@ -36,19 +44,15 @@ func _build_job_header() -> void:
 	var job: Dictionary = game_state.get_active_job()
 	var panel := Panel.new()
 	panel.position = Vector2(20, 18)
-	panel.size = Vector2(500, 92)
+	panel.size = Vector2(650, 64)
 	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
 	add_child(panel)
 
-	job_title_label = _label(job.get("title", "Ремонт"), 23, COLOR_GOLD)
-	job_title_label.position = Vector2(18, 12)
-	job_title_label.size = Vector2(464, 32)
+	job_title_label = _label(job.get("objective", job.get("title", "Ремонт")), 23, COLOR_GOLD)
+	job_title_label.position = Vector2(18, 14)
+	job_title_label.size = Vector2(614, 36)
+	job_title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	panel.add_child(job_title_label)
-
-	var address := _label("%s  •  %s" % [job.get("address", ""), job.get("danger", "")], 16, COLOR_PARCHMENT)
-	address.position = Vector2(18, 50)
-	address.size = Vector2(464, 28)
-	panel.add_child(address)
 
 
 func set_job_title(title: String) -> void:
@@ -164,9 +168,152 @@ func _build_complete_button() -> void:
 	add_child(complete_button)
 
 
-func set_work_ui_visible(is_visible: bool) -> void:
+func _build_employee_reaction_panel() -> void:
+	employee_reaction_panel = Panel.new()
+	employee_reaction_panel.position = Vector2(20, 730)
+	employee_reaction_panel.size = Vector2(1560, 150)
+	employee_reaction_panel.visible = false
+	employee_reaction_panel.add_theme_stylebox_override("panel", _style(Color(0.055, 0.07, 0.085, 0.97), COLOR_GOLD, 2, 10))
+	add_child(employee_reaction_panel)
+
+	dialogue_portrait_frame = Panel.new()
+	dialogue_portrait_frame.position = Vector2(24, 16)
+	dialogue_portrait_frame.size = Vector2(102, 116)
+	dialogue_portrait_frame.visible = false
+	dialogue_portrait_frame.clip_contents = true
+	dialogue_portrait_frame.add_theme_stylebox_override("panel", _style(Color(0.035, 0.03, 0.028, 1), COLOR_BRASS, 1, 6))
+	employee_reaction_panel.add_child(dialogue_portrait_frame)
+
+	dialogue_portrait = TextureRect.new()
+	dialogue_portrait.position = Vector2(1, 1)
+	dialogue_portrait.size = Vector2(100, 114)
+	dialogue_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	dialogue_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	dialogue_portrait_frame.add_child(dialogue_portrait)
+
+	employee_reaction_heading = _label("СОТРУДНИК", 15, COLOR_GOLD)
+	employee_reaction_heading.position = Vector2(24, 14)
+	employee_reaction_heading.size = Vector2(1260, 24)
+	employee_reaction_panel.add_child(employee_reaction_heading)
+
+	employee_reaction_label = _label("", 17, COLOR_PARCHMENT)
+	employee_reaction_label.position = Vector2(24, 44)
+	employee_reaction_label.size = Vector2(1260, 88)
+	employee_reaction_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	employee_reaction_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	employee_reaction_panel.add_child(employee_reaction_label)
+
+	var close_button := Button.new()
+	close_button.text = "ХОРОШО"
+	close_button.position = Vector2(1320, 48)
+	close_button.size = Vector2(210, 58)
+	close_button.add_theme_font_size_override("font_size", 17)
+	close_button.add_theme_color_override("font_color", COLOR_GOLD)
+	close_button.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_GOLD, 2, 8))
+	close_button.add_theme_stylebox_override("hover", _style(COLOR_SELECTED, COLOR_GOLD, 3, 8))
+	close_button.tooltip_text = "Закрыть сообщение"
+	close_button.pressed.connect(clear_employee_reaction)
+	employee_reaction_panel.add_child(close_button)
+
+
+func show_employee_reaction(employee_id: StringName, message: String) -> void:
+	var employee: Dictionary = game_state.employees.get(employee_id, {})
+	queued_dialogues.clear()
+	_display_dialogue(str(employee.get("name", "Сотрудник")), message, false, _cropped_portrait(employee))
+
+
+func show_dialogue(speaker: String, message: String) -> void:
+	if employee_reaction_panel == null or employee_reaction_label == null or message.is_empty():
+		return
+	queued_dialogues.clear()
+	_display_dialogue(speaker, message, false)
+
+
+func queue_dialogue(speaker: String, message: String, is_warning: bool = false) -> void:
+	if message.is_empty():
+		return
+	if employee_reaction_panel.visible and not employee_reaction_label.text.is_empty():
+		_push_queued_dialogue({"speaker": speaker, "message": message, "warning": is_warning})
+		return
+	_display_dialogue(speaker, message, is_warning)
+
+
+func queue_employee_reaction(employee_id: StringName, message: String) -> void:
+	if message.is_empty():
+		return
+	var employee: Dictionary = game_state.employees.get(employee_id, {})
+	var dialogue: Dictionary = {
+		"speaker": str(employee.get("name", "Сотрудник")),
+		"message": message,
+		"warning": false,
+		"portrait": _cropped_portrait(employee),
+	}
+	if employee_reaction_panel.visible and not employee_reaction_label.text.is_empty():
+		_push_queued_dialogue(dialogue)
+		return
+	_display_dialogue(str(dialogue["speaker"]), message, false, dialogue["portrait"])
+
+
+func _push_queued_dialogue(dialogue: Dictionary) -> void:
+	# На экране может быть одно сообщение и только одно следующее за ним.
+	# Новое актуальное последствие заменяет устаревший хвост очереди.
+	if queued_dialogues.is_empty():
+		queued_dialogues.append(dialogue)
+	else:
+		queued_dialogues[0] = dialogue
+
+
+func _display_dialogue(speaker: String, message: String, is_warning: bool, portrait_texture: Texture2D = null) -> void:
+	var has_portrait: bool = portrait_texture != null
+	dialogue_portrait_frame.visible = has_portrait
+	dialogue_portrait.texture = portrait_texture
+	employee_reaction_heading.position.x = 144.0 if has_portrait else 24.0
+	employee_reaction_heading.size.x = 1140.0 if has_portrait else 1260.0
+	employee_reaction_label.position.x = 144.0 if has_portrait else 24.0
+	employee_reaction_label.size.x = 1140.0 if has_portrait else 1260.0
+	employee_reaction_heading.text = speaker
+	employee_reaction_label.text = message
+	employee_reaction_label.add_theme_color_override("font_color", Color(1.0, 0.58, 0.35) if is_warning else COLOR_PARCHMENT)
 	if employee_panel != null:
-		employee_panel.visible = is_visible
+		employee_panel.visible = false
+	employee_reaction_panel.visible = true
+	employee_reaction_panel.move_to_front()
+
+
+func show_system_message(message: String, is_warning: bool = false) -> void:
+	queue_dialogue("ВНИМАНИЕ" if is_warning else "РЕЗУЛЬТАТ", message, is_warning)
+
+
+func clear_employee_reaction() -> void:
+	if not queued_dialogues.is_empty():
+		var next_dialogue: Dictionary = queued_dialogues.pop_front()
+		_display_dialogue(str(next_dialogue["speaker"]), str(next_dialogue["message"]), bool(next_dialogue["warning"]), next_dialogue.get("portrait") as Texture2D)
+		return
+	if employee_reaction_label != null:
+		employee_reaction_label.text = ""
+	if employee_reaction_panel != null:
+		employee_reaction_panel.visible = false
+	if employee_panel != null:
+		employee_panel.visible = work_ui_visible
+
+
+func clear_all_dialogues() -> void:
+	queued_dialogues.clear()
+	if employee_reaction_label != null:
+		employee_reaction_label.text = ""
+	if employee_reaction_panel != null:
+		employee_reaction_panel.visible = false
+	if employee_panel != null:
+		employee_panel.visible = work_ui_visible
+
+
+func set_work_ui_visible(is_visible: bool) -> void:
+	work_ui_visible = is_visible
+	var has_dialogue: bool = employee_reaction_label != null and not employee_reaction_label.text.is_empty()
+	if employee_reaction_panel != null:
+		employee_reaction_panel.visible = is_visible and has_dialogue
+	if employee_panel != null:
+		employee_panel.visible = is_visible and not has_dialogue
 	if complete_button != null:
 		complete_button.visible = is_visible
 
@@ -192,6 +339,8 @@ func _select_first_employee() -> void:
 
 
 func _select_employee(employee_id: StringName) -> void:
+	if employee_id != selected_employee_id:
+		clear_employee_reaction()
 	selected_employee_id = employee_id
 	for child in employee_box.get_children():
 		if child is Button:
@@ -199,7 +348,6 @@ func _select_employee(employee_id: StringName) -> void:
 			child.add_theme_stylebox_override("normal", _style(COLOR_SELECTED if selected else COLOR_CARD, COLOR_GOLD if selected else COLOR_BRASS, 3 if selected else 2, 7))
 
 	var employee: Dictionary = game_state.employees[employee_id]
-	tool_bar.visible = true
 	tool_bar.configure_for_employee(employee["name"], employee["abilities"], employee["core_actions"])
 	employee_selected.emit(employee_id)
 
