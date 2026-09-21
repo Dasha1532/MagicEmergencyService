@@ -229,6 +229,14 @@ func show_dialogue(speaker: String, message: String) -> void:
 	_display_dialogue(speaker, message, false)
 
 
+func show_resident_dialogue(message: String) -> void:
+	if message.is_empty():
+		return
+	var job: Dictionary = game_state.get_active_job()
+	queued_dialogues.clear()
+	_display_dialogue(str(job.get("resident", "Жилец")), message, false, _load_portrait(str(job.get("resident_portrait", ""))))
+
+
 func queue_dialogue(speaker: String, message: String, is_warning: bool = false) -> void:
 	if message.is_empty():
 		return
@@ -236,6 +244,22 @@ func queue_dialogue(speaker: String, message: String, is_warning: bool = false) 
 		_push_queued_dialogue({"speaker": speaker, "message": message, "warning": is_warning})
 		return
 	_display_dialogue(speaker, message, is_warning)
+
+
+func queue_resident_dialogue(message: String) -> void:
+	if message.is_empty():
+		return
+	var job: Dictionary = game_state.get_active_job()
+	var dialogue: Dictionary = {
+		"speaker": str(job.get("resident", "Жилец")),
+		"message": message,
+		"warning": false,
+		"portrait": _load_portrait(str(job.get("resident_portrait", ""))),
+	}
+	if employee_reaction_panel.visible and not employee_reaction_label.text.is_empty():
+		_push_queued_dialogue(dialogue)
+		return
+	_display_dialogue(str(dialogue["speaker"]), message, false, dialogue["portrait"])
 
 
 func queue_employee_reaction(employee_id: StringName, message: String) -> void:
@@ -261,6 +285,12 @@ func _push_queued_dialogue(dialogue: Dictionary) -> void:
 		queued_dialogues.append(dialogue)
 	else:
 		queued_dialogues[0] = dialogue
+
+
+func _load_portrait(path: String) -> Texture2D:
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D
 
 
 func _display_dialogue(speaker: String, message: String, is_warning: bool, portrait_texture: Texture2D = null) -> void:

@@ -119,8 +119,7 @@ func _open_room() -> void:
 	if not bool(simulation.world_object.get("resident_intro_seen", false)):
 		simulation.world_object["resident_intro_seen"] = true
 		game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
-		var job: Dictionary = game_state.get_active_job()
-		repair_hud.show_dialogue(str(job.get("resident", "Жилец")), simulation.get_resident_request())
+		repair_hud.show_resident_dialogue(simulation.get_resident_request())
 	feedback_panel.visible = false
 
 
@@ -289,8 +288,7 @@ func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 	else:
 		_show_feedback(str(result["message"]), true)
 	if resident_message != previous_resident_message:
-		var job: Dictionary = game_state.get_active_job()
-		repair_hud.queue_dialogue(str(job.get("resident", "Жилец")), resident_message)
+		repair_hud.queue_resident_dialogue(resident_message)
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	var is_burning: bool = bool(simulation.world_object["burning"])
@@ -318,8 +316,7 @@ func _schedule_fire_step(revision: int) -> void:
 		_show_feedback(str(result["message"]), true)
 		var resident_message: String = simulation.get_resident_reaction()
 		if resident_message != previous_resident_message:
-			var job: Dictionary = game_state.get_active_job()
-			repair_hud.queue_dialogue(str(job.get("resident", "Жилец")), resident_message)
+			repair_hud.queue_resident_dialogue(resident_message)
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	if bool(simulation.world_object["burning"]):

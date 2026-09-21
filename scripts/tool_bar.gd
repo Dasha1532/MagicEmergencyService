@@ -98,7 +98,7 @@ func show_intents(title: String, choices: Array) -> void:
 	title_label.text = title.to_upper()
 	for choice: Dictionary in choices:
 		var button := Button.new()
-		button.text = str(choice.get("label", "Действие"))
+		button.text = "   %s" % str(choice.get("label", "Действие"))
 		button.custom_minimum_size = Vector2(220, 44)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_copy_button_style(button)
@@ -160,7 +160,7 @@ func _clear_temporary_buttons() -> void:
 func _add_contextual_actions(actions: Array) -> void:
 	for action: Dictionary in actions:
 		var button := Button.new()
-		button.text = str(action.get("label", "Действие"))
+		button.text = "   %s" % str(action.get("label", "Действие"))
 		button.custom_minimum_size = Vector2(220, 44)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_copy_button_style(button)
