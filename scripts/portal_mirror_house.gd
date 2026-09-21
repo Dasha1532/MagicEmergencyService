@@ -1,0 +1,191 @@
+extends Node2D
+
+const PortalMirrorSimulationScript := preload("res://scripts/portal_mirror_simulation.gd")
+const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
+const COLOR_GOLD := Color(0.96, 0.68, 0.28)
+
+@onready var overview_background: TextureRect = $Background
+@onready var room_placement: Control = $RoomPlacement
+@onready var room_hotspot: Button = $RoomPlacement/RoomHotspot
+@onready var closeup_background: TextureRect = $RoomCloseup
+@onready var fireplace_glow: Node2D = $FireplaceGlow
+@onready var portal_mirror: Control = $PortalMirror
+@onready var employee_actor: Control = $EmployeeActor
+@onready var physical_approach: Marker2D = $PhysicalApproach
+@onready var back_to_house_button: Button = $Interface/BackToHouseButton
+@onready var tool_bar: Control = $Interface/ToolBar
+@onready var repair_hud: Control = $Interface/RepairHUD
+@onready var game_state: Node = get_node("/root/GameState")
+
+var simulation: PortalMirrorSimulation
+var selected_employee_id: StringName = &""
+var action_in_progress: bool = false
+
+
+func _ready() -> void:
+	if game_state.active_job_id != &"portal_mirror":
+		get_tree().change_scene_to_file("res://scenes/main.tscn")
+		return
+	simulation = PortalMirrorSimulationScript.new()
+	var saved_state: Dictionary = game_state.get_job_repair_state(game_state.active_job_id)
+	if not saved_state.is_empty():
+		simulation.load_state(saved_state)
+	_configure_room_button()
+	_style_button(back_to_house_button)
+	room_hotspot.pressed.connect(_open_room)
+	back_to_house_button.pressed.connect(_show_house_overview)
+	repair_hud.employee_selected.connect(_on_employee_selected)
+	repair_hud.completion_requested.connect(_attempt_complete_job)
+	portal_mirror.selected.connect(_on_mirror_selected)
+	tool_bar.tool_selected.connect(_on_tool_selected)
+	employee_actor.action_impact.connect(_on_action_impact)
+	employee_actor.action_finished.connect(_on_action_finished)
+	selected_employee_id = repair_hud.get_selected_employee_id()
+	_apply_visual_state()
+	_show_house_overview(false)
+
+
+func _open_room() -> void:
+	room_hotspot.disabled = true
+	closeup_background.visible = true
+	closeup_background.modulate = Color(1, 1, 1, 0)
+	portal_mirror.visible = true
+	fireplace_glow.visible = true
+	employee_actor.visible = _configure_employee_actor()
+	var tween: Tween = create_tween()
+	tween.tween_property(closeup_background, "modulate", Color.WHITE, 0.24)
+	await tween.finished
+	overview_background.visible = false
+	room_placement.visible = false
+	back_to_house_button.visible = true
+	tool_bar.visible = false
+	if repair_hud.has_method("set_work_ui_visible"):
+		repair_hud.call("set_work_ui_visible", true)
+	if not bool(simulation.world_object.get("resident_intro_seen", false)):
+		simulation.world_object["resident_intro_seen"] = true
+		game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+		repair_hud.show_resident_dialogue(simulation.get_resident_request())
+
+
+func _show_house_overview(animated: bool = true) -> void:
+	overview_background.visible = true
+	room_placement.visible = true
+	fireplace_glow.visible = false
+	portal_mirror.visible = false
+	employee_actor.visible = false
+	room_hotspot.disabled = false
+	back_to_house_button.visible = false
+	tool_bar.visible = false
+	if repair_hud.has_method("set_work_ui_visible"):
+		repair_hud.call("set_work_ui_visible", false)
+	if not animated:
+		closeup_background.visible = false
+		closeup_background.modulate = Color.WHITE
+		return
+	var tween: Tween = create_tween()
+	tween.tween_property(closeup_background, "modulate", Color(1, 1, 1, 0), 0.24)
+	await tween.finished
+	closeup_background.visible = false
+	closeup_background.modulate = Color.WHITE
+
+
+func _on_employee_selected(employee_id: StringName) -> void:
+	selected_employee_id = employee_id
+	tool_bar.visible = false
+	_configure_employee_actor()
+
+
+func _configure_employee_actor() -> bool:
+	if selected_employee_id.is_empty() or not game_state.employees.has(selected_employee_id):
+		employee_actor.visible = false
+		return false
+	employee_actor.visible = employee_actor.configure_employee(selected_employee_id, game_state.employees[selected_employee_id])
+	if employee_actor.visible and employee_actor.has_method("set_horizontal_flip"):
+		employee_actor.call("set_horizontal_flip", true)
+	return employee_actor.visible
+
+
+func _on_mirror_selected() -> void:
+	if action_in_progress:
+		return
+	if selected_employee_id.is_empty():
+		repair_hud.show_system_message("Сначала выберите сотрудника из бригады.", true)
+		return
+	var employee: Dictionary = game_state.employees[selected_employee_id]
+	var contextual_actions: Array[Dictionary] = []
+	if selected_employee_id == &"boris":
+		contextual_actions.append({"id": &"cover", "label": "Закрыть защитным полотном"})
+	tool_bar.configure_for_employee(str(employee["name"]), employee["abilities"], str(employee["core_actions"]))
+	tool_bar.show_for_object("Зеркало", portal_mirror.target_global_position(), {
+		&"diagnose": "Осмотреть",
+		&"physical_move": "Разбить зеркало",
+		&"telekinesis": "Сдвинуть зеркало",
+		&"antimagic": "Закрыть портал",
+		&"freeze": "Заморозить",
+		&"heat": "Нагреть",
+	}, contextual_actions, PackedStringArray(["repair"]))
+
+
+func _on_tool_selected(action_id: StringName) -> void:
+	if action_in_progress:
+		return
+	action_in_progress = true
+	portal_mirror.set_interaction_enabled(false)
+	tool_bar.visible = false
+	var approach := physical_approach.position if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical" else Vector2.INF
+	employee_actor.play_action(action_id, portal_mirror.target_global_position(), approach)
+
+
+func _on_action_impact(action_id: StringName) -> void:
+	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
+	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+	_apply_visual_state()
+	repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
+	var resident_reaction: String = simulation.get_resident_reaction(action_id)
+	if not resident_reaction.is_empty():
+		repair_hud.queue_resident_dialogue(resident_reaction)
+
+
+func _on_action_finished() -> void:
+	action_in_progress = false
+	portal_mirror.set_interaction_enabled(true)
+
+
+func _apply_visual_state() -> void:
+	portal_mirror.show_state(simulation.visual_state(), bool(simulation.world_object["cold_aura"]))
+	if repair_hud.has_method("set_completion_ready"):
+		repair_hud.call("set_completion_ready", simulation.is_resolved())
+
+
+func _attempt_complete_job() -> void:
+	if not simulation.is_resolved():
+		repair_hud.show_system_message("Работу нельзя завершить: портал всё ещё открыт.", true)
+		return
+	if game_state.complete_active_job(simulation.get_completion_result()):
+		get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+
+func _configure_room_button() -> void:
+	var empty_style := StyleBoxEmpty.new()
+	room_hotspot.add_theme_stylebox_override("normal", empty_style)
+	room_hotspot.add_theme_stylebox_override("pressed", empty_style)
+	var hover_style := StyleBoxFlat.new()
+	hover_style.bg_color = Color(0.95, 0.65, 0.2, 0.08)
+	hover_style.border_color = COLOR_GOLD
+	hover_style.set_border_width_all(3)
+	hover_style.set_corner_radius_all(8)
+	room_hotspot.add_theme_stylebox_override("hover", hover_style)
+	room_hotspot.add_theme_stylebox_override("focus", hover_style)
+
+
+func _style_button(button: Button) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = COLOR_PANEL
+	normal.border_color = COLOR_GOLD
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(8)
+	button.add_theme_stylebox_override("normal", normal)
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.15, 0.10, 0.055, 0.98)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", hover)

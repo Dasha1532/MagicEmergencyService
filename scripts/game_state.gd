@@ -196,6 +196,20 @@ var jobs: Dictionary = {
 		"repair_scene": "res://scenes/WardrobeRoom.tscn",
 		"assigned": PackedStringArray(),
 	},
+	&"portal_mirror": {
+		"title": "В зеркале открылся портал",
+		"objective": "Закрыть портал в зеркале",
+		"address": "Верхний город, 12",
+		"resident": "Госпожа Селеста",
+		"resident_portrait": "",
+		"description": "Старинное зеркало превратилось в нестабильный портал. Из отражения доносятся голоса, а магическое поле в комнате усиливается.",
+		"urgency": "Срочно",
+		"time_left": 120,
+		"danger": "Магия • портал",
+		"base_reward": 600,
+		"repair_scene": "res://scenes/PortalMirrorHouse.tscn",
+		"assigned": PackedStringArray(),
+	},
 }
 
 
@@ -415,6 +429,7 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		"net_change": reward - compensation,
 		"crew": Array(crew_names),
 		"summary": str(result.get("summary", "Аварийные работы приняты.")),
+		"follow_up": result.get("follow_up", {}),
 		"actions": result.get("actions", []),
 	}
 	job_reports.append(pending_job_report.duplicate(true))

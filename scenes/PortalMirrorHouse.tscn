@@ -1,0 +1,280 @@
+[gd_scene format=3 uid="uid://da3ur5vv4hej5"]
+
+[ext_resource type="Texture2D" uid="uid://chagfcd4kaon5" path="res://assets/backgrounds/portal_house.png" id="1_house"]
+[ext_resource type="Texture2D" uid="uid://c4d3gcubnplma" path="res://assets/backgrounds/portal_mirror_room.png" id="2_room"]
+[ext_resource type="Script" uid="uid://cwbvx6tupppnx" path="res://scripts/portal_mirror_house.gd" id="3_script"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ToolBar.tscn" id="4_toolbar"]
+[ext_resource type="PackedScene" path="res://scenes/ui/RepairHUD.tscn" id="5_hud"]
+[ext_resource type="PackedScene" path="res://scenes/EmployeeActor.tscn" id="6_actor"]
+[ext_resource type="Script" uid="uid://dn311asjxwkjy" path="res://scripts/fireplace_flame.gd" id="7_flame"]
+[ext_resource type="Texture2D" uid="uid://wjbnm5b0r354" path="res://assets/objects/portal_mirror/open.png" id="8_mirror_open"]
+[ext_resource type="Texture2D" uid="uid://cym7lcxso1xo0" path="res://assets/objects/portal_mirror/closed.png" id="9_mirror_closed"]
+[ext_resource type="Script" uid="uid://ds8ftf507he6v" path="res://scripts/portal_mirror_object.gd" id="10_mirror_script"]
+[ext_resource type="Texture2D" uid="uid://xgshsrdoylbc" path="res://assets/objects/portal_mirror/heat_damaged.png" id="11_mirror_heat"]
+[ext_resource type="Texture2D" uid="uid://dy5on7cshemd3" path="res://assets/objects/portal_mirror/destroyed.png" id="12_mirror_destroyed"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="13_pause"]
+[ext_resource type="Texture2D" uid="uid://bc1sfhuolryuh" path="res://assets/objects/portal_mirror/covered.png" id="14_mirror_covered"]
+[ext_resource type="Texture2D" uid="uid://chrmgeu0c11dy" path="res://assets/effects/status/frost.png" id="15_frost"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_marker"]
+bg_color = Color(0.2, 0.08, 0.28, 0.12)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.72, 0.48, 0.95, 0.92)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mirror_open"]
+atlas = ExtResource("8_mirror_open")
+region = Rect2(650, 0, 700, 941)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mirror_heat"]
+atlas = ExtResource("11_mirror_heat")
+region = Rect2(680, 0, 650, 1024)
+
+[node name="PortalMirrorHouse" type="Node2D" unique_id=883960508]
+script = ExtResource("3_script")
+
+[node name="Background" type="TextureRect" parent="." unique_id=894346690]
+offset_right = 1600.0
+offset_bottom = 900.0
+mouse_filter = 2
+texture = ExtResource("1_house")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="RoomPlacement" type="Control" parent="." unique_id=2120847300]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 318.0
+offset_top = 184.0
+offset_right = 953.0
+offset_bottom = 403.0
+
+[node name="RoomPreview" type="TextureRect" parent="RoomPlacement" unique_id=2125382071]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_room")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ProblemRoomMarker" type="Panel" parent="RoomPlacement" unique_id=357446509]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_marker")
+
+[node name="Label" type="Label" parent="RoomPlacement/ProblemRoomMarker" unique_id=1287498778]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -38.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.94, 0.78, 1, 1)
+theme_override_colors/font_outline_color = Color(0.06, 0.025, 0.08, 0.95)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 15
+text = "ЗАЯВКА • ПОРТАЛ В ЗЕРКАЛЕ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RoomHotspot" type="Button" parent="RoomPlacement" unique_id=2112616118]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+tooltip_text = "Гостиная • портал в зеркале"
+mouse_default_cursor_shape = 2
+
+[node name="RoomCloseup" type="TextureRect" parent="." unique_id=2106776167]
+offset_right = 1600.0
+offset_bottom = 900.0
+mouse_filter = 2
+texture = ExtResource("2_room")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="FireplaceGlow" type="Node2D" parent="." unique_id=591317423]
+z_index = 2
+position = Vector2(132, 650)
+script = ExtResource("7_flame")
+
+[node name="Glow" type="Polygon2D" parent="FireplaceGlow" unique_id=1048194641]
+position = Vector2(-30.000004, -33.999996)
+scale = Vector2(0.59859157, 0.751938)
+color = Color(1, 0.34, 0.035, 0.18)
+polygon = PackedVector2Array(-70, 36, -58, -38, -28, -76, 0, -92, 31, -70, 61, -32, 72, 37)
+
+[node name="PortalMirror" type="Control" parent="." unique_id=1711633185]
+z_index = 4
+layout_mode = 3
+anchors_preset = 0
+offset_left = 1164.0
+offset_top = 87.0
+offset_right = 1574.0
+offset_bottom = 750.0
+mouse_filter = 1
+script = ExtResource("10_mirror_script")
+
+[node name="FrostAura" type="TextureRect" parent="PortalMirror" unique_id=1786260893]
+modulate = Color(0.78, 0.9, 1, 0.68)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -259.0
+offset_top = -102.0
+offset_right = 51.0
+offset_bottom = 58.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("15_frost")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Open" type="TextureRect" parent="PortalMirror" unique_id=833594670]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -91.0
+offset_top = -69.0
+offset_right = -71.0
+offset_bottom = -13.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_mirror_open")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Closed" type="TextureRect" parent="PortalMirror" unique_id=1743773764]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -89.0
+offset_top = -25.0
+offset_right = -124.0
+offset_bottom = -27.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("9_mirror_closed")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HeatDamaged" type="TextureRect" parent="PortalMirror" unique_id=2037210020]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -70.0
+offset_top = -15.0
+offset_right = -79.0
+offset_bottom = -15.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_mirror_heat")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Destroyed" type="TextureRect" parent="PortalMirror" unique_id=661159421]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -102.0
+offset_top = -106.0
+offset_right = -116.0
+offset_bottom = 53.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("12_mirror_destroyed")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Covered" type="TextureRect" parent="PortalMirror" unique_id=305469414]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -104.0
+offset_top = -13.0
+offset_right = -113.0
+offset_bottom = -13.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("14_mirror_covered")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="InteractionButton" type="Button" parent="PortalMirror" unique_id=208614612]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_default_cursor_shape = 2
+
+[node name="Target" type="Marker2D" parent="PortalMirror" unique_id=401803174]
+position = Vector2(205, 330)
+gizmo_extents = 20.0
+
+[node name="EmployeeActor" parent="." unique_id=1756788923 instance=ExtResource("6_actor")]
+visible = false
+offset_left = 570.0
+offset_top = 205.0
+offset_right = 1076.0
+offset_bottom = 886.0
+
+[node name="PhysicalApproach" type="Marker2D" parent="." unique_id=2141750920]
+position = Vector2(1030, 245)
+gizmo_extents = 24.0
+
+[node name="Interface" type="CanvasLayer" parent="." unique_id=1722866902]
+
+[node name="ToolBar" parent="Interface" unique_id=1429871919 instance=ExtResource("4_toolbar")]
+
+[node name="RepairHUD" parent="Interface" unique_id=320767106 instance=ExtResource("5_hud")]
+offset_left = -5.0
+offset_right = -5.0
+
+[node name="BackToHouseButton" type="Button" parent="Interface" unique_id=1291077684]
+offset_left = 706.0
+offset_top = 22.0
+offset_right = 1016.0
+offset_bottom = 76.0
+theme_override_colors/font_color = Color(0.96, 0.82, 0.58, 1)
+theme_override_font_sizes/font_size = 18
+text = "←  К ОБЗОРУ ДОМА"
+
+[node name="PauseMenu" parent="." unique_id=361733957 instance=ExtResource("13_pause")]
+show_default_menu_button = false

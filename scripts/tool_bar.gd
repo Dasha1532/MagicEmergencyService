@@ -32,6 +32,7 @@ var temporary_buttons: Array[Button] = []
 var current_object_name: String = "Объект"
 var menu_height: float = 117.0
 var current_action_labels: Dictionary = {}
+var hidden_action_ids: PackedStringArray = PackedStringArray()
 
 
 func _ready() -> void:
@@ -77,9 +78,10 @@ func get_selected_tool_id() -> StringName:
 	return current_tool_id
 
 
-func show_for_object(object_name: String, anchor_position: Vector2, action_labels: Dictionary = {}, contextual_actions: Array = []) -> void:
+func show_for_object(object_name: String, anchor_position: Vector2, action_labels: Dictionary = {}, contextual_actions: Array = [], hidden_actions: PackedStringArray = PackedStringArray()) -> void:
 	current_object_name = object_name
 	current_action_labels = action_labels.duplicate()
+	hidden_action_ids = hidden_actions.duplicate()
 	_show_ability_buttons()
 	_add_contextual_actions(contextual_actions)
 	title_label.text = object_name.to_upper()
@@ -142,12 +144,15 @@ func _on_context_action_pressed(action_id: StringName) -> void:
 
 func _show_ability_buttons() -> void:
 	_clear_temporary_buttons()
+	var visible_ability_count: int = 0
 	for button in buttons:
 		var tool_data: Array = TOOL_NAMES[button.name]
 		button.text = "   %s" % str(current_action_labels.get(tool_data[0], tool_data[1]))
-		button.visible = available_buttons.has(button)
+		button.visible = available_buttons.has(button) and not hidden_action_ids.has(String(tool_data[0]))
+		if button.visible:
+			visible_ability_count += 1
 	title_label.text = current_object_name.to_upper()
-	_resize_for_action_count(available_buttons.size())
+	_resize_for_action_count(visible_ability_count)
 
 
 func _clear_temporary_buttons() -> void:
@@ -167,7 +172,11 @@ func _add_contextual_actions(actions: Array) -> void:
 		button.pressed.connect(_on_context_action_pressed.bind(StringName(str(action.get("id", "")))))
 		buttons_container.add_child(button)
 		temporary_buttons.append(button)
-	_resize_for_action_count(available_buttons.size() + actions.size())
+	var visible_ability_count: int = 0
+	for button in buttons:
+		if button.visible:
+			visible_ability_count += 1
+	_resize_for_action_count(visible_ability_count + actions.size())
 
 
 func _copy_button_style(target: Button) -> void:

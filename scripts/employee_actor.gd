@@ -19,6 +19,7 @@ var home_position: Vector2
 var walk_pose_base_position: Vector2
 var employee_positions: Dictionary = {}
 var walking_z_index: int
+var horizontal_flip: bool = false
 
 
 func _ready() -> void:
@@ -68,6 +69,15 @@ func configure_employee(new_employee_id: StringName, employee_data: Dictionary) 
 	return neutral_pose.texture != null and work_pose.texture != null
 
 
+func set_horizontal_flip(should_flip: bool) -> void:
+	horizontal_flip = should_flip
+	rotation = 0.0
+	scale = Vector2(-1.0 if horizontal_flip else 1.0, 1.0)
+	if idle_tween != null:
+		idle_tween.kill()
+		_start_idle_motion()
+
+
 func _reset_pose_visibility() -> void:
 	neutral_pose.visible = true
 	neutral_pose.modulate = Color.WHITE
@@ -93,9 +103,10 @@ func _start_idle_motion() -> void:
 	if idle_tween != null:
 		idle_tween.kill()
 	idle_tween = create_tween().set_loops()
-	idle_tween.tween_property(self, "scale", Vector2(1.004, 0.997), 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	var direction: float = -1.0 if horizontal_flip else 1.0
+	idle_tween.tween_property(self, "scale", Vector2(direction * 1.004, 0.997), 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	idle_tween.parallel().tween_property(self, "rotation", 0.0035, 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	idle_tween.tween_property(self, "scale", Vector2(0.998, 1.003), 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	idle_tween.tween_property(self, "scale", Vector2(direction * 0.998, 1.003), 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	idle_tween.parallel().tween_property(self, "rotation", -0.0025, 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
@@ -114,7 +125,7 @@ func play_action(
 	if idle_tween != null:
 		idle_tween.pause()
 	rotation = 0.0
-	scale = Vector2.ONE
+	scale = Vector2(-1.0 if horizontal_flip else 1.0, 1.0)
 	if action_style == &"magic":
 		await _show_action_pose(work_pose)
 		await _play_magic_impact(action_id, target_global_position)
@@ -166,7 +177,9 @@ func _walk_to(target_position: Vector2) -> void:
 	walk_pose.visible = true
 	walk_pose.modulate = Color.WHITE
 	walk_pose.pivot_offset = walk_pose.size * 0.5
-	walk_pose.scale = Vector2(-1.0, 1.0) if target_position.x > position.x else Vector2.ONE
+	var desired_direction: float = -1.0 if target_position.x > position.x else 1.0
+	var parent_direction: float = -1.0 if horizontal_flip else 1.0
+	walk_pose.scale = Vector2(desired_direction / parent_direction, 1.0)
 	var duration: float = clampf(distance / 260.0, 0.45, 1.45)
 	var movement: Tween = create_tween()
 	movement.tween_property(self, "position", target_position, duration).set_trans(Tween.TRANS_LINEAR)
@@ -190,7 +203,7 @@ func restore_hold_pose(target_position: Vector2, action_z_index: int = 20) -> vo
 	position = target_position
 	employee_positions[employee_id] = position
 	rotation = 0.0
-	scale = Vector2.ONE
+	scale = Vector2(-1.0 if horizontal_flip else 1.0, 1.0)
 	z_index = action_z_index
 	_reset_pose_visibility()
 	neutral_pose.visible = false

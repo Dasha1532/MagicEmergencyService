@@ -129,11 +129,17 @@ func _build_jobs_panel() -> void:
 	rule.size = Vector2(375, 2)
 	panel.add_child(rule)
 
+	var job_scroll := ScrollContainer.new()
+	job_scroll.position = Vector2(18, 70)
+	job_scroll.size = Vector2(379, 367)
+	job_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	job_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	panel.add_child(job_scroll)
+
 	job_list = VBoxContainer.new()
-	job_list.position = Vector2(18, 70)
-	job_list.size = Vector2(379, 360)
+	job_list.custom_minimum_size = Vector2(356, 360)
 	job_list.add_theme_constant_override("separation", 12)
-	panel.add_child(job_list)
+	job_scroll.add_child(job_list)
 
 
 func _build_detail_panel() -> void:
