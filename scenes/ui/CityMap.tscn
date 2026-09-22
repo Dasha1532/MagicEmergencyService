@@ -1,0 +1,158 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/city_map.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/office_hub.png" id="2_office"]
+
+[sub_resource type="AtlasTexture" id="Atlas_city_map"]
+atlas = ExtResource("2_office")
+region = Rect2(1205, 45, 435, 365)
+
+[node name="CityMap" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="MapArea" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 104.0
+offset_right = 1166.0
+offset_bottom = 878.0
+
+[node name="MapTexture" type="TextureRect" parent="MapArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("Atlas_city_map")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Shade" type="ColorRect" parent="MapArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.025, 0.018, 0.012, 0.24)
+
+[node name="HouseMarkers" type="Control" parent="MapArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="RagnarAndEleonora" type="Button" parent="MapArea/HouseMarkers"]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 470.0
+offset_right = 500.0
+offset_bottom = 630.0
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+text = "Старый квартал, 5"
+
+[node name="Selesta" type="Button" parent="MapArea/HouseMarkers"]
+layout_mode = 0
+offset_left = 710.0
+offset_top = 145.0
+offset_right = 1040.0
+offset_bottom = 305.0
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+text = "Верхний город, 12"
+
+[node name="Header" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 18.0
+offset_right = 1578.0
+offset_bottom = 90.0
+
+[node name="Title" type="Label" parent="Header"]
+layout_mode = 0
+offset_left = 26.0
+offset_top = 10.0
+offset_right = 700.0
+offset_bottom = 45.0
+theme_override_colors/font_color = Color(0.96, 0.78, 0.46, 1)
+theme_override_font_sizes/font_size = 25
+text = "КАРТА ГОРОДА"
+
+[node name="Subtitle" type="Label" parent="Header"]
+layout_mode = 0
+offset_left = 27.0
+offset_top = 42.0
+offset_right = 800.0
+offset_bottom = 65.0
+theme_override_colors/font_color = Color(0.7, 0.63, 0.52, 1)
+theme_override_font_sizes/font_size = 14
+text = "Диспетчерская сводка по адресам"
+
+[node name="BackButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 1372.0
+offset_top = 30.0
+offset_right = 1554.0
+offset_bottom = 78.0
+theme_override_colors/font_color = Color(0.92, 0.84, 0.69, 1)
+theme_override_font_sizes/font_size = 16
+text = "←  В ОФИС"
+
+[node name="HousePanel" type="Panel" parent="."]
+visible = false
+layout_mode = 0
+offset_left = 1184.0
+offset_top = 104.0
+offset_right = 1578.0
+offset_bottom = 878.0
+
+[node name="Title" type="Label" parent="HousePanel"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 20.0
+offset_right = 372.0
+offset_bottom = 78.0
+theme_override_colors/font_color = Color(0.96, 0.78, 0.46, 1)
+theme_override_font_sizes/font_size = 21
+text = "Дом"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Summary" type="Label" parent="HousePanel"]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 92.0
+offset_right = 372.0
+offset_bottom = 150.0
+theme_override_colors/font_color = Color(0.92, 0.84, 0.69, 1)
+theme_override_font_sizes/font_size = 15
+text = "Адрес"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="JobScroll" type="ScrollContainer" parent="HousePanel"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 174.0
+offset_right = 374.0
+offset_bottom = 750.0
+horizontal_scroll_mode = 0
+
+[node name="JobList" type="VBoxContainer" parent="HousePanel/JobScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12

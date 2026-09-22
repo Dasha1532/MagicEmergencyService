@@ -12,6 +12,7 @@ const COLOR_MUTED := Color(0.70, 0.63, 0.52)
 const PERSONNEL_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
 const CANDIDATE_CLASP_TEXTURE = preload("res://assets/ui/candidate_clasp.png")
 const CLOCK_CONTROLS_SCRIPT = preload("res://scripts/game_clock_controls.gd")
+const CITY_MAP_SCENE = preload("res://scenes/ui/CityMap.tscn")
 
 var selected_job_id: StringName
 var job_list: VBoxContainer
@@ -45,6 +46,7 @@ var supply_layer: Control
 var supply_money_label: Label
 var supply_catalog_status: Label
 var supply_purchase_button: Button
+var city_map_layer: Control
 var section_dialog: Panel
 var section_title: Label
 var section_body: Label
@@ -86,6 +88,7 @@ func _build_interface() -> void:
 	_build_arrival_dialog()
 	_build_personnel_screen()
 	_build_supply_shop()
+	_build_city_map()
 
 
 func _build_top_bar() -> void:
@@ -249,7 +252,7 @@ func _build_office_hub() -> void:
 	_connect_editable_hotspot($ObjectHotspots/JobBoard, "ДОСКА ЗАЯВОК", "Что опять случилось?", _open_jobs)
 	_connect_editable_hotspot($ObjectHotspots/EmployeesBoard, "СОТРУДНИКИ", "Кто сегодня работает?", _open_personnel)
 	_connect_editable_hotspot($ObjectHotspots/EquipmentStorage, "СКЛАД СНАРЯЖЕНИЯ", "Чем будем чинить?", _open_section.bind("СКЛАД СНАРЯЖЕНИЯ", "Чем будем чинить?", "Здесь будет храниться обычное и магическое оборудование службы."))
-	_connect_editable_hotspot($ObjectHotspots/CityMap, "КАРТА ГОРОДА", "Где опять прорвало?", _open_section.bind("КАРТА ГОРОДА", "Где опять прорвало?", "Здесь появятся районы города, адреса заявок и перемещение между объектами."))
+	_connect_editable_hotspot($ObjectHotspots/CityMap, "КАРТА ГОРОДА", "Где опять прорвало?", _open_city_map)
 	_connect_editable_hotspot($BookHotspots/AccountingBook, "КНИГА УЧЁТА", "Куда делись деньги?", _open_section.bind("КНИГА УЧЁТА", "Куда делись деньги?", "Здесь будут показаны доходы, расходы, зарплаты и компенсации."))
 	_connect_editable_hotspot($BookHotspots/ReviewsBook, "КНИГА ОТЗЫВОВ", "Благодарности, жалобы и угрозы.", _open_section.bind("КНИГА ОТЗЫВОВ", "Благодарности, жалобы и угрозы.", "Здесь появятся оценки жильцов, отзывы и изменение репутации службы."))
 	_connect_editable_hotspot($BookHotspots/IncidentArchive, "АРХИВ ПРОИСШЕСТВИЙ", "Так больше не делать.", _open_section.bind("АРХИВ ПРОИСШЕСТВИЙ", "Так больше не делать.", "Здесь будет сохраняться история решений, последствий и необычных аварий."))
@@ -701,6 +704,7 @@ func _open_jobs() -> void:
 	hub_layer.visible = false
 	personnel_layer.visible = false
 	supply_layer.visible = false
+	city_map_layer.visible = false
 	dashboard_layer.visible = true
 	_refresh()
 
@@ -709,6 +713,7 @@ func _open_personnel() -> void:
 	hub_layer.visible = false
 	dashboard_layer.visible = false
 	supply_layer.visible = false
+	city_map_layer.visible = false
 	personnel_layer.visible = true
 	_refresh_personnel()
 
@@ -717,14 +722,39 @@ func _open_supply_shop() -> void:
 	hub_layer.visible = false
 	dashboard_layer.visible = false
 	personnel_layer.visible = false
+	city_map_layer.visible = false
 	supply_layer.visible = true
 	_refresh_supply_shop()
+
+
+func _build_city_map() -> void:
+	city_map_layer = CITY_MAP_SCENE.instantiate()
+	city_map_layer.visible = false
+	city_map_layer.back_requested.connect(_show_hub)
+	city_map_layer.job_selected.connect(_open_job_from_map)
+	add_child(city_map_layer)
+
+
+func _open_city_map() -> void:
+	hub_layer.visible = false
+	dashboard_layer.visible = false
+	personnel_layer.visible = false
+	supply_layer.visible = false
+	city_map_layer.visible = true
+	city_map_layer.refresh()
+
+
+func _open_job_from_map(job_id: StringName) -> void:
+	selected_job_id = job_id
+	pending_dispatch_employee_ids.clear()
+	_open_jobs()
 
 
 func _show_hub() -> void:
 	dashboard_layer.visible = false
 	personnel_layer.visible = false
 	supply_layer.visible = false
+	city_map_layer.visible = false
 	hub_layer.visible = true
 	section_dialog.visible = false
 
