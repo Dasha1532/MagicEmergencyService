@@ -2,6 +2,8 @@ extends Control
 
 signal employee_selected(employee_id: StringName)
 signal completion_requested
+signal long_action_started(employee_id: StringName)
+signal long_action_finished(employee_id: StringName)
 
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
 const COLOR_CARD := Color(0.13, 0.09, 0.055, 0.96)
@@ -9,7 +11,9 @@ const COLOR_SELECTED := Color(0.10, 0.16, 0.18, 0.98)
 const COLOR_BRASS := Color(0.76, 0.54, 0.27)
 const COLOR_GOLD := Color(0.96, 0.78, 0.46)
 const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
+const COLOR_MUTED := Color(0.66, 0.60, 0.50)
 const RESIDENT_DIALOGUE_PANEL_SCENE := preload("res://scenes/ui/ResidentDialoguePanel.tscn")
+const CLOCK_CONTROLS_SCRIPT = preload("res://scripts/game_clock_controls.gd")
 
 var selected_employee_id: StringName = &""
 var employee_box: HBoxContainer
@@ -29,6 +33,14 @@ var portrait_label_position: Vector2
 var portrait_label_size: Vector2
 var work_ui_visible: bool = true
 var queued_dialogues: Array[Dictionary] = []
+var task_panel: Panel
+var task_label: Label
+var task_progress: ProgressBar
+var task_started_at: int = 0
+var task_ends_at: int = 0
+var task_callback: Callable
+var employee_buttons: Dictionary = {}
+var employee_detail_labels: Dictionary = {}
 @onready var game_state: Node = get_node("/root/GameState")
 
 
@@ -39,13 +51,46 @@ func _ready() -> void:
 	if game_state.active_job_id.is_empty():
 		game_state.active_job_id = game_state.selected_job_id
 	_build_job_header()
+	_build_clock_controls()
 	_build_employee_selector()
 	_build_return_button()
 	_build_complete_button()
 	_build_employee_reaction_panel()
+	_build_task_progress()
 	game_state.state_changed.connect(_refresh_job_time)
+	game_state.state_changed.connect(_refresh_employee_states)
 	_refresh_job_time()
 	_select_first_employee()
+	set_process(true)
+
+
+func _process(_delta: float) -> void:
+	var pending: Dictionary = game_state.get_pending_job_action(game_state.active_job_id)
+	if pending.is_empty():
+		if task_panel != null:
+			task_panel.visible = false
+		return
+	task_started_at = int(pending.get("started_at", game_state.time_minutes))
+	task_ends_at = int(pending.get("ends_at", game_state.time_minutes))
+	var duration: int = maxi(1, task_ends_at - task_started_at)
+	var elapsed: int = clampi(game_state.time_minutes - task_started_at, 0, duration)
+	task_panel.visible = duration > 1
+	if task_panel.visible:
+		task_progress.value = float(elapsed) / float(duration) * 100.0
+		task_label.text = "Работа выполняется • осталось %d мин." % maxi(0, task_ends_at - game_state.time_minutes)
+	if game_state.time_minutes < task_ends_at:
+		return
+	if not task_callback.is_valid():
+		return
+	var callback := task_callback
+	var employee_id := StringName(str(pending.get("employee_id", "")))
+	task_callback = Callable()
+	game_state.clear_pending_job_action(game_state.active_job_id)
+	task_panel.visible = false
+	if duration > 1:
+		long_action_finished.emit(employee_id)
+	if callback.is_valid():
+		callback.call()
 
 
 func _build_job_header() -> void:
@@ -67,6 +112,59 @@ func _build_job_header() -> void:
 	job_time_label.size = Vector2(614, 24)
 	job_time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	panel.add_child(job_time_label)
+
+
+func _build_clock_controls() -> void:
+	var controls := CLOCK_CONTROLS_SCRIPT.new()
+	controls.position = Vector2(680, 18)
+	add_child(controls)
+
+
+func _build_task_progress() -> void:
+	task_panel = Panel.new()
+	task_panel.position = Vector2(1048, 88)
+	task_panel.size = Vector2(530, 72)
+	task_panel.visible = false
+	task_panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 8))
+	add_child(task_panel)
+	task_label = _label("", 15, COLOR_PARCHMENT)
+	task_label.position = Vector2(14, 7)
+	task_label.size = Vector2(502, 25)
+	task_panel.add_child(task_label)
+	task_progress = ProgressBar.new()
+	task_progress.position = Vector2(14, 38)
+	task_progress.size = Vector2(502, 22)
+	task_progress.show_percentage = false
+	task_panel.add_child(task_progress)
+
+
+func start_timed_action(employee_id: StringName, action_id: StringName, completion: Callable, duration: int = -1) -> void:
+	if is_timed_action_active():
+		return
+	var actual_duration: int = duration if duration > 0 else game_state.get_action_duration(action_id)
+	if not game_state.start_job_action(game_state.active_job_id, employee_id, action_id, &"", actual_duration):
+		return
+	task_started_at = game_state.time_minutes
+	task_ends_at = task_started_at + maxi(1, actual_duration)
+	task_callback = completion
+	task_panel.visible = actual_duration > 1
+	if task_panel.visible:
+		task_label.text = "%s работает • осталось %d мин." % [game_state.employees[employee_id]["name"], actual_duration]
+		task_progress.value = 0.0
+		long_action_started.emit(employee_id)
+	game_state.set_clock_paused(false)
+
+
+func is_timed_action_active() -> bool:
+	return not game_state.get_pending_job_action(game_state.active_job_id).is_empty()
+
+
+func resume_timed_action(completion: Callable) -> void:
+	if is_timed_action_active():
+		task_callback = completion
+		var pending: Dictionary = game_state.get_pending_job_action(game_state.active_job_id)
+		if int(pending.get("ends_at", 0)) - int(pending.get("started_at", 0)) > 1:
+			long_action_started.emit(StringName(str(pending.get("employee_id", ""))))
 
 
 func set_job_title(title: String) -> void:
@@ -92,6 +190,8 @@ func _refresh_job_time() -> void:
 func _build_employee_selector() -> void:
 	var job: Dictionary = game_state.get_active_job()
 	var assigned: PackedStringArray = job.get("assigned", PackedStringArray())
+	employee_buttons.clear()
+	employee_detail_labels.clear()
 	var employee_count: int = assigned.size()
 	var visible_count: int = clampi(employee_count, 1, 3)
 	var card_width: int = 297
@@ -137,6 +237,7 @@ func _add_employee_button(employee_id: StringName) -> void:
 	button.pressed.connect(_select_employee.bind(employee_id))
 	employee_box.add_child(button)
 	button.set_meta("employee_id", employee_id)
+	employee_buttons[employee_id] = button
 
 	var portrait_frame := Panel.new()
 	portrait_frame.position = Vector2(7, 5)
@@ -169,6 +270,28 @@ func _add_employee_button(employee_id: StringName) -> void:
 	role_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	role_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	button.add_child(role_label)
+	employee_detail_labels[employee_id] = role_label
+	_update_employee_card(employee_id)
+
+
+func _refresh_employee_states() -> void:
+	for employee_key: Variant in employee_buttons.keys():
+		_update_employee_card(StringName(employee_key))
+	if selected_employee_id.is_empty() or not game_state.can_employee_work_on_job(selected_employee_id, game_state.active_job_id):
+		_select_first_employee()
+
+
+func _update_employee_card(employee_id: StringName) -> void:
+	if not employee_buttons.has(employee_id) or not employee_detail_labels.has(employee_id):
+		return
+	var employee: Dictionary = game_state.employees[employee_id]
+	var on_site: bool = game_state.can_employee_work_on_job(employee_id, game_state.active_job_id)
+	var button: Button = employee_buttons[employee_id]
+	var detail_label: Label = employee_detail_labels[employee_id]
+	button.disabled = not on_site
+	button.tooltip_text = "" if on_site else str(employee["status"])
+	detail_label.text = str(employee["core_actions"]) if on_site else str(employee["status"])
+	detail_label.add_theme_color_override("font_color", COLOR_PARCHMENT if on_site else COLOR_MUTED)
 
 
 func _build_return_button() -> void:
@@ -311,6 +434,7 @@ func _resident_portrait(job: Dictionary) -> Texture2D:
 
 
 func _display_dialogue(speaker: String, message: String, is_warning: bool, portrait_texture: Texture2D = null) -> void:
+	game_state.set_clock_paused(true)
 	var has_portrait: bool = portrait_texture != null
 	dialogue_portrait_frame.visible = has_portrait
 	dialogue_portrait.texture = portrait_texture
@@ -379,13 +503,19 @@ func get_selected_employee_id() -> StringName:
 func _select_first_employee() -> void:
 	var job: Dictionary = game_state.get_active_job()
 	var assigned: PackedStringArray = job.get("assigned", PackedStringArray())
-	if not assigned.is_empty():
-		_select_employee(StringName(assigned[0]))
-	else:
-		tool_bar.visible = false
+	for employee_id: String in assigned:
+		if game_state.can_employee_work_on_job(StringName(employee_id), game_state.active_job_id):
+			_select_employee(StringName(employee_id))
+			return
+	selected_employee_id = &""
+	tool_bar.visible = false
 
 
 func _select_employee(employee_id: StringName) -> void:
+	if not game_state.can_employee_work_on_job(employee_id, game_state.active_job_id):
+		return
+	if is_timed_action_active() and not selected_employee_id.is_empty() and employee_id != selected_employee_id:
+		return
 	if employee_id != selected_employee_id:
 		clear_employee_reaction()
 	selected_employee_id = employee_id

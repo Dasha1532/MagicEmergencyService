@@ -44,6 +44,8 @@ func _ready() -> void:
 	tool_bar.tool_selected.connect(_on_tool_selected)
 	repair_hud.employee_selected.connect(_on_employee_selected)
 	repair_hud.completion_requested.connect(_attempt_complete_job)
+	repair_hud.long_action_started.connect(_on_long_action_started)
+	repair_hud.long_action_finished.connect(_on_long_action_finished)
 	lava_faucet.selected.connect(_apply_selected_action)
 	employee_actor.action_impact.connect(_on_employee_action_impact)
 	employee_actor.action_finished.connect(_on_employee_action_finished)
@@ -51,7 +53,18 @@ func _ready() -> void:
 	selected_employee_id = repair_hud.get_selected_employee_id()
 	_configure_employee_actor()
 	_restore_repair_state()
-	_show_house_overview(false)
+	_resume_pending_action()
+	call_deferred("_open_bathroom")
+
+
+func _on_long_action_started(employee_id: StringName) -> void:
+	if employee_id == selected_employee_id and employee_actor.visible:
+		employee_actor.call("set_persistent_work_pose", true)
+
+
+func _on_long_action_finished(employee_id: StringName) -> void:
+	if employee_id == selected_employee_id:
+		employee_actor.call("set_persistent_work_pose", false)
 
 
 func _open_bathroom() -> void:
@@ -75,7 +88,7 @@ func _open_bathroom() -> void:
 	overview_background.visible = false
 	bathroom_preview_backdrop.visible = false
 	bathroom_preview.visible = false
-	back_to_house_button.visible = true
+	back_to_house_button.visible = false
 	tool_bar.visible = false
 	if repair_hud.has_method("set_work_ui_visible"):
 		repair_hud.call("set_work_ui_visible", true)
@@ -143,6 +156,12 @@ func _configure_buttons() -> void:
 
 
 func _on_tool_selected(tool_id: StringName) -> void:
+	if repair_hud.is_timed_action_active():
+		_show_feedback("Сначала дождитесь завершения текущей работы.", true)
+		return
+	if not game_state.can_employee_work_on_job(selected_employee_id, game_state.active_job_id):
+		_show_feedback("Сотрудник ещё едет на объект. Прибытие: %s." % game_state.employees[selected_employee_id]["status"], true)
+		return
 	selected_tool_id = tool_id
 	tool_bar.visible = false
 	_begin_selected_action()
@@ -175,6 +194,8 @@ func _begin_selected_action() -> void:
 	if employee_actor.visible:
 		action_in_progress = true
 		lava_faucet.set_interaction_enabled(false)
+		if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical":
+			_schedule_action(selected_tool_id)
 		employee_actor.play_action(
 			selected_tool_id,
 			_faucet_target_global(),
@@ -192,7 +213,8 @@ func _configure_employee_actor() -> bool:
 
 
 func _on_employee_action_impact(action_id: StringName) -> void:
-	_resolve_action(action_id)
+	if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"magic":
+		_resolve_action(action_id)
 
 
 func _on_employee_action_finished() -> void:
@@ -205,7 +227,6 @@ func _resolve_action(action_id: StringName) -> void:
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object)
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
-	game_state.advance_time(game_state.ACTION_TIME_MINUTES)
 	var visual_state: StringName = result.get("visual_state", &"emergency")
 	if visual_state == &"repaired":
 		lava_faucet.show_repaired_state()
@@ -233,6 +254,19 @@ func _resolve_action(action_id: StringName) -> void:
 		repair_hud.queue_resident_dialogue(resident_message)
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+
+
+func _schedule_action(action_id: StringName) -> void:
+	repair_hud.start_timed_action(selected_employee_id, action_id, _resolve_action.bind(action_id))
+
+
+func _resume_pending_action() -> void:
+	var pending: Dictionary = game_state.get_pending_job_action(game_state.active_job_id)
+	if pending.is_empty():
+		return
+	selected_employee_id = StringName(str(pending.get("employee_id", "")))
+	_configure_employee_actor()
+	repair_hud.resume_timed_action(_resolve_action.bind(StringName(str(pending.get("action_id", "")))))
 
 
 func _faucet_target_global() -> Vector2:

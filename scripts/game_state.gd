@@ -4,11 +4,11 @@ signal state_changed
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 7
+const SAVE_VERSION: int = 8
 const SAVE_PATH: String = "user://savegame.json"
 const TRAVEL_TIME_MINUTES: int = 15
-const ACTION_TIME_MINUTES: int = 10
 const OVERDUE_PAYMENT_PENALTY: int = 100
+const REAL_SECONDS_PER_GAME_MINUTE: float = 3.0
 const SUPPLY_ITEMS: Dictionary = {
 	&"animation_kit": {
 		"name": "Практическое оживление бытовых предметов",
@@ -39,6 +39,54 @@ var completed_job_ids: PackedStringArray = PackedStringArray()
 var job_reports: Array = []
 var pending_job_report: Dictionary = {}
 var job_repair_states: Dictionary = {}
+var clock_paused: bool = true
+var clock_speed: int = 1
+var _clock_accumulator: float = 0.0
+
+
+func _process(delta: float) -> void:
+	if clock_paused:
+		return
+	var current_scene := get_tree().current_scene
+	if current_scene == null or current_scene.scene_file_path.ends_with("TitleScreen.tscn"):
+		return
+	_clock_accumulator += delta * float(clock_speed)
+	var elapsed_minutes: int = floori(_clock_accumulator / REAL_SECONDS_PER_GAME_MINUTE)
+	if elapsed_minutes <= 0:
+		return
+	_clock_accumulator -= float(elapsed_minutes) * REAL_SECONDS_PER_GAME_MINUTE
+	advance_time(elapsed_minutes)
+
+
+func set_clock_paused(is_paused: bool) -> void:
+	clock_paused = is_paused
+	state_changed.emit()
+
+
+func set_clock_speed(speed: int) -> void:
+	clock_speed = speed if speed in [1, 2, 4] else 1
+	clock_paused = false
+	state_changed.emit()
+
+
+func get_action_duration(action_id: StringName, intent: StringName = &"") -> int:
+	match action_id:
+		&"diagnose":
+			return 2
+		&"repair":
+			return 6
+		&"anchor":
+			return 6
+		&"antimagic":
+			return 1
+		&"physical_move":
+			return 4 if intent in [&"move_left", &"move_kitchen", &"break_legs"] else 2
+		&"telekinesis":
+			return 1
+		&"freeze", &"heat":
+			return 1
+		_:
+			return 2
 
 var employees: Dictionary = {
 	&"liliya": {
@@ -238,10 +286,12 @@ func assign_employee(employee_id: StringName, job_id: StringName) -> void:
 		return
 	if not employees[employee_id]["available"]:
 		return
+	if is_employee_returning(employee_id):
+		return
 	if is_employee_training(employee_id):
 		return
 	var current_job := get_employee_job(employee_id)
-	if (not current_job.is_empty() and is_job_dispatched(current_job)) or is_job_dispatched(job_id):
+	if not current_job.is_empty() and is_job_dispatched(current_job):
 		return
 
 	if current_job == job_id:
@@ -257,6 +307,10 @@ func assign_employee(employee_id: StringName, job_id: StringName) -> void:
 		target_assigned.append(String(employee_id))
 		target_job["assigned"] = target_assigned
 		jobs[job_id] = target_job
+		if is_job_dispatched(job_id):
+			var employee: Dictionary = employees[employee_id]
+			employee["arrival_until"] = time_minutes + TRAVEL_TIME_MINUTES
+			employees[employee_id] = employee
 
 	_update_employee_statuses()
 	state_changed.emit()
@@ -392,11 +446,110 @@ func is_job_dispatched(job_id: StringName) -> bool:
 	return jobs.has(job_id) and bool(jobs[job_id].get("dispatched", false))
 
 
+func is_employee_returning(employee_id: StringName) -> bool:
+	return employees.has(employee_id) and int(employees[employee_id].get("return_until", 0)) > time_minutes
+
+
+func can_employee_work_on_job(employee_id: StringName, job_id: StringName) -> bool:
+	if get_employee_job(employee_id) != job_id or not is_job_dispatched(job_id):
+		return false
+	return int(employees[employee_id].get("arrival_until", 0)) <= time_minutes
+
+
+func has_employee_on_site(job_id: StringName) -> bool:
+	if not jobs.has(job_id):
+		return false
+	for employee_id: String in jobs[job_id].get("assigned", PackedStringArray()):
+		if can_employee_work_on_job(StringName(employee_id), job_id):
+			return true
+	return false
+
+
+func has_employees_in_transit(job_id: StringName) -> bool:
+	if not jobs.has(job_id):
+		return false
+	for employee_id: String in jobs[job_id].get("assigned", PackedStringArray()):
+		if int(employees[StringName(employee_id)].get("arrival_until", 0)) > time_minutes:
+			return true
+	return false
+
+
+func cancel_job_arrivals(job_id: StringName) -> int:
+	if not jobs.has(job_id) or not is_job_dispatched(job_id) or not clock_paused:
+		return 0
+	var job: Dictionary = jobs[job_id]
+	var assigned: PackedStringArray = job.get("assigned", PackedStringArray())
+	var kept := PackedStringArray()
+	var cancelled: int = 0
+	for employee_id: String in assigned:
+		var employee_key := StringName(employee_id)
+		var employee: Dictionary = employees[employee_key]
+		if int(employee.get("arrival_until", 0)) > time_minutes:
+			employee["arrival_until"] = 0
+			employees[employee_key] = employee
+			cancelled += 1
+		else:
+			kept.append(employee_id)
+	job["assigned"] = kept
+	if kept.is_empty():
+		job["dispatched"] = false
+	jobs[job_id] = job
+	_update_employee_statuses()
+	state_changed.emit()
+	return cancelled
+
+
+func get_next_arrival_time(job_id: StringName) -> int:
+	if not jobs.has(job_id):
+		return -1
+	var next_arrival: int = -1
+	for employee_id: String in jobs[job_id].get("assigned", PackedStringArray()):
+		var arrival: int = int(employees[StringName(employee_id)].get("arrival_until", 0))
+		if arrival <= time_minutes:
+			return time_minutes
+		if next_arrival < 0 or arrival < next_arrival:
+			next_arrival = arrival
+	return next_arrival
+
+
+func start_job_action(job_id: StringName, employee_id: StringName, action_id: StringName, intent: StringName, duration: int) -> bool:
+	if not is_job_available(job_id) or not can_employee_work_on_job(employee_id, job_id):
+		return false
+	var job: Dictionary = jobs[job_id]
+	var existing: Variant = job.get("pending_action", {})
+	if existing is Dictionary and not (existing as Dictionary).is_empty():
+		return false
+	job["pending_action"] = {
+		"employee_id": String(employee_id), "action_id": String(action_id), "intent": String(intent),
+		"started_at": time_minutes, "ends_at": time_minutes + maxi(1, duration),
+	}
+	jobs[job_id] = job
+	state_changed.emit()
+	return true
+
+
+func get_pending_job_action(job_id: StringName) -> Dictionary:
+	if not jobs.has(job_id):
+		return {}
+	var pending: Variant = jobs[job_id].get("pending_action", {})
+	return (pending as Dictionary).duplicate(true) if pending is Dictionary else {}
+
+
+func clear_pending_job_action(job_id: StringName) -> void:
+	if not jobs.has(job_id):
+		return
+	var job: Dictionary = jobs[job_id]
+	job["pending_action"] = {}
+	jobs[job_id] = job
+	state_changed.emit()
+
+
 func advance_time(minutes: int, excluded_job_id: StringName = &"") -> PackedStringArray:
 	var newly_overdue := PackedStringArray()
 	if minutes <= 0:
 		return newly_overdue
 	time_minutes += minutes
+	_update_employee_statuses()
 	for job_id: StringName in jobs:
 		if job_id == excluded_job_id or not is_job_available(job_id):
 			continue
@@ -440,7 +593,12 @@ func begin_job(job_id: StringName) -> bool:
 		var job: Dictionary = jobs[job_id]
 		job["dispatched"] = true
 		jobs[job_id] = job
-		advance_time(TRAVEL_TIME_MINUTES)
+		for employee_id: String in assigned:
+			var employee: Dictionary = employees[StringName(employee_id)]
+			employee["arrival_until"] = time_minutes + TRAVEL_TIME_MINUTES
+			employees[StringName(employee_id)] = employee
+		_update_employee_statuses()
+		state_changed.emit()
 	else:
 		state_changed.emit()
 	return true
@@ -454,8 +612,14 @@ func leave_active_job() -> void:
 func recall_job(job_id: StringName) -> bool:
 	if not is_job_available(job_id) or not is_job_dispatched(job_id):
 		return false
-	advance_time(TRAVEL_TIME_MINUTES)
+	if not get_pending_job_action(job_id).is_empty():
+		return false
 	var job: Dictionary = jobs[job_id]
+	for employee_id: String in job["assigned"]:
+		var employee: Dictionary = employees[StringName(employee_id)]
+		employee["arrival_until"] = 0
+		employee["return_until"] = time_minutes + TRAVEL_TIME_MINUTES
+		employees[StringName(employee_id)] = employee
 	job["assigned"] = PackedStringArray()
 	job["dispatched"] = false
 	jobs[job_id] = job
@@ -468,6 +632,8 @@ func recall_job(job_id: StringName) -> bool:
 
 func complete_active_job(result: Dictionary = {}) -> bool:
 	if active_job_id.is_empty() or not jobs.has(active_job_id):
+		return false
+	if not get_pending_job_action(active_job_id).is_empty():
 		return false
 	var completed_id: StringName = active_job_id
 	if completed_job_ids.has(String(completed_id)):
@@ -484,9 +650,11 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		var employee_key: StringName = StringName(employee_id)
 		if employees.has(employee_key):
 			crew_names.append(str(employees[employee_key]["name"]))
-	# Обратная дорога происходит автоматически. Завершённая заявка уже не теряет срок,
-	# но все остальные открытые заявки продолжают ждать.
-	advance_time(TRAVEL_TIME_MINUTES, completed_id)
+	for employee_id: String in assigned:
+		var returning_employee: Dictionary = employees[StringName(employee_id)]
+		returning_employee["arrival_until"] = 0
+		returning_employee["return_until"] = time_minutes + TRAVEL_TIME_MINUTES
+		employees[StringName(employee_id)] = returning_employee
 	money += reward - compensation
 	reputation = maxi(0, reputation + int(result.get("reputation_change", 0)) - (1 if overdue else 0))
 	completed_job_ids.append(String(completed_id))
@@ -547,6 +715,9 @@ func start_new_game() -> void:
 	job_reports = []
 	pending_job_report = {}
 	job_repair_states = {}
+	clock_paused = true
+	clock_speed = 1
+	_clock_accumulator = 0.0
 
 	for job_id: StringName in jobs:
 		var job: Dictionary = jobs[job_id]
@@ -555,6 +726,7 @@ func start_new_game() -> void:
 		job["overdue"] = false
 		job["unlocked"] = job_id == &"lava_leak"
 		job["dispatched"] = false
+		job["pending_action"] = {}
 		jobs[job_id] = job
 
 	_reset_employee(&"liliya", true, PackedStringArray(["freeze", "heat"]), "Свободна")
@@ -574,6 +746,8 @@ func _reset_employee(employee_id: StringName, available: bool, abilities: Packed
 	employee["status"] = status
 	employee["training_id"] = &""
 	employee["training_end_day"] = 0
+	employee["arrival_until"] = 0
+	employee["return_until"] = 0
 	employees[employee_id] = employee
 
 
@@ -588,6 +762,7 @@ func save_game() -> Error:
 			"overdue": bool(jobs[job_id].get("overdue", false)),
 			"unlocked": bool(jobs[job_id].get("unlocked", false)),
 			"dispatched": bool(jobs[job_id].get("dispatched", false)),
+			"pending_action": jobs[job_id].get("pending_action", {}),
 		}
 
 	var employee_progress: Dictionary = {}
@@ -598,6 +773,8 @@ func save_game() -> Error:
 			"abilities": Array(employee["abilities"]),
 			"training_id": str(employee.get("training_id", "")),
 			"training_end_day": int(employee.get("training_end_day", 0)),
+			"arrival_until": int(employee.get("arrival_until", 0)),
+			"return_until": int(employee.get("return_until", 0)),
 		}
 
 	var save_data: Dictionary = {
@@ -616,6 +793,8 @@ func save_game() -> Error:
 		"job_assignments": job_assignments,
 		"job_progress": job_progress,
 		"employee_progress": employee_progress,
+		"clock_paused": clock_paused,
+		"clock_speed": clock_speed,
 	}
 
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -647,6 +826,9 @@ func load_game() -> Error:
 	time_minutes = maxi(0, int(save_data.get("time_minutes", time_minutes)))
 	money = int(save_data.get("money", money))
 	reputation = int(save_data.get("reputation", reputation))
+	clock_paused = bool(save_data.get("clock_paused", true))
+	clock_speed = int(save_data.get("clock_speed", 1))
+	_clock_accumulator = 0.0
 
 	var loaded_selected := StringName(save_data.get("selected_job_id", "lava_leak"))
 	selected_job_id = loaded_selected if jobs.has(loaded_selected) else &"lava_leak"
@@ -678,6 +860,7 @@ func load_game() -> Error:
 		job["overdue"] = false
 		job["unlocked"] = job_id == &"lava_leak"
 		job["dispatched"] = false
+		job["pending_action"] = {}
 		if version < 6:
 			# Старые сохранения уже показывали все заявки; не скрываем начатый прогресс.
 			job["unlocked"] = true
@@ -687,6 +870,8 @@ func load_game() -> Error:
 			job["overdue"] = bool(progress.get("overdue", false)) or int(job["time_left"]) == 0
 			job["unlocked"] = bool(progress.get("unlocked", job["unlocked"]))
 			job["dispatched"] = bool(progress.get("dispatched", false))
+			var pending_action: Variant = progress.get("pending_action", {})
+			job["pending_action"] = (pending_action as Dictionary).duplicate(true) if pending_action is Dictionary else {}
 		jobs[job_id] = job
 	if not active_job_id.is_empty() and jobs.has(active_job_id):
 		var active_job: Dictionary = jobs[active_job_id]
@@ -766,6 +951,8 @@ func load_game() -> Error:
 		var loaded_training_id := StringName(str(loaded_employee.get("training_id", "")))
 		employee["training_id"] = loaded_training_id if TRAINING_DEFINITIONS.has(loaded_training_id) else &""
 		employee["training_end_day"] = int(loaded_employee.get("training_end_day", 0))
+		employee["arrival_until"] = int(loaded_employee.get("arrival_until", 0))
+		employee["return_until"] = int(loaded_employee.get("return_until", 0))
 		employees[employee_id] = employee
 
 	_complete_finished_training()
@@ -812,10 +999,21 @@ func _update_employee_statuses() -> void:
 			employees[employee_id] = employee
 			continue
 		var job_id := get_employee_job(employee_id)
+		var pending_action: Dictionary = get_pending_job_action(job_id)
 		employee["status"] = employee["idle_status"]
-		if not job_id.is_empty():
+		if int(employee.get("return_until", 0)) > time_minutes:
+			employee["status"] = "Возвращается • прибудет в %s" % _format_minutes(int(employee["return_until"]))
+		elif not job_id.is_empty() and int(employee.get("arrival_until", 0)) > time_minutes:
+			employee["status"] = "В пути • прибудет в %s" % _format_minutes(int(employee["arrival_until"]))
+		elif not job_id.is_empty() and str(pending_action.get("employee_id", "")) == String(employee_id):
+			employee["status"] = "Работает • до %s" % _format_minutes(int(pending_action.get("ends_at", time_minutes)))
+		elif not job_id.is_empty():
 			employee["status"] = "На заявке: %s" % jobs[job_id]["title"]
 		employees[employee_id] = employee
+
+
+func _format_minutes(value: int) -> String:
+	return "%02d:%02d" % [value / 60, value % 60]
 
 
 func _complete_finished_training() -> void:

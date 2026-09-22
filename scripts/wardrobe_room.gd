@@ -6,7 +6,7 @@ const EmployeeReactionResolverScript := preload("res://scripts/employee_reaction
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
 const COLOR_GOLD := Color(0.96, 0.78, 0.46)
 const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
-const FIRE_SPREAD_SECONDS: float = 10.0
+const FIRE_SPREAD_GAME_MINUTES: int = 12
 
 @export_group("Положение и размер шкафа")
 @export var entrance_scale: Vector2 = Vector2.ONE
@@ -72,15 +72,18 @@ func _ready() -> void:
 	tool_bar.intent_selected.connect(_on_context_intent_selected)
 	repair_hud.employee_selected.connect(_on_employee_selected)
 	repair_hud.completion_requested.connect(_attempt_complete_job)
+	repair_hud.long_action_started.connect(_on_long_action_started)
+	repair_hud.long_action_finished.connect(_on_long_action_finished)
 	employee_actor.action_impact.connect(_on_employee_action_impact)
 	employee_actor.action_finished.connect(_on_employee_action_finished)
 	selected_tool_id = tool_bar.get_selected_tool_id()
 	selected_employee_id = repair_hud.get_selected_employee_id()
 	_configure_employee_actor()
 	_restore_visual_state()
+	_resume_pending_action()
 	if bool(simulation.world_object["burning"]):
 		_start_fire_progression()
-	_show_house_overview(false)
+	call_deferred("_open_room")
 
 
 func _find_kitchen_passage_marker() -> Marker2D:
@@ -88,6 +91,16 @@ func _find_kitchen_passage_marker() -> Marker2D:
 	if marker == null:
 		marker = get_node("WardrobePositions/CenterWall") as Marker2D
 	return marker
+
+
+func _on_long_action_started(employee_id: StringName) -> void:
+	if employee_id == selected_employee_id and employee_actor.visible:
+		employee_actor.call("set_persistent_work_pose", true)
+
+
+func _on_long_action_finished(employee_id: StringName) -> void:
+	if employee_id == selected_employee_id:
+		employee_actor.call("set_persistent_work_pose", false)
 
 
 func _open_room() -> void:
@@ -109,7 +122,7 @@ func _open_room() -> void:
 	overview_background.visible = false
 	room_preview_backdrop.visible = false
 	room_preview.visible = false
-	back_to_house_button.visible = true
+	back_to_house_button.visible = false
 	tool_bar.visible = false
 	$Interface/PhysicalIntentPanel.visible = false
 	if repair_hud.has_method("set_work_ui_visible"):
@@ -180,6 +193,12 @@ func _panel_style(background: Color, border: Color, width: int) -> StyleBoxFlat:
 
 
 func _on_tool_selected(tool_id: StringName) -> void:
+	if repair_hud.is_timed_action_active():
+		_show_feedback("Сначала дождитесь завершения текущей работы.", true)
+		return
+	if not game_state.can_employee_work_on_job(selected_employee_id, game_state.active_job_id):
+		_show_feedback("Сотрудник ещё едет на объект. %s." % game_state.employees[selected_employee_id]["status"], true)
+		return
 	selected_tool_id = tool_id
 	if tool_id == &"physical_move":
 		tool_bar.show_intents("Силовая работа", [
@@ -243,9 +262,15 @@ func _start_action() -> void:
 		_on_employee_action_finished()
 		return
 	if employee_actor.visible:
+		var is_physical: bool = game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical"
 		var uses_hold_pose: bool = pending_intent in [&"hold", &"move_left", &"move_kitchen", &"release"]
 		var pushes_from_behind: bool = pending_intent in [&"move_left", &"move_kitchen"]
 		var action_pose: StringName = &"hold" if uses_hold_pose else (&"neutral" if selected_tool_id == &"diagnose" else &"work")
+		if is_physical:
+			var duration: int = game_state.get_action_duration(selected_tool_id, pending_intent)
+			if game_state.start_job_action(game_state.active_job_id, selected_employee_id, selected_tool_id, pending_intent, duration):
+				repair_hud.resume_timed_action(_resolve_action.bind(selected_tool_id, pending_intent))
+				game_state.set_clock_paused(false)
 		employee_actor.play_action(
 			selected_tool_id,
 			_wardrobe_target_global(),
@@ -260,7 +285,20 @@ func _start_action() -> void:
 
 
 func _on_employee_action_impact(action_id: StringName) -> void:
-	_resolve_action(action_id, pending_intent)
+	if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"magic":
+		_resolve_action(action_id, pending_intent)
+
+
+func _resume_pending_action() -> void:
+	var pending: Dictionary = game_state.get_pending_job_action(game_state.active_job_id)
+	if pending.is_empty():
+		return
+	selected_employee_id = StringName(str(pending.get("employee_id", "")))
+	_configure_employee_actor()
+	repair_hud.resume_timed_action(_resolve_action.bind(
+		StringName(str(pending.get("action_id", ""))),
+		StringName(str(pending.get("intent", "")))
+	))
 
 
 func _on_employee_action_finished() -> void:
@@ -275,7 +313,6 @@ func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, intent)
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, intent)
-	game_state.advance_time(game_state.ACTION_TIME_MINUTES)
 	_apply_visual_state()
 	var resident_message: String = simulation.get_resident_reaction()
 	if action_id == &"diagnose":
@@ -305,7 +342,9 @@ func _start_fire_progression() -> void:
 
 
 func _schedule_fire_step(revision: int) -> void:
-	await get_tree().create_timer(FIRE_SPREAD_SECONDS).timeout
+	var spread_at: int = game_state.time_minutes + FIRE_SPREAD_GAME_MINUTES
+	while game_state.time_minutes < spread_at:
+		await get_tree().process_frame
 	if revision != fire_progression_revision or not bool(simulation.world_object["burning"]):
 		return
 	var previous_resident_message: String = simulation.get_resident_reaction()

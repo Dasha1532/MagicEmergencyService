@@ -17,6 +17,7 @@ var action_origin: Vector2 = Vector2(45, 70)
 var action_origin_from_data: bool = false
 var home_position: Vector2
 var walk_pose_base_position: Vector2
+var persistent_work_pose: bool = false
 var employee_positions: Dictionary = {}
 var walking_z_index: int
 var horizontal_flip: bool = false
@@ -147,6 +148,11 @@ func play_action(
 			action_finished.emit()
 			return
 
+	if persistent_work_pose:
+		_show_work_pose_now()
+		action_in_progress = false
+		action_finished.emit()
+		return
 	_reset_pose_visibility()
 	if action_style == &"physical":
 		employee_positions[employee_id] = position
@@ -165,6 +171,25 @@ func _show_action_pose(pose: TextureRect) -> void:
 	var pose_tween: Tween = create_tween()
 	pose_tween.tween_property(pose, "modulate", Color.WHITE, 0.18)
 	await pose_tween.finished
+
+
+func set_persistent_work_pose(enabled: bool) -> void:
+	persistent_work_pose = enabled
+	if enabled:
+		_show_work_pose_now()
+	elif not action_in_progress:
+		_reset_pose_visibility()
+		if idle_tween != null:
+			idle_tween.play()
+
+
+func _show_work_pose_now() -> void:
+	if idle_tween != null:
+		idle_tween.pause()
+	for item: TextureRect in [neutral_pose, walk_pose, hold_pose]:
+		item.visible = false
+	work_pose.visible = true
+	work_pose.modulate = Color.WHITE
 
 
 func _walk_to(target_position: Vector2) -> void:

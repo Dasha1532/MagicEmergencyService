@@ -36,13 +36,26 @@ func _ready() -> void:
 	back_to_house_button.pressed.connect(_show_house_overview)
 	repair_hud.employee_selected.connect(_on_employee_selected)
 	repair_hud.completion_requested.connect(_attempt_complete_job)
+	repair_hud.long_action_started.connect(_on_long_action_started)
+	repair_hud.long_action_finished.connect(_on_long_action_finished)
 	portal_mirror.selected.connect(_on_mirror_selected)
 	tool_bar.tool_selected.connect(_on_tool_selected)
 	employee_actor.action_impact.connect(_on_action_impact)
 	employee_actor.action_finished.connect(_on_action_finished)
 	selected_employee_id = repair_hud.get_selected_employee_id()
 	_apply_visual_state()
-	_show_house_overview(false)
+	_resume_pending_action()
+	call_deferred("_open_room")
+
+
+func _on_long_action_started(employee_id: StringName) -> void:
+	if employee_id == selected_employee_id and employee_actor.visible:
+		employee_actor.call("set_persistent_work_pose", true)
+
+
+func _on_long_action_finished(employee_id: StringName) -> void:
+	if employee_id == selected_employee_id:
+		employee_actor.call("set_persistent_work_pose", false)
 
 
 func _open_room() -> void:
@@ -57,7 +70,7 @@ func _open_room() -> void:
 	await tween.finished
 	overview_background.visible = false
 	room_placement.visible = false
-	back_to_house_button.visible = true
+	back_to_house_button.visible = false
 	tool_bar.visible = false
 	if repair_hud.has_method("set_work_ui_visible"):
 		repair_hud.call("set_work_ui_visible", true)
@@ -129,22 +142,44 @@ func _on_mirror_selected() -> void:
 func _on_tool_selected(action_id: StringName) -> void:
 	if action_in_progress:
 		return
+	if repair_hud.is_timed_action_active():
+		repair_hud.show_system_message("Сначала дождитесь завершения текущей работы.", true)
+		return
+	if not game_state.can_employee_work_on_job(selected_employee_id, game_state.active_job_id):
+		repair_hud.show_system_message("Сотрудник ещё едет на объект. %s." % game_state.employees[selected_employee_id]["status"], true)
+		return
 	action_in_progress = true
 	portal_mirror.set_interaction_enabled(false)
 	tool_bar.visible = false
-	var approach := physical_approach.position if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical" else Vector2.INF
+	var is_physical: bool = game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical"
+	var approach := physical_approach.position if is_physical else Vector2.INF
+	if is_physical:
+		repair_hud.start_timed_action(selected_employee_id, action_id, _resolve_timed_action.bind(action_id))
 	employee_actor.play_action(action_id, portal_mirror.target_global_position(), approach)
 
 
 func _on_action_impact(action_id: StringName) -> void:
+	if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"magic":
+		_resolve_timed_action(action_id)
+
+
+func _resolve_timed_action(action_id: StringName) -> void:
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
-	game_state.advance_time(game_state.ACTION_TIME_MINUTES)
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	_apply_visual_state()
 	repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
 	var resident_reaction: String = simulation.get_resident_reaction(action_id)
 	if not resident_reaction.is_empty():
 		repair_hud.queue_resident_dialogue(resident_reaction)
+
+
+func _resume_pending_action() -> void:
+	var pending: Dictionary = game_state.get_pending_job_action(game_state.active_job_id)
+	if pending.is_empty():
+		return
+	selected_employee_id = StringName(str(pending.get("employee_id", "")))
+	_configure_employee_actor()
+	repair_hud.resume_timed_action(_resolve_timed_action.bind(StringName(str(pending.get("action_id", "")))))
 
 
 func _on_action_finished() -> void:

@@ -11,6 +11,7 @@ const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 const COLOR_MUTED := Color(0.70, 0.63, 0.52)
 const PERSONNEL_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
 const CANDIDATE_CLASP_TEXTURE = preload("res://assets/ui/candidate_clasp.png")
+const CLOCK_CONTROLS_SCRIPT = preload("res://scripts/game_clock_controls.gd")
 
 var selected_job_id: StringName
 var job_list: VBoxContainer
@@ -24,6 +25,8 @@ var assignment_label: Label
 var warning_label: Label
 var depart_button: Button
 var recall_button: Button
+var cancel_dispatch_button: Button
+var pending_dispatch_employee_ids: PackedStringArray = PackedStringArray()
 var dashboard_layer: Control
 var hub_layer: Control
 var personnel_layer: Control
@@ -48,6 +51,10 @@ var section_body: Label
 var job_report_layer: Control
 var job_report_title: Label
 var job_report_body: Label
+var arrival_dialog: Control
+var arrival_dialog_title: Label
+var arrival_dialog_body: Label
+var auto_wait_running: bool = false
 @onready var game_state: Node = get_node("/root/GameState")
 
 
@@ -61,6 +68,7 @@ func _ready() -> void:
 	_build_interface()
 	game_state.state_changed.connect(_refresh)
 	_refresh()
+	set_process(true)
 
 
 func _build_interface() -> void:
@@ -72,8 +80,10 @@ func _build_interface() -> void:
 	_build_detail_panel()
 	_build_employee_panel()
 	_build_dashboard_return()
+	_build_clock_controls()
 	_build_office_hub()
 	_build_job_report_dialog()
+	_build_arrival_dialog()
 	_build_personnel_screen()
 	_build_supply_shop()
 
@@ -180,6 +190,11 @@ func _build_detail_panel() -> void:
 	recall_button.visible = false
 	recall_button.pressed.connect(_recall_crew)
 	panel.add_child(recall_button)
+	cancel_dispatch_button = _button("НЕ ОТПРАВЛЯТЬ", Vector2(216, 384), Vector2(177, 52))
+	cancel_dispatch_button.add_theme_font_size_override("font_size", 13)
+	cancel_dispatch_button.visible = false
+	cancel_dispatch_button.pressed.connect(_cancel_pending_dispatch)
+	panel.add_child(cancel_dispatch_button)
 
 
 func _build_employee_panel() -> void:
@@ -210,6 +225,12 @@ func _build_dashboard_return() -> void:
 	var back_button := _button("←  В ОФИС", Vector2(746, 30), Vector2(180, 50))
 	back_button.pressed.connect(_show_hub)
 	dashboard_layer.add_child(back_button)
+
+
+func _build_clock_controls() -> void:
+	var controls := CLOCK_CONTROLS_SCRIPT.new()
+	controls.position = Vector2(625, 105)
+	dashboard_layer.add_child(controls)
 
 
 func _build_office_hub() -> void:
@@ -643,6 +664,39 @@ func _build_job_report_dialog() -> void:
 	panel.add_child(close_button)
 
 
+func _build_arrival_dialog() -> void:
+	arrival_dialog = Control.new()
+	arrival_dialog.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	arrival_dialog.visible = false
+	arrival_dialog.z_index = 200
+	add_child(arrival_dialog)
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.015, 0.01, 0.008, 0.72)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	arrival_dialog.add_child(shade)
+	var panel := _panel(Vector2(430, 285), Vector2(740, 330), 14)
+	arrival_dialog.add_child(panel)
+	arrival_dialog_title = _label("БРИГАДА ЕЩЁ В ПУТИ", 25, COLOR_GOLD)
+	arrival_dialog_title.position = Vector2(38, 34)
+	arrival_dialog_title.size = Vector2(664, 42)
+	arrival_dialog_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(arrival_dialog_title)
+	arrival_dialog_body = _label("На объекте пока никого нет. Ускорить время до прибытия первого сотрудника?", 18, COLOR_PARCHMENT)
+	arrival_dialog_body.position = Vector2(64, 104)
+	arrival_dialog_body.size = Vector2(612, 92)
+	arrival_dialog_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	arrival_dialog_body.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	arrival_dialog_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(arrival_dialog_body)
+	var yes_button := _button("ДА, УСКОРИТЬ", Vector2(74, 232), Vector2(280, 58))
+	yes_button.pressed.connect(_start_auto_wait)
+	panel.add_child(yes_button)
+	var no_button := _button("НЕТ", Vector2(386, 232), Vector2(280, 58))
+	no_button.pressed.connect(func() -> void: arrival_dialog.visible = false)
+	panel.add_child(no_button)
+
+
 func _open_jobs() -> void:
 	hub_layer.visible = false
 	personnel_layer.visible = false
@@ -861,12 +915,16 @@ func _rebuild_employees() -> void:
 		if not employee["available"]:
 			continue
 		var assigned_job: StringName = game_state.get_employee_job(employee_id)
-		var selected: bool = assigned_job == selected_job_id
-		var locked_on_site: bool = not assigned_job.is_empty() and game_state.is_job_dispatched(assigned_job)
+		var pending_selected: bool = pending_dispatch_employee_ids.has(String(employee_id))
+		var selected: bool = assigned_job == selected_job_id or pending_selected
+		var dispatched: bool = not assigned_job.is_empty() and game_state.is_job_dispatched(assigned_job)
+		var on_site: bool = dispatched and game_state.can_employee_work_on_job(employee_id, assigned_job)
+		var in_transit: bool = dispatched and not on_site
+		var returning: bool = game_state.is_employee_returning(employee_id)
 		var card := _button("", Vector2.ZERO, Vector2(390, 225))
 		var is_training: bool = game_state.is_employee_training(employee_id)
-		card.disabled = is_training or locked_on_site
-		card.tooltip_text = "Сотрудник находится на объекте" if locked_on_site else ("Сотрудник заканчивает обучение на следующий день" if is_training else "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение")
+		card.disabled = is_training or dispatched or returning
+		card.tooltip_text = employee["status"] if in_transit or returning else ("Сотрудник находится на объекте" if on_site else ("Сотрудник заканчивает обучение на следующий день" if is_training else "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение"))
 		card.add_theme_stylebox_override("normal", _style(COLOR_SELECTED if selected else COLOR_CARD, COLOR_GOLD if selected else COLOR_BRASS, 3 if selected else 2, 9))
 		card.pressed.connect(_toggle_employee.bind(employee_id))
 		employee_list.add_child(card)
@@ -907,8 +965,9 @@ func _rebuild_employees() -> void:
 		method_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(method_label)
 
-		var status_color := COLOR_GOLD if selected else COLOR_MUTED
-		var status_label := _label("✓ В этой бригаде" if selected else employee["status"], 13, status_color)
+		var status_color := COLOR_MUTED if in_transit else (COLOR_GOLD if selected else COLOR_MUTED)
+		var status_text: String = "Выбран для отправки" if pending_selected else (str(employee["status"]) if in_transit else ("✓ На объекте" if selected and on_site else ("✓ В этой бригаде" if selected else str(employee["status"]))))
+		var status_label := _label(status_text, 13, status_color)
 		status_label.position = Vector2(180, 184)
 		status_label.size = Vector2(198, 26)
 		status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -923,6 +982,7 @@ func _refresh_details() -> void:
 		warning_label.text = ""
 		depart_button.disabled = true
 		recall_button.visible = false
+		cancel_dispatch_button.visible = false
 		return
 	var job: Dictionary = game_state.jobs[selected_job_id]
 	var assigned: PackedStringArray = job["assigned"]
@@ -952,17 +1012,26 @@ func _refresh_details() -> void:
 				break
 
 	var dispatched: bool = game_state.is_job_dispatched(selected_job_id)
-	depart_button.text = "ОТКРЫТЬ ОБЪЕКТ" if dispatched else "ОТПРАВИТЬ БРИГАДУ"
+	var confirming_extra_employees: bool = dispatched and not pending_dispatch_employee_ids.is_empty()
+	var can_cancel_trip: bool = dispatched and pending_dispatch_employee_ids.is_empty() and game_state.clock_paused and game_state.has_employees_in_transit(selected_job_id)
+	if confirming_extra_employees:
+		var pending_names := PackedStringArray()
+		for employee_id: String in pending_dispatch_employee_ids:
+			pending_names.append(str(game_state.employees[StringName(employee_id)]["name"]))
+		warning_label.text = "К отправке: %s" % ", ".join(pending_names)
+	depart_button.text = "ОТПРАВИТЬ ВЫБРАННЫХ" if confirming_extra_employees else ("ОТКРЫТЬ ОБЪЕКТ" if dispatched else "ОТПРАВИТЬ БРИГАДУ")
 	depart_button.position = Vector2(22, 384)
-	depart_button.custom_minimum_size = Vector2(177, 52) if dispatched else Vector2(371, 52)
+	depart_button.custom_minimum_size = Vector2(371, 52) if confirming_extra_employees or not dispatched else Vector2(177, 52)
 	depart_button.size = depart_button.custom_minimum_size
-	depart_button.add_theme_font_size_override("font_size", 15 if dispatched else 17)
-	depart_button.disabled = assigned.is_empty()
-	recall_button.visible = dispatched
+	depart_button.add_theme_font_size_override("font_size", 15 if confirming_extra_employees or dispatched else 17)
+	depart_button.disabled = assigned.is_empty() and not confirming_extra_employees
+	recall_button.visible = dispatched and not confirming_extra_employees and not can_cancel_trip
 	recall_button.disabled = not dispatched
+	cancel_dispatch_button.visible = can_cancel_trip
 
 
 func _select_job(job_id: StringName) -> void:
+	pending_dispatch_employee_ids.clear()
 	selected_job_id = job_id
 	_refresh()
 
@@ -970,7 +1039,22 @@ func _select_job(job_id: StringName) -> void:
 func _toggle_employee(employee_id: StringName) -> void:
 	if selected_job_id.is_empty() or not game_state.is_job_available(selected_job_id):
 		return
+	if game_state.is_job_dispatched(selected_job_id):
+		if game_state.get_employee_job(employee_id).is_empty():
+			var employee_key := String(employee_id)
+			if pending_dispatch_employee_ids.has(employee_key):
+				pending_dispatch_employee_ids.remove_at(pending_dispatch_employee_ids.find(employee_key))
+			else:
+				pending_dispatch_employee_ids.append(employee_key)
+			_refresh()
+		return
 	game_state.assign_employee(employee_id, selected_job_id)
+
+
+func _cancel_pending_dispatch() -> void:
+	if selected_job_id.is_empty():
+		return
+	game_state.cancel_job_arrivals(selected_job_id)
 
 
 func _depart() -> void:
@@ -981,7 +1065,44 @@ func _depart() -> void:
 	if repair_scene.is_empty():
 		warning_label.text = "Для этой заявки ещё не подготовлена отдельная локация."
 		return
-	if game_state.begin_job(selected_job_id):
+	if game_state.is_job_dispatched(selected_job_id) and not pending_dispatch_employee_ids.is_empty():
+		var employee_ids := pending_dispatch_employee_ids.duplicate()
+		pending_dispatch_employee_ids.clear()
+		for employee_id: String in employee_ids:
+			game_state.assign_employee(StringName(employee_id), selected_job_id)
+		warning_label.text = "Выбранные сотрудники отправлены на объект."
+		return
+	if not game_state.is_job_dispatched(selected_job_id):
+		if game_state.begin_job(selected_job_id):
+			game_state.leave_active_job()
+			warning_label.text = "Бригада выехала. Можно распределить остальных сотрудников или открыть объект позже."
+		return
+	if game_state.has_employee_on_site(selected_job_id):
+		if game_state.begin_job(selected_job_id):
+			get_tree().change_scene_to_file(repair_scene)
+		return
+	game_state.set_clock_paused(true)
+	arrival_dialog.visible = true
+	arrival_dialog.move_to_front()
+
+
+func _start_auto_wait() -> void:
+	if auto_wait_running or selected_job_id.is_empty():
+		return
+	var job_id := selected_job_id
+	var arrival_time: int = game_state.get_next_arrival_time(job_id)
+	if arrival_time < 0:
+		return
+	auto_wait_running = true
+	arrival_dialog.visible = false
+	game_state.set_clock_paused(true)
+	while game_state.time_minutes < arrival_time:
+		game_state.advance_time(1)
+		await get_tree().create_timer(0.055).timeout
+	auto_wait_running = false
+	game_state.set_clock_paused(true)
+	var repair_scene: String = game_state.get_job_repair_scene(job_id)
+	if game_state.has_employee_on_site(job_id) and game_state.begin_job(job_id) and not repair_scene.is_empty():
 		get_tree().change_scene_to_file(repair_scene)
 
 
@@ -989,7 +1110,9 @@ func _recall_crew() -> void:
 	if selected_job_id.is_empty():
 		return
 	if game_state.recall_job(selected_job_id):
-		warning_label.text = "Бригада вернулась в офис. Состояние объекта сохранено."
+		warning_label.text = "Бригада едет обратно. Состояние объекта сохранено."
+	else:
+		warning_label.text = "Сначала дождитесь завершения текущей работы."
 
 
 func _panel(panel_position: Vector2, panel_size: Vector2, radius: int) -> Panel:
