@@ -4,7 +4,7 @@ signal state_changed
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 8
+const SAVE_VERSION: int = 9
 const SAVE_PATH: String = "user://savegame.json"
 const TRAVEL_TIME_MINUTES: int = 15
 const OVERDUE_PAYMENT_PENALTY: int = 100
@@ -25,6 +25,7 @@ const TRAINING_DEFINITIONS: Dictionary = {
 		"supply_item_id": &"animation_kit",
 		"category": &"magic",
 		"duration_days": 1,
+		"description": "Наделяет подходящие неживые объекты автономным поведением. Неосторожное применение может усилить уже действующие чары.",
 	},
 }
 
@@ -38,6 +39,7 @@ var owned_supply_items: PackedStringArray = PackedStringArray()
 var completed_job_ids: PackedStringArray = PackedStringArray()
 var job_reports: Array = []
 var pending_job_report: Dictionary = {}
+var financial_ledger: Array = []
 var job_repair_states: Dictionary = {}
 var clock_paused: bool = true
 var clock_speed: int = 1
@@ -104,8 +106,8 @@ var employees: Dictionary = {
 		"training_categories": PackedStringArray(["magic"]),
 		"max_special_abilities": 2,
 		"core_actions": "Заморозка и магия огня",
-		"description": "Полевой маг широкого профиля. Определяет природу чар и аккуратно меняет температуру повреждённых объектов.",
-		"strength": "Сильная сторона: диагностика и контроль стихий",
+		"description": "Полевой маг широкого профиля. Аккуратно меняет температуру повреждённых объектов и сдерживает стихийные аварии.",
+		"strength": "Сильная сторона: контроль температуры и стихий",
 		"weakness": "Ограничение: силовой ремонт требует напарника",
 		"traits": "Наблюдательна • осторожна • любит точные формулировки",
 		"action_reactions": [
@@ -176,7 +178,7 @@ var employees: Dictionary = {
 		"abilities": PackedStringArray(["telekinesis"]),
 		"training_categories": PackedStringArray(["magic", "technical"]),
 		"max_special_abilities": 2,
-		"core_actions": "Дистанционный телекинез",
+		"core_actions": "Телекинез",
 		"description": "Маг-телекинетик. Аккуратно перемещает незакреплённые объекты на расстоянии и быстро осваивает новые инструменты.",
 		"strength": "Сильная сторона: дистанционное и бережное перемещение",
 		"weakness": "Ограничение: мало полевого опыта",
@@ -204,7 +206,7 @@ var employees: Dictionary = {
 		"incompatible_abilities": PackedStringArray(["animate"]),
 		"max_special_abilities": 2,
 		"core_actions": "Магическая изоляция",
-		"description": "Инспектор по нестабильным чарам. Локализует магические утечки и проверяет объект перед ремонтом.",
+		"description": "Инспектор по нестабильным чарам. Локализует магические утечки и безопасно подавляет опасные заклинания.",
 		"strength": "Сильная сторона: антимагия и безопасность",
 		"weakness": "Ограничение: действует медленно и по инструкции",
 		"traits": "Методичен • невозмутим • замечает нарушения с порога",
@@ -212,7 +214,14 @@ var employees: Dictionary = {
 			{"action_ids": ["antimagic"], "object_equals": {"destroyed": true}, "text": "Подавлять уже нечего. Оформляю акт."},
 			{"action_ids": ["antimagic"], "object_equals": {"burning": true}, "text": "Возражаю: антимагия пожар не тушит."},
 			{"action_ids": ["antimagic"], "object_max": {"magic_level": 0}, "text": "Магического фона нет."},
-			{"action_ids": ["antimagic"], "text": "Подавление чар — не ремонт."},
+			{"action_ids": ["antimagic"], "texts": [
+				"Магический фон подавлен. Можете приступать к обычному ремонту — желательно обычным способом.",
+				"Аномалия локализована. Прошу не создавать новую до составления акта.",
+				"Заклинание прекращено. Гарантия на мебель в мои обязанности не входит.",
+				"Очаг нестабильности погашен. Всё остальное классифицируется как обычная поломка.",
+				"Чары сняты. Если объект всё ещё ведёт себя странно, это уже вопрос к мастеру.",
+				"Магическое нарушение устранено. Протокол доволен, жилец — посмотрим.",
+			]},
 		],
 		"available": false,
 	},
@@ -329,6 +338,7 @@ func hire_employee(employee_id: StringName) -> bool:
 	employee["available"] = true
 	employee["status"] = employee["idle_status"]
 	employees[employee_id] = employee
+	_record_financial_event(&"hire", -hire_cost, str(employee["name"]), {"employee_id": String(employee_id)})
 	state_changed.emit()
 	return true
 
@@ -342,6 +352,7 @@ func buy_supply_item(item_id: StringName) -> bool:
 		return false
 	money -= price
 	owned_supply_items.append(String(item_id))
+	_record_financial_event(&"purchase", -price, str(item["name"]), {"item_id": String(item_id)})
 	state_changed.emit()
 	return true
 
@@ -354,6 +365,7 @@ func grant_debug_money(amount: int = 500) -> void:
 	if not OS.is_debug_build() or amount <= 0:
 		return
 	money += amount
+	_record_financial_event(&"debug_grant", amount, "Тестовое пополнение")
 	state_changed.emit()
 
 
@@ -362,9 +374,30 @@ func advance_day(days: int = 1) -> void:
 		return
 	day += days
 	time_minutes = 9 * 60
+	if completed_job_ids.has("lava_leak"):
+		_unlock_parallel_jobs()
+	for employee_id: StringName in EMPLOYEE_ORDER:
+		var employee: Dictionary = employees[employee_id]
+		employee["arrival_until"] = 0
+		employee["return_until"] = 0
+		employees[employee_id] = employee
 	_complete_finished_training()
 	_update_employee_statuses()
 	state_changed.emit()
+
+
+func can_finish_day() -> bool:
+	for job_id: StringName in jobs:
+		if is_job_available(job_id):
+			return false
+	return true
+
+
+func try_finish_day() -> bool:
+	if not can_finish_day():
+		return false
+	advance_day(1)
+	return true
 
 
 func is_employee_training(employee_id: StringName) -> bool:
@@ -396,6 +429,8 @@ func get_training_availability(employee_id: StringName, training_id: StringName)
 		return &"no_slots"
 	if not get_employee_job(employee_id).is_empty():
 		return &"assigned"
+	if is_employee_returning(employee_id):
+		return &"returning"
 	var supply_item_id: StringName = StringName(str(training["supply_item_id"]))
 	if not has_supply_item(supply_item_id):
 		return &"missing_supply"
@@ -656,7 +691,8 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		returning_employee["return_until"] = time_minutes + TRAVEL_TIME_MINUTES
 		employees[StringName(employee_id)] = returning_employee
 	money += reward - compensation
-	reputation = maxi(0, reputation + int(result.get("reputation_change", 0)) - (1 if overdue else 0))
+	var reputation_change: int = int(result.get("reputation_change", 0)) - (1 if overdue else 0)
+	reputation = maxi(0, reputation + reputation_change)
 	completed_job_ids.append(String(completed_id))
 	job["assigned"] = PackedStringArray()
 	job["dispatched"] = false
@@ -674,15 +710,22 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		"maximum_payment": reward_adjustment == 0 and compensation == 0,
 		"compensation": compensation,
 		"net_change": reward - compensation,
+		"reputation_change": reputation_change,
+		"rating": _calculate_report_rating(reputation_change, reward_adjustment, compensation),
+		"completed_day": day,
+		"completed_time": time_minutes,
 		"crew": Array(crew_names),
 		"summary": summary,
+		"review": str(result.get("review", "")),
+		"consequences": result.get("consequences", []),
 		"overdue": overdue,
 		"follow_up": result.get("follow_up", {}),
 		"actions": result.get("actions", []),
 	}
 	job_reports.append(pending_job_report.duplicate(true))
-	if completed_id == &"lava_leak":
-		_unlock_parallel_jobs()
+	_record_financial_event(&"job", reward - compensation, str(job["title"]), {
+		"job_id": String(completed_id), "income": reward, "expense": compensation,
+	})
 	job_repair_states.erase(String(completed_id))
 	active_job_id = &""
 	_update_employee_statuses()
@@ -714,6 +757,7 @@ func start_new_game() -> void:
 	completed_job_ids = PackedStringArray()
 	job_reports = []
 	pending_job_report = {}
+	financial_ledger = [_financial_event(&"opening_balance", money, "Начальные средства службы")]
 	job_repair_states = {}
 	clock_paused = true
 	clock_speed = 1
@@ -746,6 +790,7 @@ func _reset_employee(employee_id: StringName, available: bool, abilities: Packed
 	employee["status"] = status
 	employee["training_id"] = &""
 	employee["training_end_day"] = 0
+	employee["learned_abilities"] = PackedStringArray()
 	employee["arrival_until"] = 0
 	employee["return_until"] = 0
 	employees[employee_id] = employee
@@ -771,6 +816,7 @@ func save_game() -> Error:
 		employee_progress[String(employee_id)] = {
 			"available": employee["available"],
 			"abilities": Array(employee["abilities"]),
+			"learned_abilities": Array(employee.get("learned_abilities", PackedStringArray())),
 			"training_id": str(employee.get("training_id", "")),
 			"training_end_day": int(employee.get("training_end_day", 0)),
 			"arrival_until": int(employee.get("arrival_until", 0)),
@@ -789,6 +835,7 @@ func save_game() -> Error:
 		"completed_job_ids": Array(completed_job_ids),
 		"job_reports": job_reports,
 		"pending_job_report": pending_job_report,
+		"financial_ledger": financial_ledger,
 		"job_repair_states": job_repair_states,
 		"job_assignments": job_assignments,
 		"job_progress": job_progress,
@@ -877,24 +924,39 @@ func load_game() -> Error:
 		var active_job: Dictionary = jobs[active_job_id]
 		active_job["dispatched"] = true
 		jobs[active_job_id] = active_job
-	if completed_job_ids.has("lava_leak"):
-		_unlock_parallel_jobs()
 	if not active_job_id.is_empty() and not is_job_available(active_job_id):
 		active_job_id = &""
 	if not is_job_available(selected_job_id):
 		selected_job_id = _first_available_job_id()
 	job_reports = []
+	var migrated_reputation_bonus := 0
 	var loaded_reports: Array = save_data.get("job_reports", [])
 	for loaded_report: Variant in loaded_reports:
 		if loaded_report is Dictionary:
 			var report: Dictionary = loaded_report
+			if not report.has("reputation_change") and bool(report.get("maximum_payment", false)) and not bool(report.get("overdue", false)):
+				report["reputation_change"] = 1
+				report["rating"] = 5
+				migrated_reputation_bonus += 1
 			job_reports.append(report.duplicate(true))
+	if migrated_reputation_bonus > 0:
+		reputation += migrated_reputation_bonus
+	if completed_job_ids.has("lava_leak"):
+		_set_parallel_jobs_unlocked(day > _job_completed_day(&"lava_leak"))
+	if not is_job_available(selected_job_id):
+		selected_job_id = _first_available_job_id()
 	var loaded_pending_report: Variant = save_data.get("pending_job_report", {})
 	if loaded_pending_report is Dictionary:
 		var pending_report: Dictionary = loaded_pending_report
 		pending_job_report = pending_report.duplicate(true)
 	else:
 		pending_job_report = {}
+	financial_ledger = []
+	var loaded_ledger: Variant = save_data.get("financial_ledger", [])
+	if loaded_ledger is Array:
+		for loaded_event: Variant in loaded_ledger:
+			if loaded_event is Dictionary:
+				financial_ledger.append((loaded_event as Dictionary).duplicate(true))
 
 	job_repair_states = {}
 	var loaded_repair_states: Variant = save_data.get("job_repair_states", {})
@@ -931,6 +993,17 @@ func load_game() -> Error:
 			if str(loaded_abilities[ability_index]) == "move":
 				loaded_abilities[ability_index] = "physical_move" if employee_id == &"grog" else "telekinesis"
 		employee["abilities"] = PackedStringArray(loaded_abilities)
+		var loaded_learned_abilities: Array = loaded_employee.get("learned_abilities", [])
+		var learned_abilities := PackedStringArray()
+		for learned_ability_value: Variant in loaded_learned_abilities:
+			var learned_ability := StringName(str(learned_ability_value))
+			if TRAINING_DEFINITIONS.has(learned_ability) and not learned_abilities.has(String(learned_ability)):
+				learned_abilities.append(String(learned_ability))
+		for ability_value: Variant in loaded_abilities:
+			var migrated_learned_ability := StringName(str(ability_value))
+			if TRAINING_DEFINITIONS.has(migrated_learned_ability) and not learned_abilities.has(String(migrated_learned_ability)):
+				learned_abilities.append(String(migrated_learned_ability))
+		employee["learned_abilities"] = learned_abilities
 		if employee_id == &"boris":
 			var boris_abilities: PackedStringArray = employee["abilities"]
 			for required_ability: String in PackedStringArray(["diagnose", "repair"]):
@@ -955,10 +1028,76 @@ func load_game() -> Error:
 		employee["return_until"] = int(loaded_employee.get("return_until", 0))
 		employees[employee_id] = employee
 
+	if version < 9 or financial_ledger.is_empty():
+		_rebuild_legacy_financial_ledger()
+
 	_complete_finished_training()
 	_update_employee_statuses()
 	state_changed.emit()
 	return OK
+
+
+func _record_financial_event(kind: StringName, amount: int, title: String, details: Dictionary = {}) -> void:
+	var event := _financial_event(kind, amount, title)
+	for key: Variant in details:
+		event[key] = details[key]
+	financial_ledger.append(event)
+
+
+func _financial_event(kind: StringName, amount: int, title: String) -> Dictionary:
+	return {
+		"kind": String(kind), "amount": amount, "title": title,
+		"day": day, "time_minutes": time_minutes,
+	}
+
+
+func _calculate_report_rating(reputation_change: int, reward_adjustment: int, compensation: int) -> int:
+	if compensation > 0 and reward_adjustment <= -400:
+		return 1
+	if reputation_change <= -4:
+		return 1
+	if reputation_change <= -2:
+		return 2
+	if reputation_change < 0:
+		return 3
+	if reward_adjustment < 0 or compensation > 0:
+		return 4
+	return 5
+
+
+func _rebuild_legacy_financial_ledger() -> void:
+	financial_ledger = [{
+		"kind": "opening_balance", "amount": 600, "title": "Начальные средства службы",
+		"day": 0, "time_minutes": -1, "legacy": true,
+	}]
+	var known_balance := 600
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		var amount := int(report.get("net_change", int(report.get("reward", 0)) - int(report.get("compensation", 0))))
+		financial_ledger.append({
+			"kind": "job", "amount": amount, "title": str(report.get("title", "Завершённая заявка")),
+			"income": int(report.get("reward", 0)), "expense": int(report.get("compensation", 0)),
+			"day": int(report.get("completed_day", 0)), "time_minutes": int(report.get("completed_time", -1)), "legacy": true,
+		})
+		known_balance += amount
+	for item_id_string: String in owned_supply_items:
+		var item_id := StringName(item_id_string)
+		if not SUPPLY_ITEMS.has(item_id):
+			continue
+		var price := int(SUPPLY_ITEMS[item_id]["price"])
+		financial_ledger.append({"kind": "purchase", "amount": -price, "title": str(SUPPLY_ITEMS[item_id]["name"]), "day": 0, "time_minutes": -1, "legacy": true})
+		known_balance -= price
+	for employee_id: StringName in EMPLOYEE_ORDER:
+		var employee: Dictionary = employees[employee_id]
+		var hire_cost := int(employee.get("hire_cost", 0))
+		if hire_cost <= 0 or not bool(employee.get("available", false)):
+			continue
+		financial_ledger.append({"kind": "hire", "amount": -hire_cost, "title": str(employee["name"]), "day": 0, "time_minutes": -1, "legacy": true})
+		known_balance -= hire_cost
+	if known_balance != money:
+		financial_ledger.append({"kind": "legacy_adjustment", "amount": money - known_balance, "title": "Операции прежней версии сохранения", "day": 0, "time_minutes": -1, "legacy": true})
 
 
 func _remove_employee_from_all_jobs(employee_id: StringName) -> void:
@@ -973,12 +1112,25 @@ func _remove_employee_from_all_jobs(employee_id: StringName) -> void:
 
 
 func _unlock_parallel_jobs() -> void:
+	_set_parallel_jobs_unlocked(true)
+
+
+func _set_parallel_jobs_unlocked(unlocked: bool) -> void:
 	for job_id: StringName in PackedStringArray(["walking_wardrobe", "portal_mirror"]):
 		if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
 			continue
 		var job: Dictionary = jobs[job_id]
-		job["unlocked"] = true
+		job["unlocked"] = unlocked
 		jobs[job_id] = job
+
+
+func _job_completed_day(job_id: StringName) -> int:
+	for report_value: Variant in job_reports:
+		if report_value is Dictionary:
+			var report: Dictionary = report_value
+			if StringName(str(report.get("job_id", ""))) == job_id:
+				return int(report.get("completed_day", 0))
+	return 0
 
 
 func _first_available_job_id() -> StringName:
@@ -1026,6 +1178,10 @@ func _complete_finished_training() -> void:
 		if not abilities.has(String(training_id)):
 			abilities.append(String(training_id))
 		employee["abilities"] = abilities
+		var learned_abilities: PackedStringArray = employee.get("learned_abilities", PackedStringArray())
+		if not learned_abilities.has(String(training_id)):
+			learned_abilities.append(String(training_id))
+		employee["learned_abilities"] = learned_abilities
 		employee["training_id"] = &""
 		employee["training_end_day"] = 0
 		employee["status"] = employee["idle_status"]

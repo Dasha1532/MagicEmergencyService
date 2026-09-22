@@ -1,0 +1,155 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/office_books.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/office_hub.png" id="2_background"]
+
+[node name="OfficeBooks" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+modulate = Color(0.5, 0.44, 0.37, 1)
+texture = ExtResource("2_background")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Shade" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.018, 0.012, 0.008, 0.58)
+
+[node name="Header" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 18.0
+offset_right = 1578.0
+offset_bottom = 116.0
+
+[node name="Heading" type="Label" parent="Header"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 12.0
+offset_right = 420.0
+offset_bottom = 47.0
+theme_override_colors/font_color = Color(0.96, 0.78, 0.46, 1)
+theme_override_font_sizes/font_size = 24
+text = "КНИГА УЧЁТА"
+
+[node name="Summary" type="Label" parent="Header"]
+layout_mode = 0
+offset_left = 25.0
+offset_top = 54.0
+offset_right = 760.0
+offset_bottom = 82.0
+theme_override_colors/font_color = Color(0.92, 0.84, 0.69, 1)
+theme_override_font_sizes/font_size = 15
+text = "Сводка"
+
+[node name="Accounting" type="Button" parent="Header"]
+layout_mode = 0
+offset_left = 760.0
+offset_top = 22.0
+offset_right = 950.0
+offset_bottom = 76.0
+text = "УЧЁТ"
+
+[node name="Reviews" type="Button" parent="Header"]
+layout_mode = 0
+offset_left = 962.0
+offset_top = 22.0
+offset_right = 1152.0
+offset_bottom = 76.0
+text = "ОТЗЫВЫ"
+
+[node name="Archive" type="Button" parent="Header"]
+layout_mode = 0
+offset_left = 1164.0
+offset_top = 22.0
+offset_right = 1354.0
+offset_bottom = 76.0
+text = "АРХИВ"
+
+[node name="BackButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 1398.0
+offset_top = 38.0
+offset_right = 1554.0
+offset_bottom = 92.0
+text = "← В ОФИС"
+
+[node name="ListPanel" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 22.0
+offset_top = 134.0
+offset_right = 520.0
+offset_bottom = 878.0
+
+[node name="Scroll" type="ScrollContainer" parent="ListPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+
+[node name="Entries" type="VBoxContainer" parent="ListPanel/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="DetailPanel" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 540.0
+offset_top = 134.0
+offset_right = 1578.0
+offset_bottom = 878.0
+
+[node name="Title" type="Label" parent="DetailPanel"]
+layout_mode = 0
+offset_left = 34.0
+offset_top = 26.0
+offset_right = 1004.0
+offset_bottom = 70.0
+theme_override_colors/font_color = Color(0.96, 0.78, 0.46, 1)
+theme_override_font_sizes/font_size = 24
+text = "ПОДРОБНОСТИ"
+horizontal_alignment = 1
+
+[node name="Scroll" type="ScrollContainer" parent="DetailPanel"]
+layout_mode = 0
+offset_left = 42.0
+offset_top = 92.0
+offset_right = 996.0
+offset_bottom = 714.0
+horizontal_scroll_mode = 0
+
+[node name="Body" type="Label" parent="DetailPanel/Scroll"]
+custom_minimum_size = Vector2(930, 600)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.92, 0.84, 0.69, 1)
+theme_override_font_sizes/font_size = 18
+text = "Содержимое"
+autowrap_mode = 2

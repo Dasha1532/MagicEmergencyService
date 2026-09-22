@@ -17,9 +17,12 @@ static func reaction_for(employee: Dictionary, action_id: StringName, world_obje
 		if not _matches_object(rule, world_object):
 			continue
 		var text := str(rule.get("text", ""))
-		if text.is_empty():
-			continue
-		return text
+		if not text.is_empty():
+			return text
+		var texts: Variant = rule.get("texts", [])
+		if texts is Array and not texts.is_empty():
+			var variant_index := posmod(hash([String(action_id), String(intent), world_object]), texts.size())
+			return str(texts[variant_index])
 	return ""
 
 

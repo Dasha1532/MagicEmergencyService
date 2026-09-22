@@ -136,7 +136,7 @@ func _on_mirror_selected() -> void:
 		&"antimagic": "Закрыть портал",
 		&"freeze": "Заморозить",
 		&"heat": "Нагреть",
-	}, contextual_actions, PackedStringArray(["repair"]))
+	}, contextual_actions, PackedStringArray(["repair", "animate"]))
 
 
 func _on_tool_selected(action_id: StringName) -> void:

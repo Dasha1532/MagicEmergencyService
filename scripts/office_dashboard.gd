@@ -13,6 +13,7 @@ const PERSONNEL_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "
 const CANDIDATE_CLASP_TEXTURE = preload("res://assets/ui/candidate_clasp.png")
 const CLOCK_CONTROLS_SCRIPT = preload("res://scripts/game_clock_controls.gd")
 const CITY_MAP_SCENE = preload("res://scenes/ui/CityMap.tscn")
+const OFFICE_BOOKS_SCENE = preload("res://scenes/ui/OfficeBooks.tscn")
 
 var selected_job_id: StringName
 var job_list: VBoxContainer
@@ -40,6 +41,8 @@ var personnel_weakness: Label
 var personnel_traits: Label
 var personnel_portrait: TextureRect
 var personnel_hire_button: Button
+var personnel_training_button: Button
+var finish_day_button: Button
 var personnel_cards: Dictionary = {}
 var selected_employee_id: StringName = &"liliya"
 var supply_layer: Control
@@ -47,6 +50,7 @@ var supply_money_label: Label
 var supply_catalog_status: Label
 var supply_purchase_button: Button
 var city_map_layer: Control
+var books_layer: Control
 var section_dialog: Panel
 var section_title: Label
 var section_body: Label
@@ -89,6 +93,7 @@ func _build_interface() -> void:
 	_build_personnel_screen()
 	_build_supply_shop()
 	_build_city_map()
+	_build_books()
 
 
 func _build_top_bar() -> void:
@@ -174,14 +179,14 @@ func _build_detail_panel() -> void:
 	panel.add_child(detail_body)
 
 	assignment_label = _label("", 16, COLOR_GOLD)
-	assignment_label.position = Vector2(22, 296)
-	assignment_label.size = Vector2(371, 38)
+	assignment_label.position = Vector2(22, 286)
+	assignment_label.size = Vector2(371, 56)
 	assignment_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	panel.add_child(assignment_label)
 
 	warning_label = _label("", 14, Color(0.96, 0.62, 0.35))
-	warning_label.position = Vector2(22, 338)
-	warning_label.size = Vector2(371, 38)
+	warning_label.position = Vector2(22, 346)
+	warning_label.size = Vector2(371, 34)
 	warning_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	panel.add_child(warning_label)
 
@@ -229,6 +234,11 @@ func _build_dashboard_return() -> void:
 	back_button.pressed.connect(_show_hub)
 	dashboard_layer.add_child(back_button)
 
+	finish_day_button = _button("ЗАВЕРШИТЬ ДЕНЬ", Vector2(944, 30), Vector2(210, 50))
+	finish_day_button.add_theme_font_size_override("font_size", 14)
+	finish_day_button.pressed.connect(_finish_day)
+	dashboard_layer.add_child(finish_day_button)
+
 
 func _build_clock_controls() -> void:
 	var controls := CLOCK_CONTROLS_SCRIPT.new()
@@ -253,9 +263,9 @@ func _build_office_hub() -> void:
 	_connect_editable_hotspot($ObjectHotspots/EmployeesBoard, "СОТРУДНИКИ", "Кто сегодня работает?", _open_personnel)
 	_connect_editable_hotspot($ObjectHotspots/EquipmentStorage, "СКЛАД СНАРЯЖЕНИЯ", "Чем будем чинить?", _open_section.bind("СКЛАД СНАРЯЖЕНИЯ", "Чем будем чинить?", "Здесь будет храниться обычное и магическое оборудование службы."))
 	_connect_editable_hotspot($ObjectHotspots/CityMap, "КАРТА ГОРОДА", "Где опять прорвало?", _open_city_map)
-	_connect_editable_hotspot($BookHotspots/AccountingBook, "КНИГА УЧЁТА", "Куда делись деньги?", _open_section.bind("КНИГА УЧЁТА", "Куда делись деньги?", "Здесь будут показаны доходы, расходы, зарплаты и компенсации."))
-	_connect_editable_hotspot($BookHotspots/ReviewsBook, "КНИГА ОТЗЫВОВ", "Благодарности, жалобы и угрозы.", _open_section.bind("КНИГА ОТЗЫВОВ", "Благодарности, жалобы и угрозы.", "Здесь появятся оценки жильцов, отзывы и изменение репутации службы."))
-	_connect_editable_hotspot($BookHotspots/IncidentArchive, "АРХИВ ПРОИСШЕСТВИЙ", "Так больше не делать.", _open_section.bind("АРХИВ ПРОИСШЕСТВИЙ", "Так больше не делать.", "Здесь будет сохраняться история решений, последствий и необычных аварий."))
+	_connect_editable_hotspot($BookHotspots/AccountingBook, "КНИГА УЧЁТА", "Куда делись деньги?", _open_books.bind(&"accounting"))
+	_connect_editable_hotspot($BookHotspots/ReviewsBook, "КНИГА ОТЗЫВОВ", "Благодарности, жалобы и угрозы.", _open_books.bind(&"reviews"))
+	_connect_editable_hotspot($BookHotspots/IncidentArchive, "АРХИВ ПРОИСШЕСТВИЙ", "Так больше не делать.", _open_books.bind(&"archive"))
 	_connect_editable_hotspot($ObjectHotspots/SupplyShop, "ЛАВКА СНАБЖЕНИЯ", "Очень нужные покупки", _open_supply_shop)
 
 	_build_office_menu_button()
@@ -378,10 +388,14 @@ func _build_personnel_screen() -> void:
 		personnel_layer.add_child(label)
 
 	var hire_rect := _personnel_guide_rect("StatusArea")
-	personnel_hire_button = _button("", hire_rect.position + Vector2(10, 8), hire_rect.size - Vector2(20, 16))
+	personnel_hire_button = _button("", hire_rect.position + Vector2(10, -2), Vector2(hire_rect.size.x - 20, 35))
 	personnel_hire_button.add_theme_font_size_override("font_size", 13)
-	personnel_hire_button.pressed.connect(_personnel_action_pressed)
+	personnel_hire_button.pressed.connect(_hire_selected_personnel)
 	personnel_layer.add_child(personnel_hire_button)
+	personnel_training_button = _button("", hire_rect.position + Vector2(-10, -2), Vector2(hire_rect.size.x - 20, 35))
+	personnel_training_button.add_theme_font_size_override("font_size", 13)
+	personnel_training_button.pressed.connect(_train_selected_personnel)
+	personnel_layer.add_child(personnel_training_button)
 
 	_refresh_personnel()
 
@@ -705,6 +719,7 @@ func _open_jobs() -> void:
 	personnel_layer.visible = false
 	supply_layer.visible = false
 	city_map_layer.visible = false
+	books_layer.visible = false
 	dashboard_layer.visible = true
 	_refresh()
 
@@ -714,6 +729,7 @@ func _open_personnel() -> void:
 	dashboard_layer.visible = false
 	supply_layer.visible = false
 	city_map_layer.visible = false
+	books_layer.visible = false
 	personnel_layer.visible = true
 	_refresh_personnel()
 
@@ -723,6 +739,7 @@ func _open_supply_shop() -> void:
 	dashboard_layer.visible = false
 	personnel_layer.visible = false
 	city_map_layer.visible = false
+	books_layer.visible = false
 	supply_layer.visible = true
 	_refresh_supply_shop()
 
@@ -740,6 +757,7 @@ func _open_city_map() -> void:
 	dashboard_layer.visible = false
 	personnel_layer.visible = false
 	supply_layer.visible = false
+	books_layer.visible = false
 	city_map_layer.visible = true
 	city_map_layer.refresh()
 
@@ -750,11 +768,29 @@ func _open_job_from_map(job_id: StringName) -> void:
 	_open_jobs()
 
 
+func _build_books() -> void:
+	books_layer = OFFICE_BOOKS_SCENE.instantiate()
+	books_layer.visible = false
+	books_layer.back_requested.connect(_show_hub)
+	add_child(books_layer)
+
+
+func _open_books(section: StringName) -> void:
+	hub_layer.visible = false
+	dashboard_layer.visible = false
+	personnel_layer.visible = false
+	supply_layer.visible = false
+	city_map_layer.visible = false
+	books_layer.visible = true
+	books_layer.open_section(section)
+
+
 func _show_hub() -> void:
 	dashboard_layer.visible = false
 	personnel_layer.visible = false
 	supply_layer.visible = false
 	city_map_layer.visible = false
+	books_layer.visible = false
 	hub_layer.visible = true
 	section_dialog.visible = false
 
@@ -815,12 +851,12 @@ func _select_personnel_employee(employee_id: StringName) -> void:
 	_refresh_personnel()
 
 
-func _personnel_action_pressed() -> void:
-	var employee: Dictionary = game_state.employees[selected_employee_id]
-	if not bool(employee["available"]):
-		game_state.hire_employee(selected_employee_id)
-	else:
-		game_state.train_employee(selected_employee_id, &"animate")
+func _hire_selected_personnel() -> void:
+	game_state.hire_employee(selected_employee_id)
+
+
+func _train_selected_personnel() -> void:
+	game_state.train_employee(selected_employee_id, &"animate")
 
 
 func _buy_animation_kit() -> void:
@@ -833,6 +869,10 @@ func _grant_debug_money() -> void:
 
 func _advance_debug_day() -> void:
 	game_state.advance_day(1)
+
+
+func _finish_day() -> void:
+	game_state.try_finish_day()
 
 
 func _refresh_supply_shop() -> void:
@@ -894,27 +934,66 @@ func _refresh_personnel() -> void:
 	var specialization: String = str(employee["core_actions"])
 	if abilities.has("animate"):
 		specialization += " • Оживление"
-	personnel_traits.text = "ОСОБЕННОСТИ\n%s\n\nСПЕЦИАЛИЗАЦИЯ\n%s" % [employee["traits"], specialization]
-	var is_candidate: bool = not bool(employee["available"])
 	var training_state: StringName = game_state.get_training_availability(selected_employee_id, &"animate")
-	var show_training_button: bool = training_state in [&"available", &"missing_supply", &"assigned", &"no_slots"]
-	personnel_status.visible = not is_candidate and not show_training_button
-	personnel_hire_button.visible = is_candidate or show_training_button
+	var training_definition: Dictionary = game_state.TRAINING_DEFINITIONS[&"animate"]
+	personnel_traits.text = "ОСОБЕННОСТИ\n%s\n\nСПЕЦИАЛИЗАЦИЯ\n%s\n\nКУРС «%s»\n%s" % [
+		employee["traits"], specialization, training_definition["name"], _training_state_text(training_state, employee),
+	]
+	var is_candidate: bool = not bool(employee["available"])
+	personnel_status.visible = false
+	personnel_hire_button.visible = is_candidate
+	personnel_training_button.visible = not is_candidate
 	if is_candidate:
 		var hire_cost := int(employee.get("hire_cost", 0))
 		personnel_hire_button.disabled = game_state.money < hire_cost
 		personnel_hire_button.text = "НАНЯТЬ • %d МОНЕТ" % hire_cost if not personnel_hire_button.disabled else "НУЖНО %d МОНЕТ" % hire_cost
-	elif show_training_button:
-		personnel_hire_button.disabled = training_state != &"available"
+	else:
+		personnel_training_button.disabled = training_state != &"available"
 		match training_state:
 			&"available":
-				personnel_hire_button.text = "ОБУЧИТЬ «ОЖИВЛЕНИЮ» • 1 ДЕНЬ"
+				personnel_training_button.text = "НАЧАТЬ КУРС «%s» • %d ДЕНЬ" % [training_definition["name"].to_upper(), int(training_definition["duration_days"])]
 			&"missing_supply":
-				personnel_hire_button.text = "НУЖЕН КОМПЛЕКТ ИЗ ЛАВКИ"
+				personnel_training_button.text = "НУЖЕН КОМПЛЕКТ ИЗ ЛАВКИ"
 			&"assigned":
-				personnel_hire_button.text = "СНАЧАЛА СНЯТЬ С ЗАЯВКИ"
+				personnel_training_button.text = "СНАЧАЛА СНЯТЬ С ЗАЯВКИ"
+			&"returning":
+				personnel_training_button.text = "СОТРУДНИК ЕЩЁ ВОЗВРАЩАЕТСЯ"
 			&"no_slots":
-				personnel_hire_button.text = "НЕТ СВОБОДНОЙ ЯЧЕЙКИ"
+				personnel_training_button.text = "НЕТ СВОБОДНОЙ ЯЧЕЙКИ"
+			&"incompatible":
+				personnel_training_button.text = "КУРС НЕ ПОДХОДИТ СОТРУДНИКУ"
+			&"training":
+				personnel_training_button.text = "ОБУЧЕНИЕ ИДЁТ ДО ДНЯ %d" % int(employee.get("training_end_day", game_state.day + 1))
+			&"learned":
+				personnel_training_button.text = "КУРС УЖЕ ПРОЙДЕН"
+			_:
+				personnel_training_button.text = "ОБУЧЕНИЕ НЕДОСТУПНО"
+	if finish_day_button != null:
+		finish_day_button.disabled = not game_state.can_finish_day()
+		finish_day_button.tooltip_text = "Сначала завершите доступные заявки." if finish_day_button.disabled else "Перейти к следующему рабочему дню."
+
+
+func _training_state_text(training_state: StringName, employee: Dictionary) -> String:
+	match training_state:
+		&"available":
+			return "Совместим. Можно начать обучение."
+		&"missing_supply":
+			return "Совместим, но учебный комплект ещё не куплен."
+		&"assigned":
+			return "Сначала освободите сотрудника от заявки."
+		&"returning":
+			return "Обучение начнётся после возвращения сотрудника."
+		&"no_slots":
+			return "Все ячейки изучаемых способностей заняты."
+		&"incompatible":
+			return "Несовместим с магическим обучением этого типа."
+		&"training":
+			return "Обучается до начала дня %d." % int(employee.get("training_end_day", game_state.day + 1))
+		&"learned":
+			return "Курс пройден, действие доступно на объектах."
+		&"not_hired":
+			return "Сначала сотрудника нужно нанять."
+	return "Курс пока недоступен."
 
 
 func _rebuild_jobs() -> void:
@@ -995,13 +1074,28 @@ func _rebuild_employees() -> void:
 		method_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(method_label)
 
-		var status_color := COLOR_MUTED if in_transit else (COLOR_GOLD if selected else COLOR_MUTED)
-		var status_text: String = "Выбран для отправки" if pending_selected else (str(employee["status"]) if in_transit else ("✓ На объекте" if selected and on_site else ("✓ В этой бригаде" if selected else str(employee["status"]))))
-		var status_label := _label(status_text, 13, status_color)
-		status_label.position = Vector2(180, 184)
-		status_label.size = Vector2(198, 26)
+		var status_color := COLOR_MUTED if in_transit or returning else (COLOR_GOLD if selected else COLOR_MUTED)
+		var status_text: String = _employee_card_status(employee, pending_selected, selected, on_site, in_transit, returning)
+		var status_label := _label(status_text, 12 if returning else 13, status_color)
+		status_label.position = Vector2(180, 170 if returning else 184)
+		status_label.size = Vector2(198, 42 if returning else 26)
+		status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(status_label)
+
+
+func _employee_card_status(employee: Dictionary, pending_selected: bool, selected: bool, on_site: bool, in_transit: bool, returning: bool) -> String:
+	if pending_selected:
+		return "Выбран для отправки"
+	if returning:
+		return str(employee["status"]).replace(" • прибудет в ", "\nПрибудет в ")
+	if in_transit:
+		return str(employee["status"])
+	if selected and on_site:
+		return "✓ На объекте"
+	if selected:
+		return "✓ В этой бригаде"
+	return str(employee["status"])
 
 
 func _refresh_details() -> void:
@@ -1017,7 +1111,7 @@ func _refresh_details() -> void:
 	var job: Dictionary = game_state.jobs[selected_job_id]
 	var assigned: PackedStringArray = job["assigned"]
 	detail_title.text = job["title"]
-	detail_body.text = "%s\nЖилец: %s\nОпасность: %s\n\n%s" % [job["address"], job["resident"], job["danger"], job["description"]]
+	detail_body.text = "%s\nЖилец: %s\nОпасность: %s\n%s" % [job["address"], job["resident"], job["danger"], job["description"]]
 
 	if assigned.is_empty():
 		assignment_label.text = "Бригада: не назначена"
@@ -1038,7 +1132,7 @@ func _refresh_details() -> void:
 				continue
 			var other_assigned: PackedStringArray = game_state.jobs[other_job_id]["assigned"]
 			if other_assigned.is_empty():
-				warning_label.text = "Внимание: «%s» останется без бригады." % game_state.jobs[other_job_id]["title"]
+				warning_label.text = "Другая заявка останется без бригады."
 				break
 
 	var dispatched: bool = game_state.is_job_dispatched(selected_job_id)
@@ -1105,7 +1199,7 @@ func _depart() -> void:
 	if not game_state.is_job_dispatched(selected_job_id):
 		if game_state.begin_job(selected_job_id):
 			game_state.leave_active_job()
-			warning_label.text = "Бригада выехала. Можно распределить остальных сотрудников или открыть объект позже."
+			warning_label.text = "Бригада в пути."
 		return
 	if game_state.has_employee_on_site(selected_job_id):
 		if game_state.begin_job(selected_job_id):

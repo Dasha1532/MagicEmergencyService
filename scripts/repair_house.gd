@@ -181,7 +181,7 @@ func _apply_selected_action() -> void:
 	if selected_employee_id.is_empty():
 		_show_feedback("Сначала выберите сотрудника из бригады.", true)
 		return
-	tool_bar.show_for_object("Кран", _faucet_target_global())
+	tool_bar.show_for_object("Кран", _faucet_target_global(), {}, [], PackedStringArray(["animate"]))
 
 
 func _begin_selected_action() -> void:

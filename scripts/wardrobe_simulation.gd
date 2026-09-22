@@ -281,7 +281,9 @@ func get_completion_result() -> Dictionary:
 			"reward_adjustment": -420,
 			"compensation_cost": compensation,
 			"reputation_change": -8,
-			"summary": "Вы должны были остановить шкаф, а вместо этого сожгли его вместе с посудой! Оплаты не будет, служба выплатила %d монет компенсации за мебель и содержимое." % compensation,
+			"summary": "Шкаф и его содержимое уничтожены огнём. Оплата отменена, назначена компенсация %d монет." % compensation,
+			"review": "Вы должны были остановить шкаф, а вместо этого сожгли его вместе с посудой! Теперь по квартире хотя бы ходит только запах гари.",
+			"consequences": ["Шкаф уничтожен огнём.", "Хрупкая посуда внутри уничтожена.", "Служба выплачивает компенсацию за мебель и содержимое."],
 			"actions": action_log.duplicate(true),
 		}
 	var damage := int(world_object["damage"])
@@ -302,7 +304,9 @@ func get_completion_result() -> Dictionary:
 		return {
 			"reward_adjustment": adjustment,
 			"reputation_change": -damage - contents_damage,
-			"summary": broken_reply,
+			"summary": "Шкаф остановлен повреждением ножек%s." % (" и оставлен не в заказанном месте" if not correct_place else ""),
+			"review": broken_reply,
+			"consequences": ["Ножки шкафа сломаны.", "Шкаф оставлен не в заказанном месте."] if not correct_place else ["Ножки шкафа сломаны."],
 			"actions": action_log.duplicate(true),
 		}
 	var summary: String = "Шкаф закреплён у стены и больше не ходит, хотя чары всё ещё действуют." if bool(world_object["anchored"]) else "Шкаф остановлен и больше не ходит."
@@ -312,12 +316,32 @@ func get_completion_result() -> Dictionary:
 		summary += " Хрупкая посуда внутри шкафа повреждена."
 	if not correct_place:
 		summary += " Шкаф оставлен не там, где просила хозяйка."
+	var review := "Наконец-то шкаф стоит у левой стены и ведёт себя как приличная мебель. Посуда тоже цела — я уже отвыкла от такой роскоши."
+	if contents_damage > 0:
+		review = "Шкаф больше не гуляет, зато посуда внутри пережила небольшое землетрясение. В следующий раз предупреждайте чашки заранее."
+	elif not correct_place:
+		review = "Шкаф вы остановили, спасибо. Но до левой стены он так и не дошёл — видимо, устал раньше ваших сотрудников."
 	return {
 		"reward_adjustment": adjustment,
-		"reputation_change": -damage - contents_damage,
+		"reputation_change": 1 if damage == 0 and contents_damage == 0 and correct_place else -damage - contents_damage,
 		"summary": summary,
+		"review": review,
+		"consequences": _completion_consequences(damage, contents_damage, correct_place),
 		"actions": action_log.duplicate(true),
 	}
+
+
+func _completion_consequences(damage: int, contents_damage: int, correct_place: bool) -> Array[String]:
+	var consequences: Array[String] = []
+	if damage > 0:
+		consequences.append("Шкаф получил повреждения.")
+	if contents_damage > 0:
+		consequences.append("Посуда внутри шкафа повреждена.")
+	if not correct_place:
+		consequences.append("Шкаф оставлен не в заказанном месте.")
+	if consequences.is_empty():
+		consequences.append("Дополнительного ущерба не зафиксировано.")
+	return consequences
 
 
 func _apply_physical_intent(intent: StringName) -> Dictionary:

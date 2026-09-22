@@ -181,16 +181,22 @@ func get_completion_result() -> Dictionary:
 			"compensation_cost": int(world_object["replacement_value"]),
 			"reputation_change": -6,
 			"summary": "Кран расплавлен и полностью выведен из строя. Оплаты не будет, служба компенсирует жильцу стоимость замены оборудования.",
+			"review": "Я просил починить кран, а не превратить его в современную скульптуру. Впрочем, скульптура хотя бы больше не плюётся лавой.",
+			"consequences": ["Кран полностью уничтожен и требует замены.", "Служба компенсирует стоимость оборудования."],
 			"actions": action_log.duplicate(true),
 		}
 	var damage: int = int(world_object.get("damage", 0))
 	var summary := "Поток лавы остановлен, давление сброшено, кран принят в исправном состоянии."
+	var review := "Спасибо! Из крана снова не течёт лава. Для демона звучит как жалоба, но для владельца ванной — настоящее счастье."
 	if damage > 0:
 		summary += " За дополнительный перегрев удержана компенсация за повреждение отделки."
+		review = "Лаву вы остановили — это главное. А подпалины я назову авторской отделкой, пока не увижу счёт за ремонт."
 	return {
 		"reward_adjustment": -80 * damage,
-		"reputation_change": -damage,
+		"reputation_change": 1 if damage == 0 else -damage,
 		"summary": summary,
+		"review": review,
+		"consequences": ["Дополнительного ущерба не зафиксировано."] if damage == 0 else ["Отделка ванной повреждена дополнительным перегревом."],
 		"actions": action_log.duplicate(true),
 	}
 

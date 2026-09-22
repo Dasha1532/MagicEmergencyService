@@ -47,7 +47,12 @@ func _run() -> void:
 	game_state.advance_time(100)
 	_check("Срок истёк" in marker.text, "Маркер обновлён при просрочке")
 	game_state.complete_active_job()
-	_check("Активных заявок: 1" in marker.text, "После вводной заявки открыта вторая заявка дома")
+	_check(not marker.visible and not selesta_marker.visible, "После вводной заявки день остаётся без новых вызовов")
+	_check(game_state.can_finish_day(), "После крана рабочий день можно завершить")
+	_check(game_state.try_finish_day(), "Завершение дня открывает следующее утро")
+	_check("Активных заявок: 1" in marker.text, "На следующий день открыта заявка со шкафом")
+	marker.pressed.emit()
+	await process_frame
 	var current_job_list := city_map.get_node("HousePanel/JobScroll/JobList")
 	_check(current_job_list.get_child_count() == 1 and "Шкаф" in current_job_list.get_child(0).text, "Список содержит только доступную заявку")
 	_check("Активных заявок: 1" in selesta_marker.text, "Адрес показывает заявку с порталом")

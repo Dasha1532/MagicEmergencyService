@@ -135,6 +135,8 @@ func get_completion_result() -> Dictionary:
 	if covered:
 		return {
 			"summary": "Портал закрыт полотном, но в комнате всё ещё холодно." if cold_remains else "Холод устранён, портал временно изолирован защитным полотном.",
+			"review": "Полотно очень милое. Голоса из зеркала стали тише, а зубы всё ещё стучат в полный голос." if cold_remains else "Портал теперь под покрывалом. Не совсем ремонт, зато отражение наконец перестало спорить со мной.",
+			"consequences": ["Портал только временно изолирован.", "В комнате сохранилась аномальная стужа.", "Из портала успел выбраться призрак."] if cold_remains else ["Портал временно изолирован защитным полотном.", "Из портала успел выбраться призрак."],
 			"reward_adjustment": -150 if cold_remains else -80,
 			"compensation_cost": 0,
 			"reputation_change": -1 if cold_remains else 0,
@@ -147,6 +149,8 @@ func get_completion_result() -> Dictionary:
 		}
 	return {
 		"summary": "Портал закрыт, зеркало сохранено." if not destroyed else "Портал закрыт ценой уничтоженного зеркала.",
+		"review": "Наконец-то зеркало снова показывает только меня. Никогда не думала, что буду так рада обычному отражению." if not destroyed else "Портал закрыт. Зеркало тоже, причём навсегда. Придётся любоваться собой по памяти.",
+		"consequences": ["Дополнительного ущерба не зафиксировано."] if not destroyed else ["Старинное зеркало уничтожено.", "Служба выплачивает компенсацию за зеркало."],
 		"reward_adjustment": 0 if not destroyed else -200,
 		"compensation_cost": 0 if not destroyed else 300,
 		"reputation_change": 1 if not destroyed else -2,
