@@ -4,7 +4,7 @@ signal state_changed
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 9
+const SAVE_VERSION: int = 10
 const SAVE_PATH: String = "user://savegame.json"
 const TRAVEL_TIME_MINUTES: int = 15
 const OVERDUE_PAYMENT_PENALTY: int = 100
@@ -27,6 +27,16 @@ const TRAINING_DEFINITIONS: Dictionary = {
 		"duration_days": 1,
 		"description": "Наделяет подходящие неживые объекты автономным поведением. Неосторожное применение может усилить уже действующие чары.",
 	},
+}
+const ABILITY_NAMES: Dictionary = {
+	&"freeze": "Заморозка",
+	&"heat": "Магия огня",
+	&"physical_move": "Силовая работа",
+	&"diagnose": "Диагностика",
+	&"repair": "Точный ремонт",
+	&"telekinesis": "Телекинез",
+	&"antimagic": "Магическая изоляция",
+	&"animate": "Оживление",
 }
 
 var day: int = 1
@@ -444,6 +454,45 @@ func train_employee(employee_id: StringName, training_id: StringName) -> bool:
 	employee["training_id"] = training_id
 	employee["training_end_day"] = day + maxi(1, int(TRAINING_DEFINITIONS[training_id]["duration_days"]))
 	employee["status"] = "Учится: %s" % TRAINING_DEFINITIONS[training_id]["name"]
+	employees[employee_id] = employee
+	state_changed.emit()
+	return true
+
+
+func get_ability_name(ability_id: StringName) -> String:
+	return str(ABILITY_NAMES.get(ability_id, String(ability_id).capitalize()))
+
+
+func get_forget_availability(employee_id: StringName, ability_id: StringName) -> StringName:
+	if not employees.has(employee_id):
+		return &"unknown"
+	var employee: Dictionary = employees[employee_id]
+	if not bool(employee["available"]):
+		return &"not_hired"
+	var abilities: PackedStringArray = employee["abilities"]
+	if not abilities.has(String(ability_id)):
+		return &"missing"
+	if is_employee_training(employee_id):
+		return &"training"
+	if not get_employee_job(employee_id).is_empty():
+		return &"assigned"
+	if is_employee_returning(employee_id):
+		return &"returning"
+	return &"available"
+
+
+func forget_employee_ability(employee_id: StringName, ability_id: StringName) -> bool:
+	if get_forget_availability(employee_id, ability_id) != &"available":
+		return false
+	var employee: Dictionary = employees[employee_id]
+	var abilities: PackedStringArray = employee["abilities"]
+	abilities.remove_at(abilities.find(String(ability_id)))
+	employee["abilities"] = abilities
+	var learned_abilities: PackedStringArray = employee.get("learned_abilities", PackedStringArray())
+	var learned_index := learned_abilities.find(String(ability_id))
+	if learned_index >= 0:
+		learned_abilities.remove_at(learned_index)
+	employee["learned_abilities"] = learned_abilities
 	employees[employee_id] = employee
 	state_changed.emit()
 	return true
@@ -1004,19 +1053,19 @@ func load_game() -> Error:
 			if TRAINING_DEFINITIONS.has(migrated_learned_ability) and not learned_abilities.has(String(migrated_learned_ability)):
 				learned_abilities.append(String(migrated_learned_ability))
 		employee["learned_abilities"] = learned_abilities
-		if employee_id == &"boris":
+		if version < 10 and employee_id == &"boris":
 			var boris_abilities: PackedStringArray = employee["abilities"]
 			for required_ability: String in PackedStringArray(["diagnose", "repair"]):
 				if not boris_abilities.has(required_ability):
 					boris_abilities.append(required_ability)
 			employee["abilities"] = boris_abilities
-		if employee_id == &"liliya":
+		if version < 10 and employee_id == &"liliya":
 			var liliya_abilities: PackedStringArray = employee["abilities"]
 			var diagnose_index: int = liliya_abilities.find("diagnose")
 			if diagnose_index >= 0:
 				liliya_abilities.remove_at(diagnose_index)
 			employee["abilities"] = liliya_abilities
-		if employee_id == &"nika":
+		if version < 10 and employee_id == &"nika":
 			var nika_abilities: PackedStringArray = employee["abilities"]
 			if not nika_abilities.has("telekinesis"):
 				nika_abilities.append("telekinesis")

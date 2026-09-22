@@ -42,6 +42,14 @@ var personnel_traits: Label
 var personnel_portrait: TextureRect
 var personnel_hire_button: Button
 var personnel_training_button: Button
+var personnel_specializations_button: Button
+var specialization_layer: Control
+var specialization_title: Label
+var specialization_slots: VBoxContainer
+var specialization_notice: Label
+var specialization_confirm_layer: Control
+var specialization_confirm_text: Label
+var pending_forget_ability_id: StringName = &""
 var finish_day_button: Button
 var personnel_cards: Dictionary = {}
 var selected_employee_id: StringName = &"liliya"
@@ -394,10 +402,94 @@ func _build_personnel_screen() -> void:
 	personnel_layer.add_child(personnel_hire_button)
 	personnel_training_button = _button("", hire_rect.position + Vector2(-10, -2), Vector2(hire_rect.size.x - 20, 35))
 	personnel_training_button.add_theme_font_size_override("font_size", 13)
+	personnel_training_button.clip_text = true
+	personnel_training_button.custom_minimum_size = Vector2.ZERO
 	personnel_training_button.pressed.connect(_train_selected_personnel)
 	personnel_layer.add_child(personnel_training_button)
 
+	personnel_specializations_button = _button("СПЕЦИАЛИЗАЦИИ", hire_rect.position + Vector2(10, -2), Vector2(hire_rect.size.x - 20, 35))
+	personnel_specializations_button.add_theme_font_size_override("font_size", 12)
+	personnel_specializations_button.clip_text = true
+	personnel_specializations_button.custom_minimum_size = Vector2.ZERO
+	personnel_specializations_button.size = Vector2(hire_rect.size.x - 20, 35)
+	personnel_specializations_button.pressed.connect(_open_specializations)
+	personnel_layer.add_child(personnel_specializations_button)
+	_build_specialization_dialog()
+
 	_refresh_personnel()
+
+
+func _build_specialization_dialog() -> void:
+	specialization_layer = Control.new()
+	specialization_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	specialization_layer.visible = false
+	specialization_layer.z_index = 120
+	personnel_layer.add_child(specialization_layer)
+
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.015, 0.01, 0.008, 0.76)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	specialization_layer.add_child(shade)
+
+	var panel := _panel(Vector2(500, 190), Vector2(600, 520), 14)
+	specialization_layer.add_child(panel)
+	specialization_title = _label("СПЕЦИАЛИЗАЦИИ", 26, COLOR_GOLD)
+	specialization_title.position = Vector2(35, 30)
+	specialization_title.size = Vector2(530, 42)
+	specialization_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(specialization_title)
+	var explanation := _label("У сотрудника две ячейки.\nЗабытая способность исчезнет из доступных действий.\nПри необходимости её можно изучить заново.", 16, COLOR_PARCHMENT)
+	explanation.position = Vector2(48, 84)
+	explanation.size = Vector2(504, 66)
+	explanation.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	explanation.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	explanation.clip_text = true
+	panel.add_child(explanation)
+	specialization_slots = VBoxContainer.new()
+	specialization_slots.position = Vector2(60, 166)
+	specialization_slots.size = Vector2(480, 150)
+	specialization_slots.add_theme_constant_override("separation", 14)
+	panel.add_child(specialization_slots)
+	specialization_notice = _label("", 14, Color(0.96, 0.62, 0.35))
+	specialization_notice.position = Vector2(55, 330)
+	specialization_notice.size = Vector2(490, 50)
+	specialization_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	specialization_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(specialization_notice)
+	var close_button := _button("ЗАКРЫТЬ", Vector2(150, 420), Vector2(300, 54))
+	close_button.pressed.connect(_close_specializations)
+	panel.add_child(close_button)
+
+	specialization_confirm_layer = Control.new()
+	specialization_confirm_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	specialization_confirm_layer.visible = false
+	specialization_confirm_layer.z_index = 130
+	personnel_layer.add_child(specialization_confirm_layer)
+	var confirm_shade := ColorRect.new()
+	confirm_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	confirm_shade.color = Color(0.015, 0.01, 0.008, 0.82)
+	confirm_shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	specialization_confirm_layer.add_child(confirm_shade)
+	var confirm_panel := _panel(Vector2(530, 305), Vector2(540, 290), 14)
+	specialization_confirm_layer.add_child(confirm_panel)
+	var confirm_title := _label("ЗАБЫТЬ СПЕЦИАЛИЗАЦИЮ?", 23, COLOR_GOLD)
+	confirm_title.position = Vector2(30, 30)
+	confirm_title.size = Vector2(480, 38)
+	confirm_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	confirm_panel.add_child(confirm_title)
+	specialization_confirm_text = _label("", 17, COLOR_PARCHMENT)
+	specialization_confirm_text.position = Vector2(45, 86)
+	specialization_confirm_text.size = Vector2(450, 80)
+	specialization_confirm_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	specialization_confirm_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	confirm_panel.add_child(specialization_confirm_text)
+	var confirm_button := _button("ЗАБЫТЬ", Vector2(45, 205), Vector2(210, 52))
+	confirm_button.pressed.connect(_confirm_forget_specialization)
+	confirm_panel.add_child(confirm_button)
+	var cancel_button := _button("ОТМЕНА", Vector2(285, 205), Vector2(210, 52))
+	cancel_button.pressed.connect(_cancel_forget_specialization)
+	confirm_panel.add_child(cancel_button)
 
 
 func _build_supply_shop() -> void:
@@ -848,6 +940,10 @@ func _dismiss_job_report() -> void:
 
 func _select_personnel_employee(employee_id: StringName) -> void:
 	selected_employee_id = employee_id
+	if specialization_layer != null:
+		specialization_layer.visible = false
+	if specialization_confirm_layer != null:
+		specialization_confirm_layer.visible = false
 	_refresh_personnel()
 
 
@@ -857,6 +953,85 @@ func _hire_selected_personnel() -> void:
 
 func _train_selected_personnel() -> void:
 	game_state.train_employee(selected_employee_id, &"animate")
+
+
+func _open_specializations() -> void:
+	if not bool(game_state.employees[selected_employee_id]["available"]):
+		return
+	pending_forget_ability_id = &""
+	specialization_confirm_layer.visible = false
+	specialization_layer.visible = true
+	_refresh_specialization_dialog()
+
+
+func _close_specializations() -> void:
+	pending_forget_ability_id = &""
+	specialization_confirm_layer.visible = false
+	specialization_layer.visible = false
+
+
+func _refresh_specialization_dialog() -> void:
+	if specialization_slots == null or not game_state.employees.has(selected_employee_id):
+		return
+	_clear(specialization_slots)
+	var employee: Dictionary = game_state.employees[selected_employee_id]
+	specialization_title.text = "СПЕЦИАЛИЗАЦИИ • %s" % employee["name"]
+	var abilities: PackedStringArray = employee["abilities"]
+	var slot_count: int = int(employee.get("max_special_abilities", 2))
+	for slot_index in slot_count:
+		if slot_index >= abilities.size():
+			var empty_button := _button("ЯЧЕЙКА %d • СВОБОДНА" % (slot_index + 1), Vector2.ZERO, Vector2(480, 58))
+			empty_button.disabled = true
+			specialization_slots.add_child(empty_button)
+			continue
+		var ability_id := StringName(abilities[slot_index])
+		var forget_state: StringName = game_state.get_forget_availability(selected_employee_id, ability_id)
+		var ability_button := _button("%s  •  ЗАБЫТЬ" % game_state.get_ability_name(ability_id).to_upper(), Vector2.ZERO, Vector2(480, 58))
+		ability_button.disabled = forget_state != &"available"
+		ability_button.tooltip_text = _forget_state_text(forget_state)
+		ability_button.pressed.connect(_request_forget_specialization.bind(ability_id))
+		specialization_slots.add_child(ability_button)
+	var general_state: StringName = game_state.get_forget_availability(selected_employee_id, StringName(abilities[0])) if not abilities.is_empty() else &"available"
+	specialization_notice.text = _forget_state_text(general_state) if general_state != &"available" else "Выберите занятую ячейку, чтобы освободить её."
+
+
+func _request_forget_specialization(ability_id: StringName) -> void:
+	if game_state.get_forget_availability(selected_employee_id, ability_id) != &"available":
+		_refresh_specialization_dialog()
+		return
+	pending_forget_ability_id = ability_id
+	specialization_confirm_text.text = "%s забудет специализацию «%s». Это действие нельзя отменить без повторного обучения." % [
+		game_state.employees[selected_employee_id]["name"], game_state.get_ability_name(ability_id),
+	]
+	specialization_confirm_layer.visible = true
+
+
+func _cancel_forget_specialization() -> void:
+	pending_forget_ability_id = &""
+	specialization_confirm_layer.visible = false
+
+
+func _confirm_forget_specialization() -> void:
+	if not pending_forget_ability_id.is_empty():
+		game_state.forget_employee_ability(selected_employee_id, pending_forget_ability_id)
+	pending_forget_ability_id = &""
+	specialization_confirm_layer.visible = false
+	_refresh_specialization_dialog()
+
+
+func _forget_state_text(state: StringName) -> String:
+	match state:
+		&"available":
+			return "Специализацию можно забыть."
+		&"assigned":
+			return "Сначала снимите сотрудника с заявки."
+		&"returning":
+			return "Дождитесь возвращения сотрудника."
+		&"training":
+			return "Нельзя забывать способности во время обучения."
+		&"not_hired":
+			return "Сотрудник ещё не нанят."
+	return "Специализацию сейчас нельзя забыть."
 
 
 func _buy_animation_kit() -> void:
@@ -931,23 +1106,26 @@ func _refresh_personnel() -> void:
 	personnel_strength.text = employee["strength"]
 	personnel_weakness.text = employee["weakness"]
 	var abilities: PackedStringArray = employee["abilities"]
-	var specialization: String = str(employee["core_actions"])
-	if abilities.has("animate"):
-		specialization += " • Оживление"
+	var specialization: String = _employee_specialization_text(employee)
 	var training_state: StringName = game_state.get_training_availability(selected_employee_id, &"animate")
 	var training_definition: Dictionary = game_state.TRAINING_DEFINITIONS[&"animate"]
 	personnel_traits.text = "ОСОБЕННОСТИ\n%s\n\nСПЕЦИАЛИЗАЦИЯ\n%s\n\nКУРС «%s»\n%s" % [
 		employee["traits"], specialization, training_definition["name"], _training_state_text(training_state, employee),
 	]
 	var is_candidate: bool = not bool(employee["available"])
+	var specialization_slots_full: bool = abilities.size() >= int(employee.get("max_special_abilities", 2))
 	personnel_status.visible = false
 	personnel_hire_button.visible = is_candidate
-	personnel_training_button.visible = not is_candidate
+	personnel_training_button.visible = not is_candidate and not specialization_slots_full
+	personnel_specializations_button.visible = not is_candidate and specialization_slots_full
 	if is_candidate:
 		var hire_cost := int(employee.get("hire_cost", 0))
 		personnel_hire_button.disabled = game_state.money < hire_cost
 		personnel_hire_button.text = "НАНЯТЬ • %d МОНЕТ" % hire_cost if not personnel_hire_button.disabled else "НУЖНО %d МОНЕТ" % hire_cost
 	else:
+		var action_rect := _personnel_guide_rect("StatusArea")
+		personnel_training_button.position = action_rect.position + Vector2(-10 if training_state == &"available" else 10, -2)
+		personnel_training_button.size = Vector2(action_rect.size.x - 20, 35)
 		personnel_training_button.disabled = training_state != &"available"
 		match training_state:
 			&"available":
@@ -994,6 +1172,16 @@ func _training_state_text(training_state: StringName, employee: Dictionary) -> S
 		&"not_hired":
 			return "Сначала сотрудника нужно нанять."
 	return "Курс пока недоступен."
+
+
+func _employee_specialization_text(employee: Dictionary) -> String:
+	var specialization_names := PackedStringArray()
+	var abilities: PackedStringArray = employee["abilities"]
+	for ability_id_string: String in abilities:
+		specialization_names.append(game_state.get_ability_name(StringName(ability_id_string)))
+	if specialization_names.is_empty():
+		return "Нет изученных специализаций"
+	return " • ".join(specialization_names)
 
 
 func _rebuild_jobs() -> void:
@@ -1067,7 +1255,7 @@ func _rebuild_employees() -> void:
 		role_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(role_label)
 
-		var method_label := _label(employee["core_actions"], 13, COLOR_MUTED)
+		var method_label := _label(_employee_specialization_text(employee), 13, COLOR_MUTED)
 		method_label.position = Vector2(180, 92)
 		method_label.size = Vector2(198, 58)
 		method_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

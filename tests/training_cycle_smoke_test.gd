@@ -27,8 +27,21 @@ func _run() -> void:
 	root.add_child(office)
 	await process_frame
 	office._open_personnel()
+	var status_guide: Rect2 = office._personnel_guide_rect("StatusArea")
+	_check(office.personnel_specializations_button.visible and not office.personnel_training_button.visible, "При заполненных ячейках управление заменяет бесполезную кнопку курса")
+	_check(is_equal_approx(office.personnel_specializations_button.position.x + office.personnel_specializations_button.size.x * 0.5, status_guide.get_center().x), "Управление специализациями расположено по центру области")
+	office._select_personnel_employee(&"grog")
+	_check("КУРС НЕ ПОДХОДИТ" in office.personnel_training_button.text, "Грог показывает состояние несовместимого курса")
+	_check(is_equal_approx(office.personnel_training_button.position.x + office.personnel_training_button.size.x * 0.5, status_guide.get_center().x), "Неактивное состояние курса расположено по центру")
 	office._select_personnel_employee(&"nika")
 	_check("НАЧАТЬ КУРС" in office.personnel_training_button.text, "Кадровый экран предлагает начать доступный курс")
+	office._open_specializations()
+	_check(office.specialization_slots.get_child_count() == 2, "Окно специализаций показывает две ячейки")
+	_check("ТЕЛЕКИНЕЗ" in office.specialization_slots.get_child(0).text and "СВОБОДНА" in office.specialization_slots.get_child(1).text, "Занятая и свободная ячейки подписаны")
+	office.specialization_slots.get_child(0).pressed.emit()
+	_check(office.specialization_confirm_layer.visible, "Забывание требует отдельного подтверждения")
+	office._cancel_forget_specialization()
+	office._close_specializations()
 	var course_guide: Rect2 = office._personnel_guide_rect("StatusArea")
 	_check(office.personnel_training_button.position.x < course_guide.position.x, "Кнопка курса сдвинута левее")
 	_check(office.personnel_training_button.position.x + office.personnel_training_button.size.x < course_guide.end.x, "Кнопка курса не выходит за правый край рамки")
@@ -40,6 +53,7 @@ func _run() -> void:
 	_check(returning_status == "Возвращается\nПрибудет в 09:36", "Статус возвращения разбит на две строки карточки")
 	office.personnel_training_button.pressed.emit()
 	_check(game_state.is_employee_training(&"nika"), "Обучение начинается из кадрового экрана")
+	_check(not game_state.forget_employee_ability(&"nika", &"telekinesis"), "Во время обучения специализацию забыть нельзя")
 	_check("ОБУЧЕНИЕ ИДЁТ" in office.personnel_training_button.text, "Кадровый экран показывает срок обучения")
 
 	game_state.assign_employee(&"nika", &"lava_leak")
@@ -61,6 +75,10 @@ func _run() -> void:
 		game_state.employees[&"felix"], &"antimagic", WARDROBE_SIMULATION_SCRIPT.new().world_object
 	)
 	_check(felix_reaction != "Подавление чар — не ремонт." and not felix_reaction.is_empty(), "Феликс использует выбранные контекстные реплики")
+	_check(game_state.forget_employee_ability(&"nika", &"animate"), "Изученную специализацию можно забыть после обучения")
+	_check(not (game_state.employees[&"nika"]["abilities"] as PackedStringArray).has("animate"), "Забытая специализация исчезает из действий")
+	_check(not (game_state.employees[&"nika"]["learned_abilities"] as PackedStringArray).has("animate"), "Забытая специализация удаляется из прогресса")
+	_check(game_state.get_training_availability(&"nika", &"animate") == &"available", "Забытую специализацию можно изучить заново")
 	_finish()
 
 
