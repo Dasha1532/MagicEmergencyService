@@ -245,7 +245,7 @@ grow_vertical = 2
 mouse_default_cursor_shape = 2
 
 [node name="Target" type="Marker2D" parent="PortalMirror" unique_id=401803174]
-position = Vector2(205, 330)
+position = Vector2(92, 320)
 gizmo_extents = 20.0
 
 [node name="EmployeeActor" parent="." unique_id=1756788923 instance=ExtResource("6_actor")]

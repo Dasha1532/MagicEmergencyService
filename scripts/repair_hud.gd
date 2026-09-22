@@ -9,6 +9,7 @@ const COLOR_SELECTED := Color(0.10, 0.16, 0.18, 0.98)
 const COLOR_BRASS := Color(0.76, 0.54, 0.27)
 const COLOR_GOLD := Color(0.96, 0.78, 0.46)
 const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
+const RESIDENT_DIALOGUE_PANEL_SCENE := preload("res://scenes/ui/ResidentDialoguePanel.tscn")
 
 var selected_employee_id: StringName = &""
 var employee_box: HBoxContainer
@@ -21,6 +22,10 @@ var employee_reaction_label: Label
 var employee_reaction_heading: Label
 var dialogue_portrait_frame: Panel
 var dialogue_portrait: TextureRect
+var portrait_heading_position: Vector2
+var portrait_heading_size: Vector2
+var portrait_label_position: Vector2
+var portrait_label_size: Vector2
 var work_ui_visible: bool = true
 var queued_dialogues: Array[Dictionary] = []
 @onready var game_state: Node = get_node("/root/GameState")
@@ -71,8 +76,8 @@ func _build_employee_selector() -> void:
 	var content_width: int = employee_count * card_width + maxi(employee_count - 1, 0) * card_gap
 
 	employee_panel = Panel.new()
-	employee_panel.position = Vector2(20, 745)
-	employee_panel.size = Vector2(viewport_width + 24, 135)
+	employee_panel.position = Vector2(20, 730)
+	employee_panel.size = Vector2(viewport_width + 24, 150)
 	employee_panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
 	add_child(employee_panel)
 
@@ -84,13 +89,13 @@ func _build_employee_selector() -> void:
 
 	var employee_scroll := ScrollContainer.new()
 	employee_scroll.position = Vector2(12, 38)
-	employee_scroll.size = Vector2(viewport_width, 87)
+	employee_scroll.size = Vector2(viewport_width, 102)
 	employee_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	employee_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	employee_panel.add_child(employee_scroll)
 
 	employee_box = HBoxContainer.new()
-	employee_box.custom_minimum_size = Vector2(maxi(content_width, viewport_width), 76)
+	employee_box.custom_minimum_size = Vector2(maxi(content_width, viewport_width), 91)
 	employee_box.add_theme_constant_override("separation", 7)
 	employee_scroll.add_child(employee_box)
 
@@ -101,7 +106,7 @@ func _build_employee_selector() -> void:
 func _add_employee_button(employee_id: StringName) -> void:
 	var employee: Dictionary = game_state.employees[employee_id]
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(297, 76)
+	button.custom_minimum_size = Vector2(297, 91)
 	button.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_BRASS, 2, 7))
 	button.add_theme_stylebox_override("hover", _style(Color(0.21, 0.14, 0.075, 0.98), COLOR_GOLD, 2, 7))
 	button.add_theme_stylebox_override("pressed", _style(COLOR_SELECTED, COLOR_GOLD, 3, 7))
@@ -111,7 +116,7 @@ func _add_employee_button(employee_id: StringName) -> void:
 
 	var portrait_frame := Panel.new()
 	portrait_frame.position = Vector2(7, 5)
-	portrait_frame.size = Vector2(68, 66)
+	portrait_frame.size = Vector2(82, 81)
 	portrait_frame.clip_contents = true
 	portrait_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait_frame.add_theme_stylebox_override("panel", _style(Color(0.035, 0.03, 0.028, 1), COLOR_BRASS, 1, 5))
@@ -119,7 +124,7 @@ func _add_employee_button(employee_id: StringName) -> void:
 
 	var portrait := TextureRect.new()
 	portrait.position = Vector2(1, 1)
-	portrait.size = Vector2(66, 64)
+	portrait.size = Vector2(80, 79)
 	portrait.texture = _cropped_portrait(employee)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -127,15 +132,15 @@ func _add_employee_button(employee_id: StringName) -> void:
 	portrait_frame.add_child(portrait)
 
 	var name_label := _label(str(employee["name"]), 15, COLOR_GOLD)
-	name_label.position = Vector2(82, 6)
-	name_label.size = Vector2(203, 26)
+	name_label.position = Vector2(96, 9)
+	name_label.size = Vector2(189, 28)
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	button.add_child(name_label)
 
 	var role_label := _label(str(employee["core_actions"]), 13, COLOR_PARCHMENT)
-	role_label.position = Vector2(82, 30)
-	role_label.size = Vector2(203, 40)
+	role_label.position = Vector2(96, 38)
+	role_label.size = Vector2(189, 45)
 	role_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	role_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	role_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -169,51 +174,22 @@ func _build_complete_button() -> void:
 
 
 func _build_employee_reaction_panel() -> void:
-	employee_reaction_panel = Panel.new()
-	employee_reaction_panel.position = Vector2(20, 730)
-	employee_reaction_panel.size = Vector2(1560, 150)
+	employee_reaction_panel = RESIDENT_DIALOGUE_PANEL_SCENE.instantiate() as Panel
 	employee_reaction_panel.visible = false
-	employee_reaction_panel.add_theme_stylebox_override("panel", _style(Color(0.055, 0.07, 0.085, 0.97), COLOR_GOLD, 2, 10))
 	add_child(employee_reaction_panel)
 
-	dialogue_portrait_frame = Panel.new()
-	dialogue_portrait_frame.position = Vector2(24, 16)
-	dialogue_portrait_frame.size = Vector2(102, 116)
+	dialogue_portrait_frame = employee_reaction_panel.get_node("PortraitFrame") as Panel
 	dialogue_portrait_frame.visible = false
-	dialogue_portrait_frame.clip_contents = true
-	dialogue_portrait_frame.add_theme_stylebox_override("panel", _style(Color(0.035, 0.03, 0.028, 1), COLOR_BRASS, 1, 6))
-	employee_reaction_panel.add_child(dialogue_portrait_frame)
+	dialogue_portrait = dialogue_portrait_frame.get_node("Portrait") as TextureRect
+	employee_reaction_heading = employee_reaction_panel.get_node("SpeakerName") as Label
+	employee_reaction_label = employee_reaction_panel.get_node("Message") as Label
+	portrait_heading_position = employee_reaction_heading.position
+	portrait_heading_size = employee_reaction_heading.size
+	portrait_label_position = employee_reaction_label.position
+	portrait_label_size = employee_reaction_label.size
 
-	dialogue_portrait = TextureRect.new()
-	dialogue_portrait.position = Vector2(1, 1)
-	dialogue_portrait.size = Vector2(100, 114)
-	dialogue_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	dialogue_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	dialogue_portrait_frame.add_child(dialogue_portrait)
-
-	employee_reaction_heading = _label("СОТРУДНИК", 15, COLOR_GOLD)
-	employee_reaction_heading.position = Vector2(24, 14)
-	employee_reaction_heading.size = Vector2(1260, 24)
-	employee_reaction_panel.add_child(employee_reaction_heading)
-
-	employee_reaction_label = _label("", 17, COLOR_PARCHMENT)
-	employee_reaction_label.position = Vector2(24, 44)
-	employee_reaction_label.size = Vector2(1260, 88)
-	employee_reaction_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	employee_reaction_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	employee_reaction_panel.add_child(employee_reaction_label)
-
-	var close_button := Button.new()
-	close_button.text = "ХОРОШО"
-	close_button.position = Vector2(1320, 48)
-	close_button.size = Vector2(210, 58)
-	close_button.add_theme_font_size_override("font_size", 17)
-	close_button.add_theme_color_override("font_color", COLOR_GOLD)
-	close_button.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_GOLD, 2, 8))
-	close_button.add_theme_stylebox_override("hover", _style(COLOR_SELECTED, COLOR_GOLD, 3, 8))
-	close_button.tooltip_text = "Закрыть сообщение"
+	var close_button := employee_reaction_panel.get_node("CloseButton") as Button
 	close_button.pressed.connect(clear_employee_reaction)
-	employee_reaction_panel.add_child(close_button)
 
 
 func show_employee_reaction(employee_id: StringName, message: String) -> void:
@@ -234,7 +210,7 @@ func show_resident_dialogue(message: String) -> void:
 		return
 	var job: Dictionary = game_state.get_active_job()
 	queued_dialogues.clear()
-	_display_dialogue(str(job.get("resident", "Жилец")), message, false, _load_portrait(str(job.get("resident_portrait", ""))))
+	_display_dialogue(str(job.get("resident", "Жилец")), message, false, _resident_portrait(job))
 
 
 func queue_dialogue(speaker: String, message: String, is_warning: bool = false) -> void:
@@ -254,7 +230,7 @@ func queue_resident_dialogue(message: String) -> void:
 		"speaker": str(job.get("resident", "Жилец")),
 		"message": message,
 		"warning": false,
-		"portrait": _load_portrait(str(job.get("resident_portrait", ""))),
+		"portrait": _resident_portrait(job),
 	}
 	if employee_reaction_panel.visible and not employee_reaction_label.text.is_empty():
 		_push_queued_dialogue(dialogue)
@@ -293,14 +269,31 @@ func _load_portrait(path: String) -> Texture2D:
 	return load(path) as Texture2D
 
 
+func _resident_portrait(job: Dictionary) -> Texture2D:
+	var texture: Texture2D = _load_portrait(str(job.get("resident_portrait", "")))
+	if texture == null:
+		return null
+	var configured_region: Variant = job.get("resident_portrait_region", Rect2())
+	if not configured_region is Rect2:
+		return texture
+	var region: Rect2 = configured_region
+	if region.size == Vector2.ZERO:
+		return texture
+	var portrait := AtlasTexture.new()
+	portrait.atlas = texture
+	portrait.region = region
+	portrait.filter_clip = true
+	return portrait
+
+
 func _display_dialogue(speaker: String, message: String, is_warning: bool, portrait_texture: Texture2D = null) -> void:
 	var has_portrait: bool = portrait_texture != null
 	dialogue_portrait_frame.visible = has_portrait
 	dialogue_portrait.texture = portrait_texture
-	employee_reaction_heading.position.x = 144.0 if has_portrait else 24.0
-	employee_reaction_heading.size.x = 1140.0 if has_portrait else 1260.0
-	employee_reaction_label.position.x = 144.0 if has_portrait else 24.0
-	employee_reaction_label.size.x = 1140.0 if has_portrait else 1260.0
+	employee_reaction_heading.position = portrait_heading_position if has_portrait else Vector2(24, portrait_heading_position.y)
+	employee_reaction_heading.size = portrait_heading_size if has_portrait else Vector2(1260, portrait_heading_size.y)
+	employee_reaction_label.position = portrait_label_position if has_portrait else Vector2(24, portrait_label_position.y)
+	employee_reaction_label.size = portrait_label_size if has_portrait else Vector2(1260, portrait_label_size.y)
 	employee_reaction_heading.text = speaker
 	employee_reaction_label.text = message
 	employee_reaction_label.add_theme_color_override("font_color", Color(1.0, 0.58, 0.35) if is_warning else COLOR_PARCHMENT)

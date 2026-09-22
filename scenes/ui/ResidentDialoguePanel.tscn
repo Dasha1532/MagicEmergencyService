@@ -1,0 +1,127 @@
+[gd_scene format=3 uid="uid://yvgwgemhq5l8"]
+
+[ext_resource type="Texture2D" uid="uid://dwbyyr7r77jek" path="res://assets/portraits/residents/selesta.png" id="1_preview"]
+
+[sub_resource type="StyleBoxFlat" id="StylePanel"]
+bg_color = Color(0.055, 0.07, 0.085, 0.97)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.96, 0.78, 0.46, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StylePortrait"]
+bg_color = Color(0.035, 0.03, 0.028, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.76, 0.54, 0.27, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleButtonNormal"]
+bg_color = Color(0.13, 0.09, 0.055, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.96, 0.78, 0.46, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleButtonHover"]
+bg_color = Color(0.1, 0.16, 0.18, 0.98)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.96, 0.78, 0.46, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="ResidentDialoguePanel" type="Panel" unique_id=1114708419]
+offset_left = 20.0
+offset_top = 730.0
+offset_right = 1580.0
+offset_bottom = 880.0
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StylePanel")
+
+[node name="PortraitFrame" type="Panel" parent="." unique_id=1746293914]
+z_index = 1
+clip_contents = true
+layout_mode = 0
+offset_left = 13.0
+offset_top = -98.0
+offset_right = 256.0
+offset_bottom = 137.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StylePortrait")
+
+[node name="Portrait" type="TextureRect" parent="PortraitFrame" unique_id=781053652]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("1_preview")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SpeakerName" type="Label" parent="." unique_id=945944593]
+layout_mode = 0
+offset_left = 310.0
+offset_top = 14.0
+offset_right = 1284.0
+offset_bottom = 38.0
+theme_override_colors/font_color = Color(0.96, 0.78, 0.46, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 15
+text = "ИМЯ ЖИЛЬЦА"
+
+[node name="Message" type="Label" parent="." unique_id=732988527]
+layout_mode = 0
+offset_left = 310.0
+offset_top = 44.0
+offset_right = 1284.0
+offset_bottom = 132.0
+theme_override_colors/font_color = Color(0.92, 0.84, 0.69, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 17
+text = "Здесь будет реплика жильца."
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="CloseButton" type="Button" parent="." unique_id=1080415419]
+layout_mode = 0
+offset_left = 1320.0
+offset_top = 48.0
+offset_right = 1530.0
+offset_bottom = 106.0
+tooltip_text = "Закрыть сообщение"
+theme_override_colors/font_color = Color(0.96, 0.78, 0.46, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleButtonNormal")
+theme_override_styles/hover = SubResource("StyleButtonHover")
+text = "ХОРОШО"
