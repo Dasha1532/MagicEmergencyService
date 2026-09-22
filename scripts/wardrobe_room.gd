@@ -275,6 +275,7 @@ func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, intent)
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, intent)
+	game_state.advance_time(game_state.ACTION_TIME_MINUTES)
 	_apply_visual_state()
 	var resident_message: String = simulation.get_resident_reaction()
 	if action_id == &"diagnose":

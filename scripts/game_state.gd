@@ -4,8 +4,11 @@ signal state_changed
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 5
+const SAVE_VERSION: int = 7
 const SAVE_PATH: String = "user://savegame.json"
+const TRAVEL_TIME_MINUTES: int = 15
+const ACTION_TIME_MINUTES: int = 10
+const OVERDUE_PAYMENT_PENALTY: int = 100
 const SUPPLY_ITEMS: Dictionary = {
 	&"animation_kit": {
 		"name": "Практическое оживление бытовых предметов",
@@ -177,7 +180,11 @@ var jobs: Dictionary = {
 		"resident_portrait_region": Rect2(0, 0, 1122, 1402),
 		"description": "В ванной демона из трубы идёт лава. Поток усиливается, а старая медная труба уже нагрелась.",
 		"urgency": "Срочно",
+		"initial_time": 95,
 		"time_left": 95,
+		"unlocked": true,
+		"overdue": false,
+		"dispatched": false,
 		"danger": "Огонь • давление",
 		"base_reward": 500,
 		"repair_scene": "res://scenes/RepairHouse.tscn",
@@ -192,7 +199,11 @@ var jobs: Dictionary = {
 		"resident_portrait_region": Rect2(0, 0, 1122, 1402),
 		"description": "Зачарованный шкаф ходит по комнатам, гремит хрупкой посудой и не позволяет хозяйке открыть входную дверь.",
 		"urgency": "Важно",
-		"time_left": 180,
+		"initial_time": 90,
+		"time_left": 90,
+		"unlocked": false,
+		"overdue": false,
+		"dispatched": false,
 		"danger": "Магия • шум",
 		"base_reward": 420,
 		"repair_scene": "res://scenes/WardrobeRoom.tscn",
@@ -207,7 +218,11 @@ var jobs: Dictionary = {
 		"resident_portrait_region": Rect2(0, 0, 1024, 1536),
 		"description": "Старинное зеркало превратилось в нестабильный портал. Из отражения доносятся голоса, а магическое поле в комнате усиливается.",
 		"urgency": "Срочно",
-		"time_left": 120,
+		"initial_time": 65,
+		"time_left": 65,
+		"unlocked": false,
+		"overdue": false,
+		"dispatched": false,
 		"danger": "Магия • портал",
 		"base_reward": 600,
 		"repair_scene": "res://scenes/PortalMirrorHouse.tscn",
@@ -219,12 +234,16 @@ var jobs: Dictionary = {
 func assign_employee(employee_id: StringName, job_id: StringName) -> void:
 	if not employees.has(employee_id) or not jobs.has(job_id):
 		return
+	if not is_job_available(job_id):
+		return
 	if not employees[employee_id]["available"]:
 		return
 	if is_employee_training(employee_id):
 		return
-
 	var current_job := get_employee_job(employee_id)
+	if (not current_job.is_empty() and is_job_dispatched(current_job)) or is_job_dispatched(job_id):
+		return
+
 	if current_job == job_id:
 		var selected_job: Dictionary = jobs[job_id]
 		var selected_assigned: PackedStringArray = selected_job["assigned"]
@@ -365,6 +384,34 @@ func get_active_job_repair_scene() -> String:
 	return get_job_repair_scene(active_job_id)
 
 
+func is_job_available(job_id: StringName) -> bool:
+	return jobs.has(job_id) and bool(jobs[job_id].get("unlocked", false)) and not completed_job_ids.has(String(job_id))
+
+
+func is_job_dispatched(job_id: StringName) -> bool:
+	return jobs.has(job_id) and bool(jobs[job_id].get("dispatched", false))
+
+
+func advance_time(minutes: int, excluded_job_id: StringName = &"") -> PackedStringArray:
+	var newly_overdue := PackedStringArray()
+	if minutes <= 0:
+		return newly_overdue
+	time_minutes += minutes
+	for job_id: StringName in jobs:
+		if job_id == excluded_job_id or not is_job_available(job_id):
+			continue
+		var job: Dictionary = jobs[job_id]
+		var previous_time: int = maxi(0, int(job.get("time_left", 0)))
+		var remaining_time: int = maxi(0, previous_time - minutes)
+		job["time_left"] = remaining_time
+		if previous_time > 0 and remaining_time == 0 and not bool(job.get("overdue", false)):
+			job["overdue"] = true
+			newly_overdue.append(String(job_id))
+		jobs[job_id] = job
+	state_changed.emit()
+	return newly_overdue
+
+
 func get_job_repair_state(job_id: StringName) -> Dictionary:
 	var state: Variant = job_repair_states.get(String(job_id), {})
 	if state is Dictionary:
@@ -381,7 +428,7 @@ func set_job_repair_state(job_id: StringName, repair_state: Dictionary) -> void:
 
 
 func begin_job(job_id: StringName) -> bool:
-	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
+	if not is_job_available(job_id):
 		return false
 	if get_job_repair_scene(job_id).is_empty():
 		return false
@@ -389,13 +436,34 @@ func begin_job(job_id: StringName) -> bool:
 	if assigned.is_empty():
 		return false
 	active_job_id = job_id
-	state_changed.emit()
+	if not is_job_dispatched(job_id):
+		var job: Dictionary = jobs[job_id]
+		job["dispatched"] = true
+		jobs[job_id] = job
+		advance_time(TRAVEL_TIME_MINUTES)
+	else:
+		state_changed.emit()
 	return true
 
 
 func leave_active_job() -> void:
 	active_job_id = &""
 	state_changed.emit()
+
+
+func recall_job(job_id: StringName) -> bool:
+	if not is_job_available(job_id) or not is_job_dispatched(job_id):
+		return false
+	advance_time(TRAVEL_TIME_MINUTES)
+	var job: Dictionary = jobs[job_id]
+	job["assigned"] = PackedStringArray()
+	job["dispatched"] = false
+	jobs[job_id] = job
+	if active_job_id == job_id:
+		active_job_id = &""
+	_update_employee_statuses()
+	state_changed.emit()
+	return true
 
 
 func complete_active_job(result: Dictionary = {}) -> bool:
@@ -406,7 +474,8 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		return false
 	var job: Dictionary = jobs[completed_id]
 	var base_reward: int = int(job.get("base_reward", 0))
-	var reward_adjustment: int = int(result.get("reward_adjustment", 0))
+	var overdue: bool = bool(job.get("overdue", false))
+	var reward_adjustment: int = int(result.get("reward_adjustment", 0)) - (OVERDUE_PAYMENT_PENALTY if overdue else 0)
 	var reward: int = maxi(0, base_reward + reward_adjustment)
 	var compensation: int = maxi(0, int(result.get("compensation_cost", 0)))
 	var assigned: PackedStringArray = job["assigned"]
@@ -415,11 +484,18 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		var employee_key: StringName = StringName(employee_id)
 		if employees.has(employee_key):
 			crew_names.append(str(employees[employee_key]["name"]))
+	# Обратная дорога происходит автоматически. Завершённая заявка уже не теряет срок,
+	# но все остальные открытые заявки продолжают ждать.
+	advance_time(TRAVEL_TIME_MINUTES, completed_id)
 	money += reward - compensation
-	reputation = maxi(0, reputation + int(result.get("reputation_change", 0)))
+	reputation = maxi(0, reputation + int(result.get("reputation_change", 0)) - (1 if overdue else 0))
 	completed_job_ids.append(String(completed_id))
 	job["assigned"] = PackedStringArray()
+	job["dispatched"] = false
 	jobs[completed_id] = job
+	var summary: String = str(result.get("summary", "Аварийные работы приняты."))
+	if overdue:
+		summary += " Заявка выполнена после истечения срока: из оплаты удержано %d монет." % OVERDUE_PAYMENT_PENALTY
 	pending_job_report = {
 		"job_id": String(completed_id),
 		"title": str(job["title"]),
@@ -431,11 +507,14 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		"compensation": compensation,
 		"net_change": reward - compensation,
 		"crew": Array(crew_names),
-		"summary": str(result.get("summary", "Аварийные работы приняты.")),
+		"summary": summary,
+		"overdue": overdue,
 		"follow_up": result.get("follow_up", {}),
 		"actions": result.get("actions", []),
 	}
 	job_reports.append(pending_job_report.duplicate(true))
+	if completed_id == &"lava_leak":
+		_unlock_parallel_jobs()
 	job_repair_states.erase(String(completed_id))
 	active_job_id = &""
 	_update_employee_statuses()
@@ -472,6 +551,10 @@ func start_new_game() -> void:
 	for job_id: StringName in jobs:
 		var job: Dictionary = jobs[job_id]
 		job["assigned"] = PackedStringArray()
+		job["time_left"] = int(job.get("initial_time", job.get("time_left", 0)))
+		job["overdue"] = false
+		job["unlocked"] = job_id == &"lava_leak"
+		job["dispatched"] = false
 		jobs[job_id] = job
 
 	_reset_employee(&"liliya", true, PackedStringArray(["freeze", "heat"]), "Свободна")
@@ -496,9 +579,16 @@ func _reset_employee(employee_id: StringName, available: bool, abilities: Packed
 
 func save_game() -> Error:
 	var job_assignments: Dictionary = {}
+	var job_progress: Dictionary = {}
 	for job_id: StringName in jobs:
 		var assigned: PackedStringArray = jobs[job_id]["assigned"]
 		job_assignments[String(job_id)] = Array(assigned)
+		job_progress[String(job_id)] = {
+			"time_left": int(jobs[job_id].get("time_left", 0)),
+			"overdue": bool(jobs[job_id].get("overdue", false)),
+			"unlocked": bool(jobs[job_id].get("unlocked", false)),
+			"dispatched": bool(jobs[job_id].get("dispatched", false)),
+		}
 
 	var employee_progress: Dictionary = {}
 	for employee_id: StringName in employees:
@@ -524,6 +614,7 @@ func save_game() -> Error:
 		"pending_job_report": pending_job_report,
 		"job_repair_states": job_repair_states,
 		"job_assignments": job_assignments,
+		"job_progress": job_progress,
 		"employee_progress": employee_progress,
 	}
 
@@ -579,6 +670,34 @@ func load_game() -> Error:
 			completed_job_ids.append(String(completed_id))
 	if completed_job_ids.has(String(active_job_id)):
 		active_job_id = &""
+
+	var loaded_job_progress: Dictionary = save_data.get("job_progress", {})
+	for job_id: StringName in jobs:
+		var job: Dictionary = jobs[job_id]
+		job["time_left"] = int(job.get("initial_time", job.get("time_left", 0)))
+		job["overdue"] = false
+		job["unlocked"] = job_id == &"lava_leak"
+		job["dispatched"] = false
+		if version < 6:
+			# Старые сохранения уже показывали все заявки; не скрываем начатый прогресс.
+			job["unlocked"] = true
+		elif loaded_job_progress.has(String(job_id)):
+			var progress: Dictionary = loaded_job_progress[String(job_id)]
+			job["time_left"] = maxi(0, int(progress.get("time_left", job["time_left"])))
+			job["overdue"] = bool(progress.get("overdue", false)) or int(job["time_left"]) == 0
+			job["unlocked"] = bool(progress.get("unlocked", job["unlocked"]))
+			job["dispatched"] = bool(progress.get("dispatched", false))
+		jobs[job_id] = job
+	if not active_job_id.is_empty() and jobs.has(active_job_id):
+		var active_job: Dictionary = jobs[active_job_id]
+		active_job["dispatched"] = true
+		jobs[active_job_id] = active_job
+	if completed_job_ids.has("lava_leak"):
+		_unlock_parallel_jobs()
+	if not active_job_id.is_empty() and not is_job_available(active_job_id):
+		active_job_id = &""
+	if not is_job_available(selected_job_id):
+		selected_job_id = _first_available_job_id()
 	job_reports = []
 	var loaded_reports: Array = save_data.get("job_reports", [])
 	for loaded_report: Variant in loaded_reports:
@@ -607,7 +726,7 @@ func load_game() -> Error:
 		var job: Dictionary = jobs[job_id]
 		var loaded_ids: Array = job_assignments.get(String(job_id), [])
 		var valid_ids := PackedStringArray()
-		if not completed_job_ids.has(String(job_id)):
+		if is_job_available(job_id):
 			for employee_id: Variant in loaded_ids:
 				var employee_key := StringName(str(employee_id))
 				if employees.has(employee_key) and not valid_ids.has(String(employee_key)):
@@ -664,6 +783,22 @@ func _remove_employee_from_all_jobs(employee_id: StringName) -> void:
 			assigned.remove_at(index)
 			job["assigned"] = assigned
 			jobs[job_id] = job
+
+
+func _unlock_parallel_jobs() -> void:
+	for job_id: StringName in PackedStringArray(["walking_wardrobe", "portal_mirror"]):
+		if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
+			continue
+		var job: Dictionary = jobs[job_id]
+		job["unlocked"] = true
+		jobs[job_id] = job
+
+
+func _first_available_job_id() -> StringName:
+	for job_id: StringName in jobs:
+		if is_job_available(job_id):
+			return job_id
+	return &""
 
 
 func _update_employee_statuses() -> void:

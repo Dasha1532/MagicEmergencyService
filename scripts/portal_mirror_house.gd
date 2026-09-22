@@ -138,6 +138,7 @@ func _on_tool_selected(action_id: StringName) -> void:
 
 func _on_action_impact(action_id: StringName) -> void:
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
+	game_state.advance_time(game_state.ACTION_TIME_MINUTES)
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	_apply_visual_state()
 	repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))

@@ -205,6 +205,7 @@ func _resolve_action(action_id: StringName) -> void:
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object)
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
+	game_state.advance_time(game_state.ACTION_TIME_MINUTES)
 	var visual_state: StringName = result.get("visual_state", &"emergency")
 	if visual_state == &"repaired":
 		lava_faucet.show_repaired_state()

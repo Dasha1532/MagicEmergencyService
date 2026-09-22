@@ -17,6 +17,7 @@ var employee_panel: Panel
 var complete_button: Button
 var tool_bar: MarginContainer
 var job_title_label: Label
+var job_time_label: Label
 var employee_reaction_panel: Panel
 var employee_reaction_label: Label
 var employee_reaction_heading: Label
@@ -42,6 +43,8 @@ func _ready() -> void:
 	_build_return_button()
 	_build_complete_button()
 	_build_employee_reaction_panel()
+	game_state.state_changed.connect(_refresh_job_time)
+	_refresh_job_time()
 	_select_first_employee()
 
 
@@ -53,16 +56,37 @@ func _build_job_header() -> void:
 	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
 	add_child(panel)
 
-	job_title_label = _label(job.get("objective", job.get("title", "Ремонт")), 23, COLOR_GOLD)
-	job_title_label.position = Vector2(18, 14)
-	job_title_label.size = Vector2(614, 36)
+	job_title_label = _label(job.get("objective", job.get("title", "Ремонт")), 20, COLOR_GOLD)
+	job_title_label.position = Vector2(18, 4)
+	job_title_label.size = Vector2(614, 32)
 	job_title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	panel.add_child(job_title_label)
+
+	job_time_label = _label("", 14, COLOR_PARCHMENT)
+	job_time_label.position = Vector2(18, 34)
+	job_time_label.size = Vector2(614, 24)
+	job_time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	panel.add_child(job_time_label)
 
 
 func set_job_title(title: String) -> void:
 	if job_title_label != null:
 		job_title_label.text = title
+
+
+func _refresh_job_time() -> void:
+	if job_time_label == null:
+		return
+	var job: Dictionary = game_state.get_active_job()
+	if job.is_empty():
+		job_time_label.text = game_state.format_time()
+		return
+	if bool(job.get("overdue", false)):
+		job_time_label.text = "%s  •  СРОК ИСТЁК" % game_state.format_time()
+		job_time_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.28))
+	else:
+		job_time_label.text = "%s  •  осталось %d мин." % [game_state.format_time(), int(job.get("time_left", 0))]
+		job_time_label.add_theme_color_override("font_color", COLOR_PARCHMENT)
 
 
 func _build_employee_selector() -> void:
@@ -149,7 +173,7 @@ func _add_employee_button(employee_id: StringName) -> void:
 
 func _build_return_button() -> void:
 	var button := Button.new()
-	button.text = "←  ВЕРНУТЬСЯ В ОФИС"
+	button.text = "←  ОТКРЫТЬ ОФИС"
 	button.position = Vector2(1325, 24)
 	button.size = Vector2(253, 54)
 	button.add_theme_font_size_override("font_size", 17)

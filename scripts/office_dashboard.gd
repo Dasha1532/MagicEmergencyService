@@ -23,6 +23,7 @@ var detail_body: Label
 var assignment_label: Label
 var warning_label: Label
 var depart_button: Button
+var recall_button: Button
 var dashboard_layer: Control
 var hub_layer: Control
 var personnel_layer: Control
@@ -153,26 +154,32 @@ func _build_detail_panel() -> void:
 	panel.add_child(detail_title)
 
 	detail_body = _label("", 17, COLOR_PARCHMENT)
-	detail_body.position = Vector2(22, 88)
-	detail_body.size = Vector2(371, 180)
+	detail_body.position = Vector2(22, 82)
+	detail_body.size = Vector2(371, 210)
 	detail_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail_body.clip_contents = true
 	panel.add_child(detail_body)
 
 	assignment_label = _label("", 16, COLOR_GOLD)
-	assignment_label.position = Vector2(22, 274)
-	assignment_label.size = Vector2(371, 58)
+	assignment_label.position = Vector2(22, 296)
+	assignment_label.size = Vector2(371, 38)
 	assignment_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	panel.add_child(assignment_label)
 
 	warning_label = _label("", 14, Color(0.96, 0.62, 0.35))
-	warning_label.position = Vector2(22, 332)
-	warning_label.size = Vector2(371, 44)
+	warning_label.position = Vector2(22, 338)
+	warning_label.size = Vector2(371, 38)
 	warning_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	panel.add_child(warning_label)
 
 	depart_button = _button("ОТПРАВИТЬ БРИГАДУ", Vector2(22, 384), Vector2(371, 52))
 	depart_button.pressed.connect(_depart)
 	panel.add_child(depart_button)
+	recall_button = _button("ОТОЗВАТЬ • 15 МИН.", Vector2(216, 384), Vector2(177, 52))
+	recall_button.add_theme_font_size_override("font_size", 15)
+	recall_button.visible = false
+	recall_button.pressed.connect(_recall_crew)
+	panel.add_child(recall_button)
 
 
 func _build_employee_panel() -> void:
@@ -677,9 +684,10 @@ func _open_section(title_text: String, subtitle_text: String, description: Strin
 
 func _refresh() -> void:
 	game_state.selected_job_id = selected_job_id
-	if game_state.completed_job_ids.has(String(selected_job_id)):
+	if not game_state.is_job_available(selected_job_id):
+		selected_job_id = &""
 		for available_job_id: StringName in game_state.jobs:
-			if not game_state.completed_job_ids.has(String(available_job_id)):
+			if game_state.is_job_available(available_job_id):
 				selected_job_id = available_job_id
 				game_state.selected_job_id = available_job_id
 				break
@@ -828,13 +836,14 @@ func _refresh_personnel() -> void:
 func _rebuild_jobs() -> void:
 	_clear(job_list)
 	for job_id: StringName in game_state.jobs:
-		if game_state.completed_job_ids.has(String(job_id)):
+		if not game_state.is_job_available(job_id):
 			continue
 		var job: Dictionary = game_state.jobs[job_id]
 		var assigned: PackedStringArray = job["assigned"]
 		var crew_text := "Бригада не назначена" if assigned.is_empty() else "Назначено: %d" % assigned.size()
+		var deadline_text := "ПРОСРОЧЕНО" if bool(job.get("overdue", false)) else "осталось %d мин." % int(job["time_left"])
 		var button := _button(
-			"%s\n%s\n%s  •  осталось %d мин.\n%s" % [job["title"], job["address"], job["urgency"], job["time_left"], crew_text],
+			"%s\n%s\n%s  •  %s\n%s" % [job["title"], job["address"], job["urgency"], deadline_text, crew_text],
 			Vector2.ZERO,
 			Vector2(379, 150)
 		)
@@ -853,10 +862,11 @@ func _rebuild_employees() -> void:
 			continue
 		var assigned_job: StringName = game_state.get_employee_job(employee_id)
 		var selected: bool = assigned_job == selected_job_id
+		var locked_on_site: bool = not assigned_job.is_empty() and game_state.is_job_dispatched(assigned_job)
 		var card := _button("", Vector2.ZERO, Vector2(390, 225))
 		var is_training: bool = game_state.is_employee_training(employee_id)
-		card.disabled = is_training
-		card.tooltip_text = "Сотрудник заканчивает обучение на следующий день" if is_training else "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение"
+		card.disabled = is_training or locked_on_site
+		card.tooltip_text = "Сотрудник находится на объекте" if locked_on_site else ("Сотрудник заканчивает обучение на следующий день" if is_training else "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение")
 		card.add_theme_stylebox_override("normal", _style(COLOR_SELECTED if selected else COLOR_CARD, COLOR_GOLD if selected else COLOR_BRASS, 3 if selected else 2, 9))
 		card.pressed.connect(_toggle_employee.bind(employee_id))
 		employee_list.add_child(card)
@@ -906,6 +916,14 @@ func _rebuild_employees() -> void:
 
 
 func _refresh_details() -> void:
+	if selected_job_id.is_empty() or not game_state.is_job_available(selected_job_id):
+		detail_title.text = "Все доступные заявки выполнены"
+		detail_body.text = "Новые вызовы появятся на следующем этапе игрового цикла."
+		assignment_label.text = ""
+		warning_label.text = ""
+		depart_button.disabled = true
+		recall_button.visible = false
+		return
 	var job: Dictionary = game_state.jobs[selected_job_id]
 	var assigned: PackedStringArray = job["assigned"]
 	detail_title.text = job["title"]
@@ -926,14 +944,22 @@ func _refresh_details() -> void:
 		for other_job_id: StringName in game_state.jobs:
 			if other_job_id == selected_job_id:
 				continue
-			if game_state.completed_job_ids.has(String(other_job_id)):
+			if not game_state.is_job_available(other_job_id):
 				continue
 			var other_assigned: PackedStringArray = game_state.jobs[other_job_id]["assigned"]
 			if other_assigned.is_empty():
 				warning_label.text = "Внимание: «%s» останется без бригады." % game_state.jobs[other_job_id]["title"]
 				break
 
+	var dispatched: bool = game_state.is_job_dispatched(selected_job_id)
+	depart_button.text = "ОТКРЫТЬ ОБЪЕКТ" if dispatched else "ОТПРАВИТЬ БРИГАДУ"
+	depart_button.position = Vector2(22, 384)
+	depart_button.custom_minimum_size = Vector2(177, 52) if dispatched else Vector2(371, 52)
+	depart_button.size = depart_button.custom_minimum_size
+	depart_button.add_theme_font_size_override("font_size", 15 if dispatched else 17)
 	depart_button.disabled = assigned.is_empty()
+	recall_button.visible = dispatched
+	recall_button.disabled = not dispatched
 
 
 func _select_job(job_id: StringName) -> void:
@@ -942,16 +968,28 @@ func _select_job(job_id: StringName) -> void:
 
 
 func _toggle_employee(employee_id: StringName) -> void:
+	if selected_job_id.is_empty() or not game_state.is_job_available(selected_job_id):
+		return
 	game_state.assign_employee(employee_id, selected_job_id)
 
 
 func _depart() -> void:
+	if selected_job_id.is_empty() or not game_state.is_job_available(selected_job_id):
+		warning_label.text = "Нет доступной заявки для выезда."
+		return
 	var repair_scene: String = game_state.get_job_repair_scene(selected_job_id)
 	if repair_scene.is_empty():
 		warning_label.text = "Для этой заявки ещё не подготовлена отдельная локация."
 		return
 	if game_state.begin_job(selected_job_id):
 		get_tree().change_scene_to_file(repair_scene)
+
+
+func _recall_crew() -> void:
+	if selected_job_id.is_empty():
+		return
+	if game_state.recall_job(selected_job_id):
+		warning_label.text = "Бригада вернулась в офис. Состояние объекта сохранено."
 
 
 func _panel(panel_position: Vector2, panel_size: Vector2, radius: int) -> Panel:
