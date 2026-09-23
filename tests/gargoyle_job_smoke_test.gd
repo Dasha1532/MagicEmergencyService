@@ -24,6 +24,8 @@ func _run() -> void:
 	_check(game_state.day == 3, "После заявок второго дня наступает третий день")
 	_check(game_state.is_job_available(&"sleeping_gargoyle"), "На третий день открывается заявка с горгульей")
 	_check(game_state.jobs[&"sleeping_gargoyle"]["repair_scene"] == "res://scenes/GargoyleAttic.tscn", "Заявка ведёт прямо на чердак")
+	_check(game_state.jobs[&"sleeping_gargoyle"]["resident_portrait"] == "res://assets/portraits/residents/mirabel.png", "К заявке подключён портрет Мирабель")
+	_check(game_state.jobs[&"sleeping_gargoyle"]["resident_portrait_region"] == Rect2(0, 0, 1122, 1402), "Портрет Мирабель использует полный кадр")
 
 	var attic_scene := load("res://scenes/GargoyleAttic.tscn") as PackedScene
 	_check(attic_scene != null, "Сцена чердака загружается")
@@ -35,6 +37,7 @@ func _run() -> void:
 	_check(load("res://assets/objects/drain_gargoyle/frozen.png") != null, "Замёрзшая горгулья загружается")
 	_check(load("res://assets/effects/gargoyle_attic/flooding.png") != null, "Слой протечек загружается")
 	_check(load("res://assets/effects/gargoyle_attic/frozen_flooding.png") != null, "Слой замёрзших протечек загружается")
+	_check(load("res://assets/portraits/residents/mirabel.png") != null, "Портрет Мирабель загружается")
 
 	var ideal: RefCounted = GargoyleSimulationScript.new()
 	var ideal_result: Dictionary = ideal.apply_action(&"liliya", &"animate")

@@ -41,15 +41,17 @@ func _ready() -> void:
 	for button in buttons:
 		button.pressed.connect(_on_button_pressed.bind(button))
 		button.toggle_mode = false
-		button.custom_minimum_size = Vector2(220, 44)
+		button.custom_minimum_size = Vector2(252, 46)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.add_theme_font_size_override("font_size", 15)
+		button.add_theme_constant_override("h_separation", 9)
 		var tool_data: Array = TOOL_NAMES[button.name]
-		button.text = "   %s" % str(tool_data[1])
+		button.text = str(tool_data[1])
 		for child: Node in button.get_children():
 			if child is TextureRect:
 				button.icon = child.texture
 				button.expand_icon = true
-				button.add_theme_constant_override("icon_max_width", 30)
+				button.add_theme_constant_override("icon_max_width", 38)
 				child.visible = false
 	visible = false
 
@@ -87,7 +89,7 @@ func show_for_object(object_name: String, anchor_position: Vector2, action_label
 	title_label.text = object_name.to_upper()
 	visible = true
 	position = Vector2(
-		clampf(anchor_position.x + 42.0, 20.0, 1330.0),
+		clampf(anchor_position.x + 42.0, 20.0, 1300.0),
 		clampf(anchor_position.y - menu_height * 0.45, 90.0, 690.0 - menu_height)
 	)
 	move_to_front()
@@ -100,8 +102,8 @@ func show_intents(title: String, choices: Array) -> void:
 	title_label.text = title.to_upper()
 	for choice: Dictionary in choices:
 		var button := Button.new()
-		button.text = "   %s" % str(choice.get("label", "Действие"))
-		button.custom_minimum_size = Vector2(220, 44)
+		button.text = str(choice.get("label", "Действие"))
+		button.custom_minimum_size = Vector2(252, 46)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_copy_button_style(button)
 		button.pressed.connect(_on_intent_pressed.bind(StringName(str(choice.get("id", "")))))
@@ -109,7 +111,7 @@ func show_intents(title: String, choices: Array) -> void:
 		temporary_buttons.append(button)
 	var back_button := Button.new()
 	back_button.text = "← Назад"
-	back_button.custom_minimum_size = Vector2(220, 40)
+	back_button.custom_minimum_size = Vector2(252, 42)
 	_copy_button_style(back_button)
 	back_button.pressed.connect(_show_ability_buttons)
 	buttons_container.add_child(back_button)
@@ -119,9 +121,9 @@ func show_intents(title: String, choices: Array) -> void:
 
 func _resize_for_action_count(action_count: int) -> void:
 	var visible_count: int = maxi(1, action_count)
-	menu_height = 66.0 + visible_count * 51.0
-	var desired_size := Vector2(248.0, menu_height)
-	buttons_container.custom_minimum_size = Vector2(220.0, visible_count * 44.0 + maxi(0, visible_count - 1) * 10.0)
+	menu_height = 66.0 + visible_count * 53.0
+	var desired_size := Vector2(280.0, menu_height)
+	buttons_container.custom_minimum_size = Vector2(252.0, visible_count * 46.0 + maxi(0, visible_count - 1) * 10.0)
 	custom_minimum_size = desired_size
 	size = desired_size
 
@@ -147,7 +149,7 @@ func _show_ability_buttons() -> void:
 	var visible_ability_count: int = 0
 	for button in buttons:
 		var tool_data: Array = TOOL_NAMES[button.name]
-		button.text = "   %s" % str(current_action_labels.get(tool_data[0], tool_data[1]))
+		button.text = str(current_action_labels.get(tool_data[0], tool_data[1]))
 		button.visible = available_buttons.has(button) and not hidden_action_ids.has(String(tool_data[0]))
 		if button.visible:
 			visible_ability_count += 1
@@ -165,8 +167,8 @@ func _clear_temporary_buttons() -> void:
 func _add_contextual_actions(actions: Array) -> void:
 	for action: Dictionary in actions:
 		var button := Button.new()
-		button.text = "   %s" % str(action.get("label", "Действие"))
-		button.custom_minimum_size = Vector2(220, 44)
+		button.text = str(action.get("label", "Действие"))
+		button.custom_minimum_size = Vector2(252, 46)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_copy_button_style(button)
 		button.pressed.connect(_on_context_action_pressed.bind(StringName(str(action.get("id", "")))))

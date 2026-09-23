@@ -5,7 +5,8 @@ signal state_changed
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
 const SAVE_VERSION: int = 10
-const SAVE_PATH: String = "user://savegame.json"
+const LEGACY_SAVE_PATH: String = "user://savegame.json"
+const SAVE_SLOT_COUNT: int = 5
 const TRAVEL_TIME_MINUTES: int = 15
 const OVERDUE_PAYMENT_PENALTY: int = 100
 const REAL_SECONDS_PER_GAME_MINUTE: float = 3.0
@@ -17,6 +18,13 @@ const SUPPLY_ITEMS: Dictionary = {
 		"icon": "res://assets/icons/tools/tool_animate.png",
 		"description": "Служебное руководство, учебный кристалл и набор безопасных печатей. Открывает однодневный курс «Оживление» для совместимого сотрудника.",
 		"training_id": "animate",
+	},
+	&"ghost_trap": {
+		"name": "Служебная ловушка для привидений",
+		"category": "Полевое снаряжение",
+		"price": 250,
+		"icon": "res://assets/objects/ghost_trap/empty.png",
+		"description": "Переносной зачарованный контейнер. После двухминутной установки позволяет поймать бестелесное существо без открытия портала.",
 	},
 }
 const TRAINING_DEFINITIONS: Dictionary = {
@@ -300,7 +308,8 @@ var jobs: Dictionary = {
 		"objective": "Восстановить водоотвод на чердаке",
 		"address": "Башенная улица, 8",
 		"resident": "Госпожа Мирабель",
-		"resident_portrait": "",
+		"resident_portrait": "res://assets/portraits/residents/mirabel.png",
+		"resident_portrait_region": Rect2(0, 0, 1122, 1402),
 		"description": "Водосточная горгулья уснула и забилась листьями. Дождевая вода уже затапливает чердак.",
 		"urgency": "Срочно",
 		"initial_time": 80,
@@ -311,6 +320,25 @@ var jobs: Dictionary = {
 		"danger": "Магия • затопление",
 		"base_reward": 580,
 		"repair_scene": "res://scenes/GargoyleAttic.tscn",
+		"assigned": PackedStringArray(),
+	},
+	&"escaped_ghost": {
+		"title": "Привидение выбралось из зеркала",
+		"objective": "Изгнать или поймать привидение",
+		"address": "Верхний город, 12",
+		"resident": "Госпожа Селеста",
+		"resident_portrait": "res://assets/portraits/residents/selesta.png",
+		"resident_portrait_region": Rect2(0, 0, 1024, 1536),
+		"description": "Защитное полотно осталось на зеркале, но привидение прошло сквозь него и теперь мечется по гостиной.",
+		"urgency": "Срочно",
+		"initial_time": 75,
+		"time_left": 75,
+		"unlocked": false,
+		"overdue": false,
+		"dispatched": false,
+		"danger": "Магия • привидение",
+		"base_reward": 620,
+		"repair_scene": "res://scenes/GhostMirrorRoom.tscn",
 		"assigned": PackedStringArray(),
 	},
 }
@@ -406,6 +434,7 @@ func advance_day(days: int = 1) -> void:
 		_unlock_parallel_jobs()
 	if completed_job_ids.has("walking_wardrobe") and completed_job_ids.has("portal_mirror"):
 		_unlock_gargoyle_job()
+	_unlock_escaped_ghost_job_if_due()
 	for employee_id: StringName in EMPLOYEE_ORDER:
 		var employee: Dictionary = employees[employee_id]
 		employee["arrival_until"] = 0
@@ -811,8 +840,67 @@ func format_time() -> String:
 	return "%02d:%02d" % [floori(float(time_minutes) / 60.0), time_minutes % 60]
 
 
-func has_save() -> bool:
-	return FileAccess.file_exists(SAVE_PATH)
+func save_slot_path(slot: int) -> String:
+	return "user://save_slot_%d.json" % clampi(slot, 1, SAVE_SLOT_COUNT)
+
+
+func has_save(slot: int = 0) -> bool:
+	if slot > 0:
+		if slot > SAVE_SLOT_COUNT:
+			return false
+		return FileAccess.file_exists(save_slot_path(slot)) or (slot == 1 and FileAccess.file_exists(LEGACY_SAVE_PATH))
+	for slot_index in range(1, SAVE_SLOT_COUNT + 1):
+		if has_save(slot_index):
+			return true
+	return false
+
+
+func get_latest_save_slot() -> int:
+	var latest_slot := 0
+	var latest_time := 0
+	for slot_index in range(1, SAVE_SLOT_COUNT + 1):
+		var path := _existing_save_slot_path(slot_index)
+		if path.is_empty():
+			continue
+		var modified := int(FileAccess.get_modified_time(path))
+		if latest_slot == 0 or modified >= latest_time:
+			latest_slot = slot_index
+			latest_time = modified
+	return latest_slot
+
+
+func get_save_slot_summary(slot: int) -> Dictionary:
+	var path := _existing_save_slot_path(slot)
+	if path.is_empty():
+		return {"exists": false, "slot": slot}
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {"exists": false, "slot": slot}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		return {"exists": false, "slot": slot}
+	var data: Dictionary = parsed
+	var minutes := maxi(0, int(data.get("time_minutes", 9 * 60)))
+	return {
+		"exists": true,
+		"slot": slot,
+		"day": maxi(1, int(data.get("day", 1))),
+		"time": "%02d:%02d" % [floori(float(minutes) / 60.0), minutes % 60],
+		"money": int(data.get("money", 0)),
+		"reputation": int(data.get("reputation", 0)),
+		"active_job_id": str(data.get("active_job_id", "")),
+	}
+
+
+func _existing_save_slot_path(slot: int) -> String:
+	if slot < 1 or slot > SAVE_SLOT_COUNT:
+		return ""
+	var slot_path := save_slot_path(slot)
+	if FileAccess.file_exists(slot_path):
+		return slot_path
+	if slot == 1 and FileAccess.file_exists(LEGACY_SAVE_PATH):
+		return LEGACY_SAVE_PATH
+	return ""
 
 
 func start_new_game() -> void:
@@ -865,7 +953,9 @@ func _reset_employee(employee_id: StringName, available: bool, abilities: Packed
 	employees[employee_id] = employee
 
 
-func save_game() -> Error:
+func save_game(slot: int = 1) -> Error:
+	if slot < 1 or slot > SAVE_SLOT_COUNT:
+		return ERR_INVALID_PARAMETER
 	var job_assignments: Dictionary = {}
 	var job_progress: Dictionary = {}
 	for job_id: StringName in jobs:
@@ -913,18 +1003,21 @@ func save_game() -> Error:
 		"clock_speed": clock_speed,
 	}
 
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var file := FileAccess.open(save_slot_path(slot), FileAccess.WRITE)
 	if file == null:
 		return FileAccess.get_open_error()
 	file.store_string(JSON.stringify(save_data, "\t"))
 	return OK
 
 
-func load_game() -> Error:
-	if not has_save():
+func load_game(slot: int = 0) -> Error:
+	if slot < 0 or slot > SAVE_SLOT_COUNT:
+		return ERR_INVALID_PARAMETER
+	var target_slot := slot if slot > 0 else get_latest_save_slot()
+	if target_slot < 1 or not has_save(target_slot):
 		return ERR_FILE_NOT_FOUND
 
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	var file := FileAccess.open(_existing_save_slot_path(target_slot), FileAccess.READ)
 	if file == null:
 		return FileAccess.get_open_error()
 
@@ -1018,6 +1111,7 @@ func load_game() -> Error:
 			_job_completed_day(&"portal_mirror")
 		)
 		_set_gargoyle_job_unlocked(day > last_second_day_completion)
+	_unlock_escaped_ghost_job_if_due()
 	if not is_job_available(selected_job_id):
 		selected_job_id = _first_available_job_id()
 	var loaded_pending_report: Variant = save_data.get("pending_job_report", {})
@@ -1209,6 +1303,24 @@ func _set_gargoyle_job_unlocked(unlocked: bool) -> void:
 		return
 	var job: Dictionary = jobs[job_id]
 	job["unlocked"] = unlocked
+	jobs[job_id] = job
+
+
+func _unlock_escaped_ghost_job_if_due() -> void:
+	var source_day := 0
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		var follow_up: Variant = report.get("follow_up", {})
+		if follow_up is Dictionary and str((follow_up as Dictionary).get("type", "")) == "escaped_ghost":
+			source_day = int(report.get("completed_day", 0))
+			break
+	var job_id := &"escaped_ghost"
+	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
+		return
+	var job: Dictionary = jobs[job_id]
+	job["unlocked"] = source_day > 0 and day > source_day
 	jobs[job_id] = job
 
 

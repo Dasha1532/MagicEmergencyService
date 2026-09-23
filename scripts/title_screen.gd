@@ -1,5 +1,7 @@
 extends Control
 
+const SaveSlotsPanelScript := preload("res://scripts/save_slots_panel.gd")
+
 const TAGLINES: PackedStringArray = [
 	"Спасаем дома, нервы и иногда реальность.",
 	"Любая авария поправима. Последствия обсуждаются отдельно.",
@@ -25,6 +27,7 @@ var status_label: Label
 var volume_slider: HSlider
 var fullscreen_check: CheckButton
 var title_font: SystemFont
+var slots_panel
 
 
 func _ready() -> void:
@@ -32,6 +35,7 @@ func _ready() -> void:
 	# была закрыта или перезагружена во время паузы.
 	get_tree().paused = false
 	_build_interface()
+	_build_slots_panel()
 	_logo_shine_loop()
 
 
@@ -114,7 +118,7 @@ func _build_navigation() -> void:
 	var load_button := _nav_button("▱\nЗАГРУЗИТЬ ИГРУ", 2)
 	load_button.disabled = not game_state.has_save()
 	load_button.tooltip_text = "Нет сохранённой игры" if load_button.disabled else "Открыть сохранённую игру"
-	load_button.pressed.connect(_continue_game)
+	load_button.pressed.connect(_show_load_slots)
 	navigation.add_child(load_button)
 
 	var settings_button := _nav_button("⚙\nНАСТРОЙКИ", 3)
@@ -221,7 +225,11 @@ func _new_game() -> void:
 
 
 func _continue_game() -> void:
-	var error: Error = game_state.load_game()
+	_load_slot(game_state.get_latest_save_slot())
+
+
+func _load_slot(slot: int) -> void:
+	var error: Error = game_state.load_game(slot)
 	if error != OK:
 		status_label.text = "Не удалось загрузить сохранение. Код ошибки: %d" % error
 		return
@@ -230,6 +238,27 @@ func _continue_game() -> void:
 	if not repair_scene.is_empty():
 		target_scene = repair_scene
 	get_tree().change_scene_to_file(target_scene)
+
+
+func _build_slots_panel() -> void:
+	slots_panel = SaveSlotsPanelScript.new()
+	slots_panel.configure(&"load")
+	slots_panel.visible = false
+	slots_panel.slot_selected.connect(_load_slot)
+	slots_panel.cancelled.connect(_hide_load_slots)
+	add_child(slots_panel)
+
+
+func _show_load_slots() -> void:
+	navigation.visible = false
+	settings_panel.visible = false
+	slots_panel.refresh()
+	slots_panel.visible = true
+
+
+func _hide_load_slots() -> void:
+	slots_panel.visible = false
+	navigation.visible = true
 
 
 func _show_settings() -> void:

@@ -18,7 +18,7 @@ var HOUSE_DEFINITIONS: Dictionary = {
 	},
 	&"selesta": {
 		"address": "Верхний город, 12",
-		"job_ids": PackedStringArray(["portal_mirror"]),
+		"job_ids": PackedStringArray(["portal_mirror", "escaped_ghost"]),
 	},
 	&"tower_street": {
 		"address": "Башенная улица, 8",

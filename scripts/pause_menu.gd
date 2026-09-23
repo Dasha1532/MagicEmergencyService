@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const SaveSlotsPanelScript := preload("res://scripts/save_slots_panel.gd")
+
 @export var show_default_menu_button := true
 
 const COLOR_OVERLAY := Color(0.015, 0.012, 0.012, 0.76)
@@ -21,18 +23,23 @@ var status_label: Label
 var volume_slider: HSlider
 var fullscreen_check: CheckButton
 var menu_button: Button
+var slots_panel
+var slots_mode: StringName = &"load"
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = 100
 	_build_interface()
+	_build_slots_panel()
 	overlay.visible = false
 
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		if overlay.visible and settings_panel.visible:
+		if slots_panel.visible:
+			_close_slots_panel()
+		elif overlay.visible and settings_panel.visible:
 			_show_main_panel()
 		else:
 			_toggle_menu()
@@ -97,7 +104,7 @@ func _build_main_panel() -> void:
 	main_panel.add_child(save_button)
 
 	load_button = _button("ЗАГРУЗИТЬ ИГРУ", 288)
-	load_button.pressed.connect(_load_game)
+	load_button.pressed.connect(_show_load_slots)
 	main_panel.add_child(load_button)
 
 	var settings_button := _button("НАСТРОЙКИ", 366)
@@ -186,6 +193,7 @@ func _open_menu() -> void:
 	main_panel.visible = true
 	settings_panel.visible = false
 	overlay.visible = true
+	slots_panel.visible = false
 	menu_button.visible = false
 	get_tree().paused = true
 
@@ -197,16 +205,21 @@ func _close_menu() -> void:
 
 
 func _save_game() -> void:
-	var error: Error = game_state.save_game()
+	_show_save_slots()
+
+
+func _save_to_slot(slot: int) -> void:
+	var error: Error = game_state.save_game(slot)
 	if error == OK:
-		status_label.text = "Игра сохранена: день %d, %s" % [game_state.day, game_state.format_time()]
+		status_label.text = "Слот %d сохранён: день %d, %s" % [slot, game_state.day, game_state.format_time()]
 		load_button.disabled = false
 	else:
 		status_label.text = "Не удалось сохранить игру. Код ошибки: %d" % error
+	_close_slots_panel()
 
 
-func _load_game() -> void:
-	var error: Error = game_state.load_game()
+func _load_from_slot(slot: int) -> void:
+	var error: Error = game_state.load_game(slot)
 	if error != OK:
 		status_label.text = "Не удалось загрузить сохранение. Код ошибки: %d" % error
 		return
@@ -218,6 +231,38 @@ func _load_game() -> void:
 	if not repair_scene.is_empty():
 		target_scene = repair_scene
 	get_tree().change_scene_to_file(target_scene)
+
+
+func _build_slots_panel() -> void:
+	slots_panel = SaveSlotsPanelScript.new()
+	slots_panel.visible = false
+	slots_panel.slot_selected.connect(_on_slot_selected)
+	slots_panel.cancelled.connect(_close_slots_panel)
+	add_child(slots_panel)
+
+
+func _show_save_slots() -> void:
+	slots_mode = &"save"
+	slots_panel.configure(slots_mode)
+	slots_panel.visible = true
+
+
+func _show_load_slots() -> void:
+	slots_mode = &"load"
+	slots_panel.configure(slots_mode)
+	slots_panel.visible = true
+
+
+func _close_slots_panel() -> void:
+	slots_panel.visible = false
+	main_panel.visible = true
+
+
+func _on_slot_selected(slot: int) -> void:
+	if slots_mode == &"save":
+		_save_to_slot(slot)
+	else:
+		_load_from_slot(slot)
 
 
 func _show_settings() -> void:

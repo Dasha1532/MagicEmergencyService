@@ -57,6 +57,8 @@ var supply_layer: Control
 var supply_money_label: Label
 var supply_catalog_status: Label
 var supply_purchase_button: Button
+var trap_supply_status: Label
+var trap_purchase_button: Button
 var city_map_layer: Control
 var books_layer: Control
 var section_dialog: Panel
@@ -68,6 +70,9 @@ var job_report_body: Label
 var arrival_dialog: Control
 var arrival_dialog_title: Label
 var arrival_dialog_body: Label
+var dispatch_warning_dialog: Control
+var dispatch_warning_body: Label
+var risk_dispatch_confirmed: bool = false
 var auto_wait_running: bool = false
 @onready var game_state: Node = get_node("/root/GameState")
 
@@ -98,6 +103,7 @@ func _build_interface() -> void:
 	_build_office_hub()
 	_build_job_report_dialog()
 	_build_arrival_dialog()
+	_build_dispatch_warning_dialog()
 	_build_personnel_screen()
 	_build_supply_shop()
 	_build_city_map()
@@ -563,9 +569,36 @@ func _build_supply_shop() -> void:
 	supply_catalog_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	item_card.add_child(supply_catalog_status)
 
+	var trap_item: Dictionary = game_state.SUPPLY_ITEMS[&"ghost_trap"]
+	var trap_card := Panel.new()
+	trap_card.position = Vector2(18, 260)
+	trap_card.size = Vector2(394, 190)
+	trap_card.add_theme_stylebox_override("panel", _style(COLOR_CARD, COLOR_BRASS, 2, 9))
+	catalog_panel.add_child(trap_card)
+	var trap_icon := TextureRect.new()
+	trap_icon.position = Vector2(12, 18)
+	trap_icon.size = Vector2(108, 108)
+	trap_icon.texture = load(str(trap_item["icon"])) as Texture2D
+	trap_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	trap_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	trap_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	trap_card.add_child(trap_icon)
+	var trap_name := _label(str(trap_item["name"]), 16, COLOR_GOLD)
+	trap_name.position = Vector2(132, 16)
+	trap_name.size = Vector2(246, 58)
+	trap_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	trap_card.add_child(trap_name)
+	trap_supply_status = _label("", 14, COLOR_PARCHMENT)
+	trap_supply_status.position = Vector2(132, 76)
+	trap_supply_status.size = Vector2(246, 28)
+	trap_card.add_child(trap_supply_status)
+	trap_purchase_button = _button("", Vector2(132, 118), Vector2(246, 54))
+	trap_purchase_button.pressed.connect(_buy_ghost_trap)
+	trap_card.add_child(trap_purchase_button)
+
 	var catalog_hint := _label("Ассортимент городской службы пока невелик. Зато каждая покупка проходит через три журнала.", 15, COLOR_MUTED)
-	catalog_hint.position = Vector2(28, 285)
-	catalog_hint.size = Vector2(374, 110)
+	catalog_hint.position = Vector2(28, 474)
+	catalog_hint.size = Vector2(374, 64)
 	catalog_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	catalog_panel.add_child(catalog_hint)
 	if OS.is_debug_build():
@@ -806,6 +839,39 @@ func _build_arrival_dialog() -> void:
 	panel.add_child(no_button)
 
 
+func _build_dispatch_warning_dialog() -> void:
+	dispatch_warning_dialog = Control.new()
+	dispatch_warning_dialog.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dispatch_warning_dialog.visible = false
+	dispatch_warning_dialog.z_index = 210
+	add_child(dispatch_warning_dialog)
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.015, 0.01, 0.008, 0.76)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	dispatch_warning_dialog.add_child(shade)
+	var panel := _panel(Vector2(410, 260), Vector2(780, 380), 14)
+	dispatch_warning_dialog.add_child(panel)
+	var title := _label("В БРИГАДЕ НЕТ АНТИМАГИИ", 25, COLOR_GOLD)
+	title.position = Vector2(38, 34)
+	title.size = Vector2(704, 42)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(title)
+	dispatch_warning_body = _label("", 18, COLOR_PARCHMENT)
+	dispatch_warning_body.position = Vector2(70, 100)
+	dispatch_warning_body.size = Vector2(640, 120)
+	dispatch_warning_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dispatch_warning_body.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	dispatch_warning_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(dispatch_warning_body)
+	var proceed_button := _button("ВСЁ РАВНО ОТПРАВИТЬ", Vector2(60, 278), Vector2(310, 62))
+	proceed_button.pressed.connect(_confirm_risky_dispatch)
+	panel.add_child(proceed_button)
+	var back_button := _button("ВЕРНУТЬСЯ К СОСТАВУ", Vector2(410, 278), Vector2(310, 62))
+	back_button.pressed.connect(func() -> void: dispatch_warning_dialog.visible = false)
+	panel.add_child(back_button)
+
+
 func _open_jobs() -> void:
 	hub_layer.visible = false
 	personnel_layer.visible = false
@@ -1038,6 +1104,10 @@ func _buy_animation_kit() -> void:
 	game_state.buy_supply_item(&"animation_kit")
 
 
+func _buy_ghost_trap() -> void:
+	game_state.buy_supply_item(&"ghost_trap")
+
+
 func _grant_debug_money() -> void:
 	game_state.grant_debug_money(500)
 
@@ -1072,6 +1142,30 @@ func _refresh_supply_shop() -> void:
 		supply_catalog_status.add_theme_color_override("font_color", COLOR_PARCHMENT)
 		supply_purchase_button.text = "КУПИТЬ • %d МОНЕТ" % price
 		supply_purchase_button.disabled = false
+	_refresh_ghost_trap_offer()
+
+
+func _refresh_ghost_trap_offer() -> void:
+	if trap_purchase_button == null:
+		return
+	var item: Dictionary = game_state.SUPPLY_ITEMS[&"ghost_trap"]
+	var price := int(item["price"])
+	var owned: bool = game_state.has_supply_item(&"ghost_trap")
+	if owned:
+		trap_supply_status.text = "ПРИОБРЕТЕНО"
+		trap_supply_status.add_theme_color_override("font_color", COLOR_GOLD)
+		trap_purchase_button.text = "ПРИОБРЕТЕНО"
+		trap_purchase_button.disabled = true
+	elif game_state.money < price:
+		trap_supply_status.text = "%d МОНЕТ" % price
+		trap_supply_status.add_theme_color_override("font_color", COLOR_PARCHMENT)
+		trap_purchase_button.text = "НЕ ХВАТАЕТ МОНЕТ"
+		trap_purchase_button.disabled = true
+	else:
+		trap_supply_status.text = "%d МОНЕТ" % price
+		trap_supply_status.add_theme_color_override("font_color", COLOR_PARCHMENT)
+		trap_purchase_button.text = "КУПИТЬ • %d МОНЕТ" % price
+		trap_purchase_button.disabled = false
 
 
 func _refresh_personnel() -> void:
@@ -1312,17 +1406,6 @@ func _refresh_details() -> void:
 	warning_label.text = ""
 	if game_state.get_job_repair_scene(selected_job_id).is_empty():
 		warning_label.text = "Объект этой заявки ещё готовится. Выезд пока недоступен."
-	elif not assigned.is_empty():
-		for other_job_id: StringName in game_state.jobs:
-			if other_job_id == selected_job_id:
-				continue
-			if not game_state.is_job_available(other_job_id):
-				continue
-			var other_assigned: PackedStringArray = game_state.jobs[other_job_id]["assigned"]
-			if other_assigned.is_empty():
-				warning_label.text = "Другая заявка останется без бригады."
-				break
-
 	var dispatched: bool = game_state.is_job_dispatched(selected_job_id)
 	var confirming_extra_employees: bool = dispatched and not pending_dispatch_employee_ids.is_empty()
 	var can_cancel_trip: bool = dispatched and pending_dispatch_employee_ids.is_empty() and game_state.clock_paused and game_state.has_employees_in_transit(selected_job_id)
@@ -1340,6 +1423,14 @@ func _refresh_details() -> void:
 	recall_button.visible = dispatched and not confirming_extra_employees and not can_cancel_trip
 	recall_button.disabled = not dispatched
 	cancel_dispatch_button.visible = can_cancel_trip
+
+
+func _crew_has_ability(assigned: PackedStringArray, ability_id: StringName) -> bool:
+	for employee_id: String in assigned:
+		var employee: Dictionary = game_state.employees.get(StringName(employee_id), {})
+		if (employee.get("abilities", PackedStringArray()) as PackedStringArray).has(String(ability_id)):
+			return true
+	return false
 
 
 func _select_job(job_id: StringName) -> void:
@@ -1385,6 +1476,12 @@ func _depart() -> void:
 		warning_label.text = "Выбранные сотрудники отправлены на объект."
 		return
 	if not game_state.is_job_dispatched(selected_job_id):
+		var assigned: PackedStringArray = game_state.jobs[selected_job_id]["assigned"]
+		if selected_job_id == &"escaped_ghost" and not risk_dispatch_confirmed and not _crew_has_ability(assigned, &"antimagic"):
+			dispatch_warning_body.text = "Изгнать призрака такой бригадой не получится. Купленная служебная ловушка позволит поймать привидение. Всё равно отправить бригаду?" if game_state.has_supply_item(&"ghost_trap") else "Изгнать призрака такой бригадой не получится. Может потребоваться служебная ловушка — её можно купить в лавке снаряжения. Всё равно отправить бригаду?"
+			dispatch_warning_dialog.visible = true
+			dispatch_warning_dialog.move_to_front()
+			return
 		if game_state.begin_job(selected_job_id):
 			game_state.leave_active_job()
 			warning_label.text = ""
@@ -1396,6 +1493,13 @@ func _depart() -> void:
 	game_state.set_clock_paused(true)
 	arrival_dialog.visible = true
 	arrival_dialog.move_to_front()
+
+
+func _confirm_risky_dispatch() -> void:
+	dispatch_warning_dialog.visible = false
+	risk_dispatch_confirmed = true
+	_depart()
+	risk_dispatch_confirmed = false
 
 
 func _start_auto_wait() -> void:
