@@ -19,8 +19,10 @@ const COLOR_MUTED := Color(0.70, 0.63, 0.52)
 @onready var accounting_button: Button = $Header/Accounting
 @onready var reviews_button: Button = $Header/Reviews
 @onready var archive_button: Button = $Header/Archive
+@onready var pay_claim_button: Button = $DetailPanel/PayClaim
 
 var current_section: StringName = &"accounting"
+var selected_claim_key: Dictionary = {}
 
 
 func _ready() -> void:
@@ -28,6 +30,7 @@ func _ready() -> void:
 	accounting_button.pressed.connect(open_section.bind(&"accounting"))
 	reviews_button.pressed.connect(open_section.bind(&"reviews"))
 	archive_button.pressed.connect(open_section.bind(&"archive"))
+	pay_claim_button.pressed.connect(_pay_selected_claim)
 	if not game_state.state_changed.is_connected(refresh):
 		game_state.state_changed.connect(refresh)
 	_apply_styles()
@@ -44,6 +47,8 @@ func refresh() -> void:
 		return
 	_update_tabs()
 	_clear(entry_list)
+	pay_claim_button.visible = false
+	selected_claim_key = {}
 	match current_section:
 		&"reviews":
 			_build_reviews()
@@ -103,7 +108,7 @@ func _build_archive() -> void:
 		return
 	for index in range(game_state.job_reports.size() - 1, -1, -1):
 		var report: Dictionary = game_state.job_reports[index]
-		var damage_text := "компенсация: %d" % int(report.get("compensation", 0)) if int(report.get("compensation", 0)) > 0 else "без компенсации"
+		var damage_text := _claim_status_text(report)
 		_add_entry("%s\n%s • %s" % [report.get("title", "Заявка"), _report_date(report), damage_text], _show_archive_report.bind(report))
 
 
@@ -111,14 +116,14 @@ func _show_financial_event(event: Dictionary) -> void:
 	var kind := str(event.get("kind", ""))
 	var kind_text: String = {
 		"opening_balance": "Начальный баланс", "job": "Завершённая заявка",
-		"purchase": "Покупка", "hire": "Найм сотрудника",
+		"purchase": "Покупка", "hire": "Найм сотрудника", "compensation": "Компенсация жильцу",
 		"legacy_adjustment": "Старая операция", "debug_grant": "Тестовое пополнение",
 	}.get(kind, "Денежная операция")
 	var amount := int(event.get("amount", 0))
 	detail_title.text = str(event.get("title", kind_text))
 	detail_body.text = "%s\n%s\n\nИзменение средств: %s%d монет" % [kind_text, _event_date(event), "+" if amount >= 0 else "", amount]
 	if kind == "job":
-		detail_body.text += "\nПолучено: %d монет\nКомпенсация: %d монет" % [int(event.get("income", 0)), int(event.get("expense", 0))]
+		detail_body.text += "\nПолучено: %d монет" % int(event.get("income", 0))
 	if bool(event.get("legacy", false)):
 		detail_body.text += "\n\nЗапись восстановлена из сохранения предыдущей версии."
 
@@ -156,6 +161,20 @@ func _show_archive_report(report: Dictionary) -> void:
 		_report_date(report), report.get("resident", "не указан"), ", ".join(PackedStringArray(crew)) if not crew.is_empty() else "не указана",
 		report.get("summary", "Работы завершены."), int(report.get("reward", 0)), int(report.get("compensation", 0)),
 	]
+	var claim_status := str(report.get("claim_status", "none"))
+	if claim_status == "denied":
+		text += "\nРешение по претензии: отказано"
+		selected_claim_key = {
+			"job_id": str(report.get("job_id", "")),
+			"completed_day": int(report.get("completed_day", 0)),
+			"completed_time": int(report.get("completed_time", -1)),
+		}
+		pay_claim_button.text = "ВЫПЛАТИТЬ %d МОНЕТ" % int(report.get("claim_amount", 0))
+		pay_claim_button.visible = int(report.get("claim_amount", 0)) > 0
+	elif claim_status == "paid":
+		text += "\nРешение по претензии: выплачено"
+	elif claim_status == "paid_after_denial":
+		text += "\nРешение по претензии: выплачено после первоначального отказа"
 	text += "\n\nПОСЛЕДСТВИЯ"
 	for consequence: String in _report_consequences(report):
 		text += "\n• %s" % consequence
@@ -172,6 +191,13 @@ func _report_consequences(report: Dictionary) -> PackedStringArray:
 				result.append(text)
 	if bool(report.get("overdue", false)):
 		result.append("Заявка завершена после истечения срока.")
+	match str(report.get("claim_status", "none")):
+		"paid":
+			result.append("Претензия жильца удовлетворена: выплачено %d монет." % int(report.get("compensation", 0)))
+		"paid_after_denial":
+			result.append("После первоначального отказа служба выплатила %d монет и восстановила потерянную из-за отказа репутацию." % int(report.get("compensation", 0)))
+		"denied":
+			result.append("В компенсации ущерба отказано; репутация службы снижена на %d." % int(report.get("claim_reputation_penalty", 0)))
 	var follow_up: Variant = report.get("follow_up", {})
 	if follow_up is Dictionary and str((follow_up as Dictionary).get("type", "")) == "escaped_ghost":
 		var ghost_text := "Из портала выбрался призрак; это может создать новую заявку."
@@ -188,6 +214,35 @@ func _report_consequences(report: Dictionary) -> PackedStringArray:
 		else:
 			result.append("Дополнительного ущерба не зафиксировано.")
 	return result
+
+
+func _claim_status_text(report: Dictionary) -> String:
+	match str(report.get("claim_status", "none")):
+		"paid":
+			return "выплачено: %d" % int(report.get("compensation", 0))
+		"paid_after_denial":
+			return "выплачено после отказа: %d" % int(report.get("compensation", 0))
+		"denied":
+			return "в компенсации отказано"
+		"pending":
+			return "претензия ожидает решения"
+	return "без претензии"
+
+
+func _pay_selected_claim() -> void:
+	if selected_claim_key.is_empty():
+		return
+	var job_id := str(selected_claim_key.get("job_id", ""))
+	var completed_day := int(selected_claim_key.get("completed_day", 0))
+	var completed_time := int(selected_claim_key.get("completed_time", -1))
+	if not game_state.pay_denied_claim(job_id, completed_day, completed_time):
+		return
+	for report_value: Variant in game_state.job_reports:
+		if report_value is Dictionary:
+			var report: Dictionary = report_value
+			if str(report.get("job_id", "")) == job_id and int(report.get("completed_day", 0)) == completed_day and int(report.get("completed_time", -1)) == completed_time:
+				_show_archive_report(report)
+				return
 
 
 func _report_rating(report: Dictionary) -> int:
@@ -257,10 +312,17 @@ func _apply_styles() -> void:
 	$Header.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
 	$ListPanel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
 	$DetailPanel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
-	for button: Button in [accounting_button, reviews_button, archive_button, $BackButton]:
+	for button: Button in [accounting_button, reviews_button, archive_button, pay_claim_button, $BackButton]:
 		button.add_theme_font_size_override("font_size", 15)
 		button.add_theme_color_override("font_color", COLOR_PARCHMENT)
 		button.add_theme_stylebox_override("hover", _style(COLOR_CARD_HOVER, COLOR_GOLD, 2, 7))
+		button.add_theme_stylebox_override("pressed", _style(COLOR_SELECTED, COLOR_GOLD, 3, 7))
+		button.add_theme_stylebox_override("focus", _style(Color.TRANSPARENT, COLOR_GOLD, 2, 7))
+	$BackButton.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_BRASS, 2, 7))
+	pay_claim_button.add_theme_color_override("font_color", COLOR_GOLD)
+	pay_claim_button.add_theme_color_override("font_hover_color", COLOR_GOLD)
+	pay_claim_button.add_theme_stylebox_override("normal", _style(COLOR_SELECTED, COLOR_GOLD, 3, 8))
+	pay_claim_button.add_theme_stylebox_override("hover", _style(COLOR_CARD_HOVER, COLOR_GOLD, 3, 8))
 
 
 func _style(background: Color, border: Color, width: int, radius: int) -> StyleBoxFlat:

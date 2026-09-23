@@ -20,7 +20,6 @@ var job_list: VBoxContainer
 var employee_list: HBoxContainer
 var money_label: Label
 var day_label: Label
-var time_label: Label
 var detail_title: Label
 var detail_body: Label
 var assignment_label: Label
@@ -67,6 +66,10 @@ var section_body: Label
 var job_report_layer: Control
 var job_report_title: Label
 var job_report_body: Label
+var claim_layer: Control
+var claim_title: Label
+var claim_body: Label
+var claim_pay_button: Button
 var arrival_dialog: Control
 var arrival_dialog_title: Label
 var arrival_dialog_body: Label
@@ -102,6 +105,7 @@ func _build_interface() -> void:
 	_build_clock_controls()
 	_build_office_hub()
 	_build_job_report_dialog()
+	_build_claim_dialog()
 	_build_arrival_dialog()
 	_build_dispatch_warning_dialog()
 	_build_personnel_screen()
@@ -128,11 +132,6 @@ func _build_top_bar() -> void:
 	day_label.position = Vector2(1010, 19)
 	day_label.size = Vector2(90, 36)
 	panel.add_child(day_label)
-
-	time_label = _label(game_state.format_time(), 20, COLOR_PARCHMENT)
-	time_label.position = Vector2(1105, 19)
-	time_label.size = Vector2(78, 36)
-	panel.add_child(time_label)
 
 	_add_stat_icon(panel, 0, Vector2(1168, 18))
 	money_label = _label("%d монет" % game_state.money, 20, COLOR_PARCHMENT)
@@ -806,6 +805,39 @@ func _build_job_report_dialog() -> void:
 	panel.add_child(close_button)
 
 
+func _build_claim_dialog() -> void:
+	claim_layer = Control.new()
+	claim_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	claim_layer.visible = false
+	claim_layer.z_index = 110
+	hub_layer.add_child(claim_layer)
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.015, 0.01, 0.008, 0.78)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	claim_layer.add_child(shade)
+	var panel := _panel(Vector2(390, 225), Vector2(820, 450), 14)
+	claim_layer.add_child(panel)
+	claim_title = _label("ПРЕТЕНЗИЯ ЖИЛЬЦА", 28, COLOR_GOLD)
+	claim_title.position = Vector2(45, 34)
+	claim_title.size = Vector2(730, 48)
+	claim_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(claim_title)
+	claim_body = _label("", 19, COLOR_PARCHMENT)
+	claim_body.position = Vector2(70, 102)
+	claim_body.size = Vector2(680, 190)
+	claim_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	claim_body.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	claim_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(claim_body)
+	claim_pay_button = _button("", Vector2(55, 340), Vector2(330, 68))
+	claim_pay_button.pressed.connect(_resolve_claim.bind(true))
+	panel.add_child(claim_pay_button)
+	var deny_button := _button("ОТКАЗАТЬ В КОМПЕНСАЦИИ", Vector2(435, 340), Vector2(330, 68))
+	deny_button.pressed.connect(_resolve_claim.bind(false))
+	panel.add_child(deny_button)
+
+
 func _build_arrival_dialog() -> void:
 	arrival_dialog = Control.new()
 	arrival_dialog.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -970,7 +1002,6 @@ func _refresh() -> void:
 				game_state.selected_job_id = available_job_id
 				break
 	day_label.text = "День %d" % game_state.day
-	time_label.text = game_state.format_time()
 	money_label.text = "%d монет" % game_state.money
 	_rebuild_jobs()
 	_rebuild_employees()
@@ -997,10 +1028,33 @@ func _refresh_job_report() -> void:
 		finance_text += " — максимальная по заявке\nОценка выполнения: отлично"
 	if compensation > 0:
 		finance_text += "\nКомпенсация жильцу: %d монет\nИзменение средств службы: %d монет" % [compensation, int(report.get("net_change", -compensation))]
+	elif int(report.get("claim_amount", 0)) > 0:
+		finance_text += "\nПретензия жильца: %d монет\nРешение потребуется после принятия акта" % int(report.get("claim_amount", 0))
 	job_report_body.text = "%s\n\nЗаказчик: %s\nБригада: %s\n\n%s\n\n%s" % [report.get("title", "Заявка"), report.get("resident", ""), crew_text, finance_text, report.get("summary", "")]
 
 
 func _dismiss_job_report() -> void:
+	if str(game_state.pending_job_report.get("claim_status", "none")) == "pending":
+		job_report_layer.visible = false
+		_show_claim_dialog()
+		return
+	game_state.dismiss_pending_job_report()
+
+
+func _show_claim_dialog() -> void:
+	var report: Dictionary = game_state.pending_job_report
+	var amount := int(report.get("claim_amount", 0))
+	claim_title.text = "ПРЕТЕНЗИЯ • %s" % str(report.get("resident", "Жилец"))
+	claim_body.text = "%s\n\nТребование за причинённый ущерб: %d монет.\n\nКомпенсировать ущерб или отказать жильцу?" % [report.get("title", "Завершённая заявка"), amount]
+	claim_pay_button.text = "КОМПЕНСИРОВАТЬ • %d" % amount
+	claim_layer.visible = true
+	claim_layer.move_to_front()
+
+
+func _resolve_claim(pay_compensation: bool) -> void:
+	if not game_state.resolve_pending_claim(pay_compensation):
+		return
+	claim_layer.visible = false
 	game_state.dismiss_pending_job_report()
 
 

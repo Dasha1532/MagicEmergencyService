@@ -8,6 +8,7 @@ const GhostSimulationScript := preload("res://scripts/ghost_followup_simulation.
 @onready var occupied_trap: TextureRect = $TrapPlacement/Occupied
 @onready var employee_actor: Control = $EmployeeActor
 @onready var physical_approach: Marker2D = $PhysicalApproach
+@onready var mirror_physical_approach: Marker2D = $MirrorPhysicalApproach
 @onready var tool_bar: Control = $Interface/ToolBar
 @onready var repair_hud: Control = $Interface/RepairHUD
 @onready var game_state: Node = get_node("/root/GameState")
@@ -132,7 +133,7 @@ func _on_tool_selected(action_id: StringName) -> void:
 	var target: Vector2 = mirror.target_global_position() if selected_target == &"mirror" else ghost.target_global_position()
 	var is_physical: bool = game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical"
 	var is_timed: bool = is_physical or action_id == &"install_trap"
-	var approach := physical_approach.position if is_physical else Vector2.INF
+	var approach := (mirror_physical_approach.position if selected_target == &"mirror" else physical_approach.position) if is_physical else Vector2.INF
 	if is_timed:
 		repair_hud.start_timed_action(selected_employee_id, action_id, _resolve_action.bind(action_id), 2 if action_id == &"install_trap" else -1)
 	if action_id == &"install_trap":

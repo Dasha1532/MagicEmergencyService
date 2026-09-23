@@ -71,9 +71,12 @@ func _configure_employee_actor() -> bool:
 func _on_gargoyle_selected() -> void:
 	if action_in_progress:
 		return
-	if bool(simulation.world_object.get("damaged", false)):
+	if simulation.is_terminal():
 		tool_bar.visible = false
-		repair_hud.show_system_message("Горгулья уже повреждена. Вода уходит через образовавшийся пролом; дополнительные действия не требуются.", true)
+		var terminal_message := "Горгулья уже повреждена. Вода уходит через образовавшийся пролом; дополнительные действия не требуются."
+		if bool(simulation.world_object.get("awake", false)):
+			terminal_message = "Горгулья уже оживлена и исправно отводит воду. Дополнительные действия не требуются."
+		repair_hud.show_system_message(terminal_message, true)
 		return
 	if selected_employee_id.is_empty():
 		repair_hud.show_system_message("Сначала выберите сотрудника из бригады.", true)
@@ -137,7 +140,7 @@ func _resume_pending_action() -> void:
 
 func _on_action_finished() -> void:
 	action_in_progress = false
-	gargoyle.set_interaction_enabled(true)
+	gargoyle.set_interaction_enabled(not simulation.is_terminal())
 
 
 func _apply_visual_state() -> void:
@@ -145,6 +148,7 @@ func _apply_visual_state() -> void:
 	var water_state: StringName = simulation.flooding_state()
 	flooding.visible = water_state == &"water"
 	frozen_flooding.visible = water_state == &"frozen"
+	gargoyle.set_interaction_enabled(not simulation.is_terminal() and not action_in_progress)
 	if repair_hud.has_method("set_completion_ready"):
 		repair_hud.call("set_completion_ready", simulation.is_resolved())
 

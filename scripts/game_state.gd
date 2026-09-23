@@ -4,7 +4,7 @@ signal state_changed
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 10
+const SAVE_VERSION: int = 11
 const LEGACY_SAVE_PATH: String = "user://savegame.json"
 const SAVE_SLOT_COUNT: int = 5
 const TRAVEL_TIME_MINUTES: int = 15
@@ -788,7 +788,7 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		returning_employee["arrival_until"] = 0
 		returning_employee["return_until"] = time_minutes + TRAVEL_TIME_MINUTES
 		employees[StringName(employee_id)] = returning_employee
-	money += reward - compensation
+	money += reward
 	var reputation_change: int = int(result.get("reputation_change", 0)) - (1 if overdue else 0)
 	reputation = maxi(0, reputation + reputation_change)
 	completed_job_ids.append(String(completed_id))
@@ -806,8 +806,11 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		"base_reward": base_reward,
 		"reward_adjustment": reward_adjustment,
 		"maximum_payment": reward_adjustment == 0 and compensation == 0,
-		"compensation": compensation,
-		"net_change": reward - compensation,
+		"compensation": 0,
+		"claim_amount": compensation,
+		"claim_status": "pending" if compensation > 0 else "none",
+		"claim_reputation_penalty": 0,
+		"net_change": reward,
 		"reputation_change": reputation_change,
 		"rating": _calculate_report_rating(reputation_change, reward_adjustment, compensation),
 		"completed_day": day,
@@ -821,8 +824,8 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		"actions": result.get("actions", []),
 	}
 	job_reports.append(pending_job_report.duplicate(true))
-	_record_financial_event(&"job", reward - compensation, str(job["title"]), {
-		"job_id": String(completed_id), "income": reward, "expense": compensation,
+	_record_financial_event(&"job", reward, str(job["title"]), {
+		"job_id": String(completed_id), "income": reward, "expense": 0,
 	})
 	job_repair_states.erase(String(completed_id))
 	active_job_id = &""
@@ -832,8 +835,101 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 
 
 func dismiss_pending_job_report() -> void:
+	if str(pending_job_report.get("claim_status", "none")) == "pending":
+		return
 	pending_job_report = {}
 	state_changed.emit()
+
+
+func resolve_pending_claim(pay_compensation: bool) -> bool:
+	if pending_job_report.is_empty() or str(pending_job_report.get("claim_status", "none")) != "pending":
+		return false
+	var claim_amount := maxi(0, int(pending_job_report.get("claim_amount", 0)))
+	if claim_amount <= 0:
+		return false
+	if pay_compensation:
+		money -= claim_amount
+		pending_job_report["claim_status"] = "paid"
+		pending_job_report["compensation"] = claim_amount
+		pending_job_report["net_change"] = int(pending_job_report.get("reward", 0)) - claim_amount
+		_record_financial_event(&"compensation", -claim_amount, str(pending_job_report.get("title", "Компенсация жильцу")), {
+			"job_id": str(pending_job_report.get("job_id", "")), "resident": str(pending_job_report.get("resident", "")),
+		})
+	else:
+		var reputation_penalty := 2 if claim_amount >= 300 else 1
+		reputation = maxi(0, reputation - reputation_penalty)
+		pending_job_report["claim_status"] = "denied"
+		pending_job_report["claim_reputation_penalty"] = reputation_penalty
+		pending_job_report["reputation_change"] = int(pending_job_report.get("reputation_change", 0)) - reputation_penalty
+		var review := str(pending_job_report.get("review", "")).strip_edges()
+		pending_job_report["review_before_claim_decision"] = review
+		pending_job_report["review"] = "%s%s" % [review, " В компенсации мне ещё и отказали." if not review.is_empty() else "Служба отказалась компенсировать причинённый ущерб."]
+	pending_job_report["claim_decision_day"] = day
+	pending_job_report["claim_decision_time"] = time_minutes
+	pending_job_report["rating"] = _calculate_report_rating(
+		int(pending_job_report.get("reputation_change", 0)),
+		int(pending_job_report.get("reward_adjustment", 0)),
+		claim_amount
+	)
+	_sync_pending_report_to_history()
+	state_changed.emit()
+	return true
+
+
+func pay_denied_claim(job_id: String, completed_day: int, completed_time: int) -> bool:
+	for index in range(job_reports.size() - 1, -1, -1):
+		var report_value: Variant = job_reports[index]
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		if str(report.get("job_id", "")) != job_id or int(report.get("completed_day", 0)) != completed_day or int(report.get("completed_time", -1)) != completed_time:
+			continue
+		if str(report.get("claim_status", "none")) != "denied":
+			return false
+		var claim_amount := maxi(0, int(report.get("claim_amount", 0)))
+		if claim_amount <= 0:
+			return false
+		money -= claim_amount
+		var restored_reputation := maxi(0, int(report.get("claim_reputation_penalty", 0)))
+		reputation += restored_reputation
+		report["claim_status"] = "paid_after_denial"
+		report["compensation"] = claim_amount
+		report["net_change"] = int(report.get("reward", 0)) - claim_amount
+		report["reputation_change"] = int(report.get("reputation_change", 0)) + restored_reputation
+		report["claim_reputation_restored"] = restored_reputation
+		report["claim_reputation_penalty"] = 0
+		var original_review := str(report.get("review_before_claim_decision", "")).strip_edges()
+		if original_review.is_empty():
+			original_review = str(report.get("review", "")).replace(" В компенсации мне ещё и отказали.", "").replace("Служба отказалась компенсировать причинённый ущерб.", "").strip_edges()
+		report["review"] = "%s%s" % [original_review, " Позже служба всё-таки выплатила компенсацию." if not original_review.is_empty() else "После первоначального отказа служба всё-таки выплатила компенсацию."]
+		report["claim_payment_day"] = day
+		report["claim_payment_time"] = time_minutes
+		report["rating"] = _calculate_report_rating(
+			int(report.get("reputation_change", 0)),
+			int(report.get("reward_adjustment", 0)),
+			claim_amount
+		)
+		job_reports[index] = report
+		_record_financial_event(&"compensation", -claim_amount, str(report.get("title", "Компенсация жильцу")), {
+			"job_id": job_id, "resident": str(report.get("resident", "")), "late_payment": true,
+		})
+		state_changed.emit()
+		return true
+	return false
+
+
+func _sync_pending_report_to_history() -> void:
+	var job_id := str(pending_job_report.get("job_id", ""))
+	var completed_day := int(pending_job_report.get("completed_day", 0))
+	var completed_time := int(pending_job_report.get("completed_time", -1))
+	for index in range(job_reports.size() - 1, -1, -1):
+		var report_value: Variant = job_reports[index]
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		if str(report.get("job_id", "")) == job_id and int(report.get("completed_day", 0)) == completed_day and int(report.get("completed_time", -1)) == completed_time:
+			job_reports[index] = pending_job_report.duplicate(true)
+			return
 
 
 func format_time() -> String:
@@ -1096,6 +1192,7 @@ func load_game(slot: int = 0) -> Error:
 	for loaded_report: Variant in loaded_reports:
 		if loaded_report is Dictionary:
 			var report: Dictionary = loaded_report
+			_migrate_claim_fields(report)
 			if not report.has("reputation_change") and bool(report.get("maximum_payment", false)) and not bool(report.get("overdue", false)):
 				report["reputation_change"] = 1
 				report["rating"] = 5
@@ -1117,6 +1214,7 @@ func load_game(slot: int = 0) -> Error:
 	var loaded_pending_report: Variant = save_data.get("pending_job_report", {})
 	if loaded_pending_report is Dictionary:
 		var pending_report: Dictionary = loaded_pending_report
+		_migrate_claim_fields(pending_report)
 		pending_job_report = pending_report.duplicate(true)
 	else:
 		pending_job_report = {}
@@ -1213,6 +1311,15 @@ func _record_financial_event(kind: StringName, amount: int, title: String, detai
 	financial_ledger.append(event)
 
 
+func _migrate_claim_fields(report: Dictionary) -> void:
+	if report.has("claim_status"):
+		return
+	var legacy_compensation := maxi(0, int(report.get("compensation", 0)))
+	report["claim_amount"] = legacy_compensation
+	report["claim_status"] = "paid" if legacy_compensation > 0 else "none"
+	report["claim_reputation_penalty"] = 0
+
+
 func _financial_event(kind: StringName, amount: int, title: String) -> Dictionary:
 	return {
 		"kind": String(kind), "amount": amount, "title": title,
@@ -1244,13 +1351,23 @@ func _rebuild_legacy_financial_ledger() -> void:
 		if not report_value is Dictionary:
 			continue
 		var report: Dictionary = report_value
-		var amount := int(report.get("net_change", int(report.get("reward", 0)) - int(report.get("compensation", 0))))
+		var income := int(report.get("reward", 0))
 		financial_ledger.append({
-			"kind": "job", "amount": amount, "title": str(report.get("title", "Завершённая заявка")),
-			"income": int(report.get("reward", 0)), "expense": int(report.get("compensation", 0)),
+			"kind": "job", "amount": income, "title": str(report.get("title", "Завершённая заявка")),
+			"income": income, "expense": 0,
 			"day": int(report.get("completed_day", 0)), "time_minutes": int(report.get("completed_time", -1)), "legacy": true,
 		})
-		known_balance += amount
+		known_balance += income
+		var claim_status := str(report.get("claim_status", "paid"))
+		var paid_compensation := int(report.get("compensation", 0)) if claim_status in ["paid", "paid_after_denial"] else 0
+		if paid_compensation > 0:
+			financial_ledger.append({
+				"kind": "compensation", "amount": -paid_compensation, "title": str(report.get("title", "Компенсация жильцу")),
+				"job_id": str(report.get("job_id", "")), "resident": str(report.get("resident", "")),
+				"day": int(report.get("claim_decision_day", report.get("completed_day", 0))),
+				"time_minutes": int(report.get("claim_decision_time", report.get("completed_time", -1))), "legacy": true,
+			})
+			known_balance -= paid_compensation
 	for item_id_string: String in owned_supply_items:
 		var item_id := StringName(item_id_string)
 		if not SUPPLY_ITEMS.has(item_id):

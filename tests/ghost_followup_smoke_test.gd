@@ -47,6 +47,11 @@ func _run() -> void:
 	var original_destroyed := original_mirror_scene.get_node("PortalMirror/Destroyed") as TextureRect
 	_check(followup_destroyed.position == original_destroyed.position and followup_destroyed.size == original_destroyed.size, "Разбитое зеркало сохраняет размер из предыдущей заявки")
 	original_mirror_scene.queue_free()
+	var ghost_room_scene := (load("res://scenes/GhostMirrorRoom.tscn") as PackedScene).instantiate()
+	var ghost_approach := ghost_room_scene.get_node("PhysicalApproach") as Marker2D
+	var mirror_approach := ghost_room_scene.get_node("MirrorPhysicalApproach") as Marker2D
+	_check(mirror_approach.position.x > ghost_approach.position.x + 300.0, "Для действий с зеркалом используется отдельная точка подхода у зеркала")
+	ghost_room_scene.queue_free()
 	room.queue_free()
 	await process_frame
 

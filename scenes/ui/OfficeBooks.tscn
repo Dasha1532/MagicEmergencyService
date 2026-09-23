@@ -142,7 +142,7 @@ layout_mode = 0
 offset_left = 42.0
 offset_top = 92.0
 offset_right = 996.0
-offset_bottom = 714.0
+offset_bottom = 636.0
 horizontal_scroll_mode = 0
 
 [node name="Body" type="Label" parent="DetailPanel/Scroll"]
@@ -153,3 +153,13 @@ theme_override_colors/font_color = Color(0.92, 0.84, 0.69, 1)
 theme_override_font_sizes/font_size = 18
 text = "Содержимое"
 autowrap_mode = 2
+
+[node name="PayClaim" type="Button" parent="DetailPanel"]
+visible = false
+layout_mode = 0
+offset_left = 620.0
+offset_top = 646.0
+offset_right = 996.0
+offset_bottom = 712.0
+theme_override_font_sizes/font_size = 16
+text = "ВЫПЛАТИТЬ КОМПЕНСАЦИЮ"

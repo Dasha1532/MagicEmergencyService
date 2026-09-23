@@ -47,8 +47,10 @@ func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
 	var applied := false
 	var warning := false
 	var message := "Действие не изменило состояние водостока."
-	if bool(world_object["damaged"]) and action_id != &"diagnose":
+	if bool(world_object["damaged"]):
 		return _record(employee_id, action_id, false, true, "Горгулья уже повреждена. Вода уходит через образовавшийся пролом; дополнительные действия не требуются.")
+	if bool(world_object["awake"]):
+		return _record(employee_id, action_id, false, true, "Горгулья уже оживлена и исправно отводит воду. Дополнительные действия не требуются.")
 
 	match action_id:
 		&"diagnose":
@@ -111,6 +113,10 @@ func is_resolved() -> bool:
 	if bool(world_object["damaged"]):
 		return true
 	return not bool(world_object["frozen"]) and (bool(world_object["awake"]) or bool(world_object["bypass_open"]))
+
+
+func is_terminal() -> bool:
+	return bool(world_object["damaged"]) or bool(world_object["awake"])
 
 
 func visual_state() -> StringName:

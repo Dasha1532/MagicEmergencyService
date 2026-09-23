@@ -208,6 +208,9 @@ offset_bottom = 886.0
 [node name="PhysicalApproach" type="Marker2D" parent="."]
 position = Vector2(570, 270)
 
+[node name="MirrorPhysicalApproach" type="Marker2D" parent="."]
+position = Vector2(1030, 245)
+
 [node name="Interface" type="CanvasLayer" parent="."]
 
 [node name="ToolBar" parent="Interface" instance=ExtResource("13_toolbar")]
