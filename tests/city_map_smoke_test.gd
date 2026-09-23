@@ -20,10 +20,12 @@ func _run() -> void:
 	await process_frame
 	var marker := city_map.get_node("MapArea/HouseMarkers/RagnarAndEleonora") as Button
 	var selesta_marker := city_map.get_node("MapArea/HouseMarkers/Selesta") as Button
+	var gargoyle_marker := city_map.get_node("MapArea/HouseMarkers/GargoyleAttic") as Button
 	_check("Активных заявок: 1" in marker.text, "Стартовая заявка показана по адресу")
 	_check("Старый квартал, 5" in marker.text, "Маркер подписан адресом")
 	_check("Рагнар" not in marker.text and "Элеонор" not in marker.text, "Маркер не присваивает дом жильцам")
 	_check(not selesta_marker.visible, "Адрес без доступных заявок скрыт")
+	_check(not gargoyle_marker.visible, "Адрес третьего дня пока скрыт")
 	_check("Бригада не назначена" in marker.text, "Показан статус без бригады")
 
 	var selection := {"job_id": &""}
@@ -63,6 +65,11 @@ func _run() -> void:
 	_check("Сотрудники в пути" in selesta_marker.text, "Второй дом обновлён при отправке")
 	game_state.cancel_job_arrivals(&"portal_mirror")
 	_check("Бригада не назначена" in selesta_marker.text, "Второй дом обновлён при отмене отправки")
+	game_state.completed_job_ids.append("walking_wardrobe")
+	game_state.completed_job_ids.append("portal_mirror")
+	game_state.advance_day()
+	_check(gargoyle_marker.visible and "Горгуль" not in gargoyle_marker.text, "На третий день карта показывает новый адрес без имени объекта")
+	_check("Активных заявок: 1" in gargoyle_marker.text, "Новый маркер использует общие данные заявок")
 	_finish()
 
 

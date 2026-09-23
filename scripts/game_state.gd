@@ -295,6 +295,24 @@ var jobs: Dictionary = {
 		"repair_scene": "res://scenes/PortalMirrorHouse.tscn",
 		"assigned": PackedStringArray(),
 	},
+	&"sleeping_gargoyle": {
+		"title": "Восстановить водоотвод на чердаке",
+		"objective": "Восстановить водоотвод на чердаке",
+		"address": "Башенная улица, 8",
+		"resident": "Госпожа Мирабель",
+		"resident_portrait": "",
+		"description": "Водосточная горгулья уснула и забилась листьями. Дождевая вода уже затапливает чердак.",
+		"urgency": "Срочно",
+		"initial_time": 80,
+		"time_left": 80,
+		"unlocked": false,
+		"overdue": false,
+		"dispatched": false,
+		"danger": "Магия • затопление",
+		"base_reward": 580,
+		"repair_scene": "res://scenes/GargoyleAttic.tscn",
+		"assigned": PackedStringArray(),
+	},
 }
 
 
@@ -386,6 +404,8 @@ func advance_day(days: int = 1) -> void:
 	time_minutes = 9 * 60
 	if completed_job_ids.has("lava_leak"):
 		_unlock_parallel_jobs()
+	if completed_job_ids.has("walking_wardrobe") and completed_job_ids.has("portal_mirror"):
+		_unlock_gargoyle_job()
 	for employee_id: StringName in EMPLOYEE_ORDER:
 		var employee: Dictionary = employees[employee_id]
 		employee["arrival_until"] = 0
@@ -788,7 +808,7 @@ func dismiss_pending_job_report() -> void:
 
 
 func format_time() -> String:
-	return "%02d:%02d" % [time_minutes / 60, time_minutes % 60]
+	return "%02d:%02d" % [floori(float(time_minutes) / 60.0), time_minutes % 60]
 
 
 func has_save() -> bool:
@@ -992,6 +1012,12 @@ func load_game() -> Error:
 		reputation += migrated_reputation_bonus
 	if completed_job_ids.has("lava_leak"):
 		_set_parallel_jobs_unlocked(day > _job_completed_day(&"lava_leak"))
+	if completed_job_ids.has("walking_wardrobe") and completed_job_ids.has("portal_mirror"):
+		var last_second_day_completion := maxi(
+			_job_completed_day(&"walking_wardrobe"),
+			_job_completed_day(&"portal_mirror")
+		)
+		_set_gargoyle_job_unlocked(day > last_second_day_completion)
 	if not is_job_available(selected_job_id):
 		selected_job_id = _first_available_job_id()
 	var loaded_pending_report: Variant = save_data.get("pending_job_report", {})
@@ -1173,6 +1199,19 @@ func _set_parallel_jobs_unlocked(unlocked: bool) -> void:
 		jobs[job_id] = job
 
 
+func _unlock_gargoyle_job() -> void:
+	_set_gargoyle_job_unlocked(true)
+
+
+func _set_gargoyle_job_unlocked(unlocked: bool) -> void:
+	var job_id := &"sleeping_gargoyle"
+	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
+		return
+	var job: Dictionary = jobs[job_id]
+	job["unlocked"] = unlocked
+	jobs[job_id] = job
+
+
 func _job_completed_day(job_id: StringName) -> int:
 	for report_value: Variant in job_reports:
 		if report_value is Dictionary:
@@ -1214,7 +1253,7 @@ func _update_employee_statuses() -> void:
 
 
 func _format_minutes(value: int) -> String:
-	return "%02d:%02d" % [value / 60, value % 60]
+	return "%02d:%02d" % [floori(float(value) / 60.0), value % 60]
 
 
 func _complete_finished_training() -> void:

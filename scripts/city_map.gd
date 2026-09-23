@@ -20,11 +20,16 @@ var HOUSE_DEFINITIONS: Dictionary = {
 		"address": "Верхний город, 12",
 		"job_ids": PackedStringArray(["portal_mirror"]),
 	},
+	&"tower_street": {
+		"address": "Башенная улица, 8",
+		"job_ids": PackedStringArray(["sleeping_gargoyle"]),
+	},
 }
 
 @onready var game_state: Node = get_node("/root/GameState")
 @onready var ragnar_marker: Button = $MapArea/HouseMarkers/RagnarAndEleonora
 @onready var selesta_marker: Button = $MapArea/HouseMarkers/Selesta
+@onready var gargoyle_marker: Button = $MapArea/HouseMarkers/GargoyleAttic
 @onready var house_panel: Panel = $HousePanel
 @onready var house_title: Label = $HousePanel/Title
 @onready var house_summary: Label = $HousePanel/Summary
@@ -37,6 +42,7 @@ func _ready() -> void:
 	$BackButton.pressed.connect(func() -> void: back_requested.emit())
 	ragnar_marker.pressed.connect(_select_house.bind(&"ragnar_eleonora"))
 	selesta_marker.pressed.connect(_select_house.bind(&"selesta"))
+	gargoyle_marker.pressed.connect(_select_house.bind(&"tower_street"))
 	if not game_state.state_changed.is_connected(refresh):
 		game_state.state_changed.connect(refresh)
 	_apply_styles()
@@ -46,6 +52,7 @@ func _ready() -> void:
 func refresh() -> void:
 	_refresh_marker(ragnar_marker, &"ragnar_eleonora")
 	_refresh_marker(selesta_marker, &"selesta")
+	_refresh_marker(gargoyle_marker, &"tower_street")
 	if not selected_house_id.is_empty():
 		_refresh_house_panel()
 
@@ -55,7 +62,7 @@ func _apply_styles() -> void:
 	house_panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
 	$BackButton.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_BRASS, 2, 8))
 	$BackButton.add_theme_stylebox_override("hover", _style(COLOR_CARD_HOVER, COLOR_GOLD, 2, 8))
-	for marker: Button in [ragnar_marker, selesta_marker]:
+	for marker: Button in [ragnar_marker, selesta_marker, gargoyle_marker]:
 		marker.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_BRASS, 2, 8))
 		marker.add_theme_stylebox_override("hover", _style(COLOR_CARD_HOVER, COLOR_GOLD, 3, 8))
 		marker.add_theme_stylebox_override("pressed", _style(COLOR_SELECTED, COLOR_GOLD, 3, 8))

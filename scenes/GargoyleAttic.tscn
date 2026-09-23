@@ -1,0 +1,174 @@
+[gd_scene format=3 uid="uid://vhh0kw3ooa7s"]
+
+[ext_resource type="Texture2D" uid="uid://dh83fvv0wdhvc" path="res://assets/backgrounds/gargoyle_attic.png" id="1_background"]
+[ext_resource type="Texture2D" uid="uid://bxntu2g3vk0f1" path="res://assets/objects/drain_gargoyle/dormant.png" id="2_dormant"]
+[ext_resource type="Texture2D" uid="uid://bpnvyoflgkcpn" path="res://assets/objects/drain_gargoyle/awakened.png" id="3_awakened"]
+[ext_resource type="Texture2D" uid="uid://b43n2hxjt76b2" path="res://assets/objects/drain_gargoyle/dormant_clean.png" id="4_clean"]
+[ext_resource type="Texture2D" uid="uid://dxg7agxnjc0ee" path="res://assets/objects/drain_gargoyle/damaged.png" id="4_damaged"]
+[ext_resource type="Texture2D" uid="uid://b61iegc5gif1o" path="res://assets/effects/gargoyle_attic/flooding.png" id="4_flooding"]
+[ext_resource type="Texture2D" uid="uid://c560pi6vsg3qv" path="res://assets/objects/drain_gargoyle/frozen.png" id="4_frozen"]
+[ext_resource type="Texture2D" uid="uid://c8wnhaocvvlva" path="res://assets/effects/gargoyle_attic/frozen_flooding.png" id="4_frozen_flooding"]
+[ext_resource type="Script" uid="uid://deolwpfecvsoy" path="res://scripts/gargoyle_attic.gd" id="5_room"]
+[ext_resource type="Script" uid="uid://ck73c0cm7vurq" path="res://scripts/gargoyle_object.gd" id="6_object"]
+[ext_resource type="PackedScene" path="res://scenes/EmployeeActor.tscn" id="7_actor"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ToolBar.tscn" id="8_toolbar"]
+[ext_resource type="PackedScene" path="res://scenes/ui/RepairHUD.tscn" id="9_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="10_pause"]
+
+[node name="GargoyleAttic" type="Node2D" unique_id=2057033162]
+script = ExtResource("5_room")
+
+[node name="AtticBackground" type="TextureRect" parent="." unique_id=1348900866]
+offset_right = 1600.0
+offset_bottom = 900.0
+mouse_filter = 2
+texture = ExtResource("1_background")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Flooding" type="TextureRect" parent="." unique_id=257124420]
+z_index = 1
+offset_right = 1600.0
+offset_bottom = 900.0
+mouse_filter = 2
+texture = ExtResource("4_flooding")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="FrozenFlooding" type="TextureRect" parent="." unique_id=1061268557]
+visible = false
+z_index = 1
+offset_right = 1600.0
+offset_bottom = 900.0
+mouse_filter = 2
+texture = ExtResource("4_frozen_flooding")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="GargoylePlacement" type="Control" parent="." unique_id=498878567]
+z_index = 3
+layout_mode = 3
+anchors_preset = 0
+offset_left = 1080.0
+offset_top = 170.0
+offset_right = 1590.0
+offset_bottom = 680.0
+mouse_filter = 1
+script = ExtResource("6_object")
+
+[node name="Dormant" type="TextureRect" parent="GargoylePlacement" unique_id=1314254172]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -8.0
+offset_top = -136.0
+offset_right = -122.0
+offset_bottom = -179.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_dormant")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Awakened" type="TextureRect" parent="GargoylePlacement" unique_id=319278925]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -5.0
+offset_top = -96.0
+offset_right = -120.0
+offset_bottom = -206.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_awakened")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="DormantClean" type="TextureRect" parent="GargoylePlacement" unique_id=560205067]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -6.0
+offset_top = -126.0
+offset_right = -134.0
+offset_bottom = -172.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_clean")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Damaged" type="TextureRect" parent="GargoylePlacement" unique_id=46517111]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 1.0
+offset_top = -91.0
+offset_right = -128.0
+offset_bottom = -230.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_damaged")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Frozen" type="TextureRect" parent="GargoylePlacement" unique_id=375083958]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -8.0
+offset_top = -136.0
+offset_right = -122.0
+offset_bottom = -179.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_frozen")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="InteractionButton" type="Button" parent="GargoylePlacement" unique_id=772731125]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_default_cursor_shape = 2
+
+[node name="Target" type="Marker2D" parent="GargoylePlacement" unique_id=386269965]
+position = Vector2(121, 72)
+gizmo_extents = 20.0
+
+[node name="EmployeeActor" parent="." unique_id=487086756 instance=ExtResource("7_actor")]
+offset_left = 117.0
+offset_top = 177.0
+offset_right = 623.0
+offset_bottom = 858.0
+
+[node name="PhysicalApproach" type="Marker2D" parent="." unique_id=1005061359]
+position = Vector2(1025, 250)
+gizmo_extents = 24.0
+
+[node name="Interface" type="CanvasLayer" parent="." unique_id=2005922168]
+
+[node name="ToolBar" parent="Interface" unique_id=1486966887 instance=ExtResource("8_toolbar")]
+
+[node name="RepairHUD" parent="Interface" unique_id=1454522104 instance=ExtResource("9_hud")]
+offset_left = -5.0
+offset_right = -5.0
+
+[node name="PauseMenu" parent="." unique_id=1556810645 instance=ExtResource("10_pause")]
+show_default_menu_button = false

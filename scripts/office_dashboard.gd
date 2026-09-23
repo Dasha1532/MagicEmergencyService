@@ -1387,7 +1387,7 @@ func _depart() -> void:
 	if not game_state.is_job_dispatched(selected_job_id):
 		if game_state.begin_job(selected_job_id):
 			game_state.leave_active_job()
-			warning_label.text = "Бригада в пути."
+			warning_label.text = ""
 		return
 	if game_state.has_employee_on_site(selected_job_id):
 		if game_state.begin_job(selected_job_id):

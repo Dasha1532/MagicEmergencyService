@@ -28,6 +28,9 @@ var title_font: SystemFont
 
 
 func _ready() -> void:
+	# Главное меню всегда должно принимать ввод, даже если предыдущая сцена
+	# была закрыта или перезагружена во время паузы.
+	get_tree().paused = false
 	_build_interface()
 	_logo_shine_loop()
 
@@ -194,8 +197,8 @@ func _logo_shine_loop() -> void:
 		await tween.finished
 
 
-func _set_logo_shine(position: float) -> void:
-	logo_material.set_shader_parameter("shine_position", position)
+func _set_logo_shine(shine_position: float) -> void:
+	logo_material.set_shader_parameter("shine_position", shine_position)
 
 
 func _choose_tagline() -> String:

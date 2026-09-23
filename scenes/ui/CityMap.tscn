@@ -74,6 +74,16 @@ mouse_filter = 0
 mouse_default_cursor_shape = 2
 text = "Верхний город, 12"
 
+[node name="GargoyleAttic" type="Button" parent="MapArea/HouseMarkers"]
+layout_mode = 0
+offset_left = 590.0
+offset_top = 445.0
+offset_right = 920.0
+offset_bottom = 605.0
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+text = "Башенная улица, 8"
+
 [node name="Header" type="Panel" parent="."]
 layout_mode = 0
 offset_left = 22.0
