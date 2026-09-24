@@ -41,6 +41,19 @@ func _run() -> void:
 	var office := office_scene.instantiate()
 	root.add_child(office)
 	await process_frame
+	office._on_cat_pressed()
+	_check(office.cat_phrase_panel.visible and not office.cat_phrase_label.text.is_empty(), "Невидимая зона кота показывает шуточную реплику")
+	for click_index in range(9):
+		office._on_cat_pressed()
+	_check("Инспектором кошачьего отдела" in office.cat_phrase_label.text, "Десятое нажатие выдаёт скрытое кошачье прозвище")
+	office._open_equipment_storage()
+	await process_frame
+	_check(office.equipment_cards.get_child_count() == 1, "На складе изначально есть служебный ремонтный набор Бориса")
+	game_state.grant_debug_money(500)
+	_check(game_state.buy_supply_item(&"ghost_trap"), "Ловушка покупается для проверки склада")
+	_check(game_state.buy_supply_item(&"thermal_regulator"), "Терморегулятор покупается для проверки склада")
+	await process_frame
+	_check(office.equipment_cards.get_child_count() == 3, "Купленное полевое снаряжение появляется на складе")
 	_check(not office.warning_label.visible, "Служебные подтверждения не выводятся поверх карточки заявки")
 	office._open_personnel()
 	var status_guide: Rect2 = office._personnel_guide_rect("StatusArea")

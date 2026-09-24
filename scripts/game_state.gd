@@ -4,12 +4,14 @@ signal state_changed
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 11
+const SAVE_VERSION: int = 12
 const LEGACY_SAVE_PATH: String = "user://savegame.json"
 const SAVE_SLOT_COUNT: int = 5
 const TRAVEL_TIME_MINUTES: int = 15
 const OVERDUE_PAYMENT_PENALTY: int = 100
 const REAL_SECONDS_PER_GAME_MINUTE: float = 3.0
+const DEMO_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle", "escaped_ghost", "frozen_bath"]
+const DEMO_CORE_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle"]
 const SUPPLY_ITEMS: Dictionary = {
 	&"animation_kit": {
 		"name": "Практическое оживление бытовых предметов",
@@ -100,6 +102,7 @@ var owned_supply_items: PackedStringArray = PackedStringArray()
 var completed_job_ids: PackedStringArray = PackedStringArray()
 var job_reports: Array = []
 var pending_job_report: Dictionary = {}
+var demo_completion_seen: bool = false
 var financial_ledger: Array = []
 var job_repair_states: Dictionary = {}
 var clock_paused: bool = true
@@ -924,6 +927,64 @@ func dismiss_pending_job_report() -> void:
 	state_changed.emit()
 
 
+func is_demo_complete() -> bool:
+	for job_id: String in get_demo_required_job_ids():
+		if not completed_job_ids.has(job_id):
+			return false
+	return true
+
+
+func get_demo_required_job_ids() -> PackedStringArray:
+	var required := DEMO_CORE_JOB_IDS.duplicate()
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
+			continue
+		var follow_up: Variant = (report_value as Dictionary).get("follow_up", {})
+		if not follow_up is Dictionary:
+			continue
+		var follow_up_id := str((follow_up as Dictionary).get("type", ""))
+		if follow_up_id in ["escaped_ghost", "frozen_bath"] and not required.has(follow_up_id):
+			required.append(follow_up_id)
+	return required
+
+
+func should_show_demo_completion() -> bool:
+	return is_demo_complete() and pending_job_report.is_empty() and not demo_completion_seen
+
+
+func mark_demo_completion_seen() -> void:
+	if demo_completion_seen:
+		return
+	demo_completion_seen = true
+	state_changed.emit()
+
+
+func get_demo_summary() -> Dictionary:
+	var required_jobs := get_demo_required_job_ids()
+	var claims := 0
+	var damaged_jobs := 0
+	var compensation_paid := 0
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		var claim_amount := maxi(int(report.get("claim_amount", 0)), int(report.get("compensation", 0)))
+		if claim_amount > 0:
+			damaged_jobs += 1
+			claims += 1
+		compensation_paid += maxi(0, int(report.get("compensation", 0)))
+	return {
+		"completed_jobs": required_jobs.size(),
+		"required_jobs": required_jobs.size(),
+		"money": money,
+		"reputation": reputation,
+		"titles": get_reputation_titles(2),
+		"claims": claims,
+		"damaged_jobs": damaged_jobs,
+		"compensation_paid": compensation_paid,
+	}
+
+
 func resolve_pending_claim(pay_compensation: bool) -> bool:
 	if pending_job_report.is_empty() or str(pending_job_report.get("claim_status", "none")) != "pending":
 		return false
@@ -1143,6 +1204,7 @@ func start_new_game() -> void:
 	completed_job_ids = PackedStringArray()
 	job_reports = []
 	pending_job_report = {}
+	demo_completion_seen = false
 	financial_ledger = [_financial_event(&"opening_balance", money, "Начальные средства службы")]
 	job_repair_states = {}
 	clock_paused = true
@@ -1223,6 +1285,7 @@ func save_game(slot: int = 1) -> Error:
 		"completed_job_ids": Array(completed_job_ids),
 		"job_reports": job_reports,
 		"pending_job_report": pending_job_report,
+		"demo_completion_seen": demo_completion_seen,
 		"financial_ledger": financial_ledger,
 		"job_repair_states": job_repair_states,
 		"job_assignments": job_assignments,
@@ -1264,6 +1327,7 @@ func load_game(slot: int = 0) -> Error:
 	time_minutes = maxi(0, int(save_data.get("time_minutes", time_minutes)))
 	money = int(save_data.get("money", money))
 	reputation = int(save_data.get("reputation", reputation))
+	demo_completion_seen = bool(save_data.get("demo_completion_seen", false))
 	clock_paused = bool(save_data.get("clock_paused", true))
 	clock_speed = int(save_data.get("clock_speed", 1))
 	_clock_accumulator = 0.0

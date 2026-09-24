@@ -65,6 +65,8 @@ var supply_detail_description: Label
 var supply_delivery_note: Label
 var selected_supply_item_id: StringName = &"animation_kit"
 var selected_training_id: StringName = &"animate"
+var equipment_layer: Control
+var equipment_cards: HBoxContainer
 var city_map_layer: Control
 var books_layer: Control
 var section_dialog: Panel
@@ -82,6 +84,13 @@ var arrival_dialog_title: Label
 var arrival_dialog_body: Label
 var dispatch_warning_dialog: Control
 var dispatch_warning_body: Label
+var demo_completion_layer: Control
+var demo_completion_title: Label
+var demo_completion_summary: Label
+var cat_click_count: int = 0
+var cat_message_revision: int = 0
+var cat_phrase_panel: Panel
+var cat_phrase_label: Label
 var risk_dispatch_confirmed: bool = false
 var auto_wait_running: bool = false
 @onready var game_state: Node = get_node("/root/GameState")
@@ -115,8 +124,10 @@ func _build_interface() -> void:
 	_build_claim_dialog()
 	_build_arrival_dialog()
 	_build_dispatch_warning_dialog()
+	_build_demo_completion_dialog()
 	_build_personnel_screen()
 	_build_supply_shop()
+	_build_equipment_storage()
 	_build_city_map()
 	_build_books()
 
@@ -282,7 +293,7 @@ func _build_office_hub() -> void:
 
 	_connect_editable_hotspot($ObjectHotspots/JobBoard, "ДОСКА ЗАЯВОК", "Что опять случилось?", _open_jobs)
 	_connect_editable_hotspot($ObjectHotspots/EmployeesBoard, "СОТРУДНИКИ", "Кто сегодня работает?", _open_personnel)
-	_connect_editable_hotspot($ObjectHotspots/EquipmentStorage, "СКЛАД СНАРЯЖЕНИЯ", "Чем будем чинить?", _open_section.bind("СКЛАД СНАРЯЖЕНИЯ", "Чем будем чинить?", "Здесь будет храниться обычное и магическое оборудование службы."))
+	_connect_editable_hotspot($ObjectHotspots/EquipmentStorage, "СКЛАД СНАРЯЖЕНИЯ", "Чем будем чинить?", _open_equipment_storage)
 	_connect_editable_hotspot($ObjectHotspots/CityMap, "КАРТА ГОРОДА", "Где опять прорвало?", _open_city_map)
 	_connect_editable_hotspot($BookHotspots/AccountingBook, "КНИГА УЧЁТА", "Куда делись деньги?", _open_books.bind(&"accounting"))
 	_connect_editable_hotspot($BookHotspots/ReviewsBook, "КНИГА ОТЗЫВОВ", "Благодарности, жалобы и угрозы.", _open_books.bind(&"reviews"))
@@ -290,6 +301,7 @@ func _build_office_hub() -> void:
 	_connect_editable_hotspot($ObjectHotspots/SupplyShop, "ЛАВКА СНАБЖЕНИЯ", "Очень нужные покупки", _open_supply_shop)
 
 	_build_office_menu_button()
+	_build_cat_easter_egg()
 
 	var hint := _label("Наведите курсор. Кот занят важным, его не будите.", 19, COLOR_PARCHMENT)
 	hint.position = Vector2(470, 846)
@@ -304,6 +316,90 @@ func _build_office_hub() -> void:
 	pulse.tween_property(hint, "scale", Vector2(0.96, 0.96), 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	_build_section_dialog()
+
+
+func _build_cat_easter_egg() -> void:
+	var cat_button := Button.new()
+	cat_button.position = Vector2(480, 620)
+	cat_button.size = Vector2(185, 105)
+	cat_button.flat = true
+	cat_button.focus_mode = Control.FOCUS_NONE
+	cat_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	cat_button.pressed.connect(_on_cat_pressed)
+	hub_layer.add_child(cat_button)
+
+	cat_phrase_panel = _panel(Vector2(340, 500), Vector2(560, 108), 12)
+	cat_phrase_panel.visible = false
+	cat_phrase_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cat_phrase_panel.z_index = 20
+	hub_layer.add_child(cat_phrase_panel)
+	cat_phrase_label = _label("", 17, COLOR_PARCHMENT)
+	cat_phrase_label.position = Vector2(24, 14)
+	cat_phrase_label.size = Vector2(512, 80)
+	cat_phrase_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cat_phrase_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	cat_phrase_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	cat_phrase_label.clip_text = true
+	cat_phrase_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cat_phrase_panel.add_child(cat_phrase_label)
+
+
+func _on_cat_pressed() -> void:
+	cat_click_count += 1
+	cat_phrase_label.text = _cat_phrase_for_click(cat_click_count)
+	cat_phrase_panel.visible = true
+	cat_phrase_panel.move_to_front()
+	cat_message_revision += 1
+	_hide_cat_phrase_later(cat_message_revision)
+
+
+func _cat_phrase_for_click(click_number: int) -> String:
+	if click_number == 10:
+		return "Поздравляю. Вы назначены Инспектором кошачьего отдела. Должность неоплачиваемая."
+	var contextual := _cat_contextual_phrases()
+	if click_number % 4 == 0 and not contextual.is_empty():
+		return contextual[(click_number / 4 - 1) % contextual.size()]
+	if click_number <= 3:
+		var calm := [
+			"Кот занят. Оставьте заявку у диспетчера.",
+			"Мурчание не является официальной консультацией.",
+			"Складская мышь локализована. Работы ведутся.",
+		]
+		return calm[(click_number - 1) % calm.size()]
+	if click_number <= 7:
+		var annoyed := [
+			"Перерыв на сон согласован с руководством.",
+			"Повторное нажатие не ускоряет обработку заявки.",
+			"Специалист по когтетехническому надзору просит не мешать.",
+			"За срочность предусмотрена доплата сметаной.",
+		]
+		return annoyed[(click_number - 4) % annoyed.size()]
+	var warnings := [
+		"Предупреждение: терпение специалиста заканчивается.",
+		"Кот внёс вас в книгу учёта. В раздел расходов.",
+		"Мяу. Перевод: отойдите от рабочего места.",
+		"Последнее предупреждение перед применением когтей.",
+	]
+	return warnings[(click_number - 8) % warnings.size()]
+
+
+func _cat_contextual_phrases() -> PackedStringArray:
+	var phrases := PackedStringArray()
+	if game_state.completed_job_ids.has("walking_wardrobe"):
+		phrases.append("Шкаф ходил подозрительно. Как собака.")
+	if game_state.completed_job_ids.has("portal_mirror") or game_state.completed_job_ids.has("escaped_ghost"):
+		phrases.append("Привидение в банке? Главное, чтобы не тунец.")
+	if game_state.completed_job_ids.has("frozen_bath"):
+		phrases.append("Замёрзшая ванна — это большая миска. Но неудобная.")
+	if game_state.completed_job_ids.has("sleeping_gargoyle"):
+		phrases.append("Горгулья не мяукала. Я проверял.")
+	return phrases
+
+
+func _hide_cat_phrase_later(revision: int) -> void:
+	await get_tree().create_timer(3.0).timeout
+	if revision == cat_message_revision and cat_phrase_panel != null:
+		cat_phrase_panel.visible = false
 
 
 func _build_personnel_screen() -> void:
@@ -900,10 +996,54 @@ func _build_dispatch_warning_dialog() -> void:
 	panel.add_child(back_button)
 
 
+func _build_demo_completion_dialog() -> void:
+	demo_completion_layer = Control.new()
+	demo_completion_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	demo_completion_layer.visible = false
+	demo_completion_layer.z_index = 300
+	add_child(demo_completion_layer)
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.012, 0.008, 0.006, 0.88)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	demo_completion_layer.add_child(shade)
+	var panel := _panel(Vector2(335, 118), Vector2(930, 664), 16)
+	demo_completion_layer.add_child(panel)
+	demo_completion_title = _label("ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА", 34, COLOR_GOLD)
+	demo_completion_title.position = Vector2(60, 48)
+	demo_completion_title.size = Vector2(810, 52)
+	demo_completion_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	demo_completion_title.clip_text = true
+	panel.add_child(demo_completion_title)
+	var message := _label("Первые рабочие дни позади.\nГород и сотрудники уцелели — уже хороший результат.", 19, COLOR_PARCHMENT)
+	message.position = Vector2(125, 122)
+	message.size = Vector2(680, 68)
+	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	message.clip_text = true
+	panel.add_child(message)
+	demo_completion_summary = _label("", 21, COLOR_PARCHMENT)
+	demo_completion_summary.position = Vector2(150, 210)
+	demo_completion_summary.size = Vector2(630, 300)
+	demo_completion_summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	demo_completion_summary.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	demo_completion_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	demo_completion_summary.clip_text = true
+	panel.add_child(demo_completion_summary)
+	var continue_button := _button("ОСТАТЬСЯ В ОФИСЕ", Vector2(70, 558), Vector2(370, 66))
+	continue_button.pressed.connect(_continue_after_demo)
+	panel.add_child(continue_button)
+	var menu_button := _button("В ГЛАВНОЕ МЕНЮ", Vector2(490, 558), Vector2(370, 66))
+	menu_button.pressed.connect(_finish_demo_to_menu)
+	panel.add_child(menu_button)
+
+
 func _open_jobs() -> void:
 	hub_layer.visible = false
 	personnel_layer.visible = false
 	supply_layer.visible = false
+	equipment_layer.visible = false
 	city_map_layer.visible = false
 	books_layer.visible = false
 	dashboard_layer.visible = true
@@ -914,6 +1054,7 @@ func _open_personnel() -> void:
 	hub_layer.visible = false
 	dashboard_layer.visible = false
 	supply_layer.visible = false
+	equipment_layer.visible = false
 	city_map_layer.visible = false
 	books_layer.visible = false
 	personnel_layer.visible = true
@@ -926,8 +1067,160 @@ func _open_supply_shop() -> void:
 	personnel_layer.visible = false
 	city_map_layer.visible = false
 	books_layer.visible = false
+	equipment_layer.visible = false
 	supply_layer.visible = true
 	_refresh_supply_shop()
+
+
+func _build_equipment_storage() -> void:
+	equipment_layer = Control.new()
+	equipment_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	equipment_layer.visible = false
+	add_child(equipment_layer)
+
+	var background := TextureRect.new()
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.texture = load("res://assets/backgrounds/office_hub.png") as Texture2D
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	equipment_layer.add_child(background)
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.015, 0.01, 0.008, 0.76)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	equipment_layer.add_child(shade)
+
+	var top_panel := _panel(Vector2(150, 80), Vector2(1300, 100), 14)
+	equipment_layer.add_child(top_panel)
+	var heading := _label("СКЛАД СНАРЯЖЕНИЯ", 28, COLOR_GOLD)
+	heading.position = Vector2(28, 17)
+	heading.size = Vector2(700, 42)
+	top_panel.add_child(heading)
+	var subtitle := _label("Служебное имущество и купленное полевое оборудование", 15, COLOR_MUTED)
+	subtitle.position = Vector2(30, 55)
+	subtitle.size = Vector2(760, 28)
+	top_panel.add_child(subtitle)
+	var back_button := _button("←  В ОФИС", Vector2(1068, 20), Vector2(204, 60))
+	back_button.pressed.connect(_show_hub)
+	top_panel.add_child(back_button)
+
+	var content_panel := _panel(Vector2(150, 198), Vector2(1300, 620), 14)
+	equipment_layer.add_child(content_panel)
+	equipment_cards = HBoxContainer.new()
+	equipment_cards.position = Vector2(34, 40)
+	equipment_cards.size = Vector2(1232, 510)
+	equipment_cards.add_theme_constant_override("separation", 22)
+	content_panel.add_child(equipment_cards)
+	var hint := _label("Магические книги хранятся в учебном фонде и на склад не поступают.", 15, COLOR_MUTED)
+	hint.position = Vector2(40, 566)
+	hint.size = Vector2(1220, 28)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content_panel.add_child(hint)
+	_refresh_equipment_storage()
+
+
+func _open_equipment_storage() -> void:
+	hub_layer.visible = false
+	dashboard_layer.visible = false
+	personnel_layer.visible = false
+	supply_layer.visible = false
+	city_map_layer.visible = false
+	books_layer.visible = false
+	equipment_layer.visible = true
+	_refresh_equipment_storage()
+
+
+func _refresh_equipment_storage() -> void:
+	if equipment_cards == null:
+		return
+	for child: Node in equipment_cards.get_children():
+		child.queue_free()
+	_add_equipment_card(
+		"Ремонтный набор Бориса",
+		"СЛУЖЕБНОЕ СНАРЯЖЕНИЕ\nВСЕГДА В НАЛИЧИИ",
+		"res://assets/objects/repair_kit/toolbox.png",
+		"Инструменты Бориса для диагностики\nи обычного ремонта. Набор не расходуется."
+	)
+	if game_state.has_supply_item(&"ghost_trap"):
+		_add_equipment_card(
+			str(game_state.SUPPLY_ITEMS[&"ghost_trap"]["name"]),
+			_equipment_status(&"ghost_trap"),
+			str(game_state.SUPPLY_ITEMS[&"ghost_trap"]["icon"]),
+			"Переносная ловушка для безопасного захвата бестелесных существ."
+		)
+	if game_state.has_supply_item(&"thermal_regulator"):
+		_add_equipment_card(
+			str(game_state.SUPPLY_ITEMS[&"thermal_regulator"]["name"]),
+			_equipment_status(&"thermal_regulator"),
+			str(game_state.SUPPLY_ITEMS[&"thermal_regulator"]["icon"]),
+			"Стабилизирует магическую температуру воды после установки на объекте."
+		)
+
+
+func _add_equipment_card(item_name: String, status_text: String, icon_path: String, description: String) -> void:
+	var card := Panel.new()
+	card.custom_minimum_size = Vector2(395, 500)
+	card.add_theme_stylebox_override("panel", _style(COLOR_CARD, COLOR_BRASS, 2, 12))
+	equipment_cards.add_child(card)
+	var icon := TextureRect.new()
+	icon.position = Vector2(72, 28)
+	icon.size = Vector2(250, 225)
+	icon.texture = load(icon_path) as Texture2D
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(icon)
+	var title := _label(item_name, 21, COLOR_GOLD)
+	title.position = Vector2(28, 270)
+	title.size = Vector2(339, 62)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	card.add_child(title)
+	var status := _label(status_text, 14, Color(0.96, 0.68, 0.34))
+	status.position = Vector2(24, 342)
+	status.size = Vector2(347, 44)
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status.clip_text = true
+	card.add_child(status)
+	var body := _label(description, 15, COLOR_PARCHMENT)
+	body.position = Vector2(34, 404)
+	body.size = Vector2(327, 72)
+	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.clip_text = true
+	card.add_child(body)
+
+
+func _equipment_status(item_id: StringName) -> String:
+	var job_id: StringName = &"escaped_ghost" if item_id == &"ghost_trap" else &"frozen_bath"
+	var active_state: Dictionary = game_state.get_job_repair_state(job_id)
+	var active_object: Variant = active_state.get("world_object", {})
+	if active_object is Dictionary:
+		if item_id == &"ghost_trap":
+			var trap_state := StringName(str((active_object as Dictionary).get("trap_state", "packed")))
+			if trap_state == &"occupied":
+				return "ЗАНЯТА • ПРИВИДЕНИЕ В ЛОВУШКЕ"
+			if trap_state == &"installed":
+				return "УСТАНОВЛЕНА НА ОБЪЕКТЕ"
+		elif bool((active_object as Dictionary).get("regulator_installed", false)):
+			return "УСТАНОВЛЕН • СТАРЫЙ КВАРТАЛ, 5"
+	for report_value: Variant in game_state.job_reports:
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		if item_id == &"ghost_trap" and str(report.get("job_id", "")) == "escaped_ghost":
+			for action_value: Variant in report.get("actions", []):
+				if action_value is Dictionary and str((action_value as Dictionary).get("action_id", "")) == "trap":
+					var action_result: Variant = (action_value as Dictionary).get("result", {})
+					if action_result is Dictionary and bool((action_result as Dictionary).get("applied", false)):
+						return "ЗАНЯТА • ПРИВИДЕНИЕ В ЛОВУШКЕ"
+		elif item_id == &"thermal_regulator" and str(report.get("job_id", "")) == "frozen_bath" and int(report.get("expense_reimbursement", 0)) > 0:
+			return "УСТАНОВЛЕН • СТАРЫЙ КВАРТАЛ, 5"
+	return "НА СКЛАДЕ • ГОТОВО К ВЫЕЗДУ"
 
 
 func _build_city_map() -> void:
@@ -943,6 +1236,7 @@ func _open_city_map() -> void:
 	dashboard_layer.visible = false
 	personnel_layer.visible = false
 	supply_layer.visible = false
+	equipment_layer.visible = false
 	books_layer.visible = false
 	city_map_layer.visible = true
 	city_map_layer.refresh()
@@ -966,6 +1260,7 @@ func _open_books(section: StringName) -> void:
 	dashboard_layer.visible = false
 	personnel_layer.visible = false
 	supply_layer.visible = false
+	equipment_layer.visible = false
 	city_map_layer.visible = false
 	books_layer.visible = true
 	books_layer.open_section(section)
@@ -975,6 +1270,7 @@ func _show_hub() -> void:
 	dashboard_layer.visible = false
 	personnel_layer.visible = false
 	supply_layer.visible = false
+	equipment_layer.visible = false
 	city_map_layer.visible = false
 	books_layer.visible = false
 	hub_layer.visible = true
@@ -1006,7 +1302,37 @@ func _refresh() -> void:
 		_refresh_personnel()
 	if supply_layer != null:
 		_refresh_supply_shop()
+	if equipment_layer != null:
+		_refresh_equipment_storage()
 	_refresh_job_report()
+	_refresh_demo_completion()
+
+
+func _refresh_demo_completion() -> void:
+	if demo_completion_layer == null:
+		return
+	var should_show: bool = game_state.should_show_demo_completion()
+	demo_completion_layer.visible = should_show
+	if not should_show:
+		return
+	var summary: Dictionary = game_state.get_demo_summary()
+	var titles: PackedStringArray = summary.get("titles", PackedStringArray(["Новая служба"]))
+	demo_completion_summary.text = "Выполнено заявок: %d из %d\nРепутация: %d\nПрозвища службы:\n%s\nКазна: %d монет\nЗаявок с ущербом: %d\nПретензий жильцов: %d\nВыплачено компенсаций: %d монет" % [
+		int(summary.get("completed_jobs", 0)), int(summary.get("required_jobs", 0)), int(summary.get("reputation", 0)),
+		", ".join(titles), int(summary.get("money", 0)), int(summary.get("damaged_jobs", 0)),
+		int(summary.get("claims", 0)), int(summary.get("compensation_paid", 0)),
+	]
+	demo_completion_layer.move_to_front()
+
+
+func _continue_after_demo() -> void:
+	game_state.mark_demo_completion_seen()
+	demo_completion_layer.visible = false
+
+
+func _finish_demo_to_menu() -> void:
+	game_state.mark_demo_completion_seen()
+	get_tree().change_scene_to_file("res://scenes/TitleScreen.tscn")
 
 
 func _refresh_job_report() -> void:
