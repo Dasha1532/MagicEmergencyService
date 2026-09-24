@@ -6,6 +6,7 @@ signal action_finished
 @onready var neutral_pose: TextureRect = $NeutralPose
 @onready var work_pose: TextureRect = $WorkPose
 @onready var walk_pose: TextureRect = $WalkPose
+@onready var walk_pose_alt: TextureRect = $WalkPoseAlt
 @onready var hold_pose: TextureRect = $HoldPose
 @onready var action_origin_marker: Marker2D = get_node_or_null("ActionOrigin") as Marker2D
 
@@ -17,6 +18,7 @@ var action_origin: Vector2 = Vector2(45, 70)
 var action_origin_from_data: bool = false
 var home_position: Vector2
 var walk_pose_base_position: Vector2
+var walk_pose_alt_base_position: Vector2
 var persistent_work_pose: bool = false
 var employee_positions: Dictionary = {}
 var walking_z_index: int
@@ -28,7 +30,9 @@ func _ready() -> void:
 	walking_z_index = z_index
 	pivot_offset = Vector2(size.x * 0.5, size.y)
 	walk_pose_base_position = walk_pose.position
+	walk_pose_alt_base_position = walk_pose_alt.position
 	walk_pose.pivot_offset = walk_pose.size * 0.5
+	walk_pose_alt.pivot_offset = walk_pose_alt.size * 0.5
 	_reset_pose_visibility()
 	if not Engine.is_editor_hint():
 		_start_idle_motion()
@@ -53,8 +57,10 @@ func configure_employee(new_employee_id: StringName, employee_data: Dictionary) 
 	neutral_pose.texture = load(neutral_path)
 	work_pose.texture = load(work_path)
 	var walk_path := str(employee_data.get("actor_walk_pose", ""))
+	var walk_alt_path := str(employee_data.get("actor_walk_pose_alt", ""))
 	var hold_path := str(employee_data.get("actor_hold_pose", ""))
 	walk_pose.texture = load(walk_path) as Texture2D if not walk_path.is_empty() else null
+	walk_pose_alt.texture = load(walk_alt_path) as Texture2D if not walk_alt_path.is_empty() else null
 	hold_pose.texture = load(hold_path) as Texture2D if not hold_path.is_empty() else null
 	# Обе цельные позы используют одну область, масштаб и точку опоры.
 	work_pose.offset_left = neutral_pose.offset_left
@@ -62,8 +68,10 @@ func configure_employee(new_employee_id: StringName, employee_data: Dictionary) 
 	work_pose.offset_right = neutral_pose.offset_right
 	work_pose.offset_bottom = neutral_pose.offset_bottom
 	_copy_pose_layout(neutral_pose, walk_pose)
+	_copy_pose_layout(neutral_pose, walk_pose_alt)
 	_copy_pose_layout(neutral_pose, hold_pose)
 	walk_pose_base_position = walk_pose.position
+	walk_pose_alt_base_position = walk_pose_alt.position
 	_reset_pose_visibility()
 	if idle_tween != null:
 		idle_tween.play()
@@ -89,6 +97,11 @@ func _reset_pose_visibility() -> void:
 	walk_pose.position = walk_pose_base_position
 	walk_pose.rotation = 0.0
 	walk_pose.scale = Vector2.ONE
+	walk_pose_alt.visible = false
+	walk_pose_alt.modulate = Color.WHITE
+	walk_pose_alt.position = walk_pose_alt_base_position
+	walk_pose_alt.rotation = 0.0
+	walk_pose_alt.scale = Vector2.ONE
 	hold_pose.visible = false
 	hold_pose.modulate = Color(1, 1, 1, 0)
 
@@ -163,7 +176,7 @@ func play_action(
 
 
 func _show_action_pose(pose: TextureRect) -> void:
-	for item: TextureRect in [neutral_pose, work_pose, walk_pose, hold_pose]:
+	for item: TextureRect in [neutral_pose, work_pose, walk_pose, walk_pose_alt, hold_pose]:
 		if item != pose:
 			item.visible = false
 	pose.visible = true
@@ -186,7 +199,7 @@ func set_persistent_work_pose(enabled: bool) -> void:
 func _show_work_pose_now() -> void:
 	if idle_tween != null:
 		idle_tween.pause()
-	for item: TextureRect in [neutral_pose, walk_pose, hold_pose]:
+	for item: TextureRect in [neutral_pose, walk_pose, walk_pose_alt, hold_pose]:
 		item.visible = false
 	work_pose.visible = true
 	work_pose.modulate = Color.WHITE
@@ -200,24 +213,57 @@ func _walk_to(target_position: Vector2) -> void:
 	work_pose.visible = false
 	hold_pose.visible = false
 	walk_pose.visible = true
+	walk_pose_alt.visible = false
 	walk_pose.modulate = Color.WHITE
+	walk_pose_alt.modulate = Color(1, 1, 1, 0)
 	walk_pose.pivot_offset = walk_pose.size * 0.5
+	walk_pose_alt.pivot_offset = walk_pose_alt.size * 0.5
 	var desired_direction: float = -1.0 if target_position.x > position.x else 1.0
 	var parent_direction: float = -1.0 if horizontal_flip else 1.0
 	walk_pose.scale = Vector2(desired_direction / parent_direction, 1.0)
+	walk_pose_alt.scale = walk_pose.scale
 	var duration: float = clampf(distance / 260.0, 0.45, 1.45)
 	var movement: Tween = create_tween()
 	movement.tween_property(self, "position", target_position, duration).set_trans(Tween.TRANS_LINEAR)
+	var frame_cycle: Tween = null
+	if walk_pose_alt.texture != null:
+		# Пауза между шагами делает походку спокойнее, а короткое перекрытие
+		# сглаживает разницу между двумя нарисованными силуэтами.
+		walk_pose_alt.visible = true
+		frame_cycle = create_tween().set_loops()
+		frame_cycle.tween_interval(0.24)
+		frame_cycle.tween_property(walk_pose, "modulate:a", 0.0, 0.10).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		frame_cycle.parallel().tween_property(walk_pose_alt, "modulate:a", 1.0, 0.10).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		frame_cycle.tween_interval(0.24)
+		frame_cycle.tween_property(walk_pose_alt, "modulate:a", 0.0, 0.10).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		frame_cycle.parallel().tween_property(walk_pose, "modulate:a", 1.0, 0.10).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	var steps: Tween = create_tween().set_loops()
 	steps.tween_property(walk_pose, "position:y", walk_pose_base_position.y - 7.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	steps.parallel().tween_property(walk_pose, "rotation", 0.009, 0.16).set_trans(Tween.TRANS_SINE)
+	steps.parallel().tween_property(walk_pose_alt, "position:y", walk_pose_alt_base_position.y - 7.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	steps.parallel().tween_property(walk_pose_alt, "rotation", 0.009, 0.16).set_trans(Tween.TRANS_SINE)
 	steps.tween_property(walk_pose, "position:y", walk_pose_base_position.y, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	steps.parallel().tween_property(walk_pose, "rotation", -0.007, 0.16).set_trans(Tween.TRANS_SINE)
+	steps.parallel().tween_property(walk_pose_alt, "position:y", walk_pose_alt_base_position.y, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	steps.parallel().tween_property(walk_pose_alt, "rotation", -0.007, 0.16).set_trans(Tween.TRANS_SINE)
 	await movement.finished
+	if frame_cycle != null:
+		frame_cycle.kill()
 	steps.kill()
+	walk_pose_alt.visible = false
+	walk_pose.modulate = Color.WHITE
+	walk_pose_alt.modulate = Color.WHITE
 	walk_pose.position = walk_pose_base_position
 	walk_pose.rotation = 0.0
 	walk_pose.scale = Vector2.ONE
+	walk_pose_alt.position = walk_pose_alt_base_position
+	walk_pose_alt.rotation = 0.0
+	walk_pose_alt.scale = Vector2.ONE
+
+
+func _set_walk_frame(show_alternate: bool) -> void:
+	walk_pose.visible = not show_alternate
+	walk_pose_alt.visible = show_alternate and walk_pose_alt.texture != null
 
 
 func restore_hold_pose(target_position: Vector2, action_z_index: int = 20) -> void:

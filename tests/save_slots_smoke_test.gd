@@ -26,6 +26,7 @@ func _run() -> void:
 	_check(int(second.get("day", 0)) == 4 and int(second.get("money", 0)) == 1180, "Карточка второго слота показывает его состояние")
 	_check(game_state.load_game(1) == OK and game_state.day == 2 and game_state.money == 725, "Загружается выбранный слот")
 	_check(game_state.load_game(2) == OK and game_state.day == 4 and game_state.money == 1180, "Слоты не перезаписывают друг друга")
+	_check(not game_state._is_valid_pending_report({"claim_status": "none"}), "Устаревшая пустая запись не считается актом выполненных работ")
 	var panel = load("res://scripts/save_slots_panel.gd").new()
 	root.add_child(panel)
 	await process_frame

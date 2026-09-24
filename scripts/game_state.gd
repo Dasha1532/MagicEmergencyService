@@ -13,6 +13,7 @@ const REAL_SECONDS_PER_GAME_MINUTE: float = 3.0
 const SUPPLY_ITEMS: Dictionary = {
 	&"animation_kit": {
 		"name": "Практическое оживление бытовых предметов",
+		"catalog_name": "Практическое оживление",
 		"category": "Учебный комплект",
 		"price": 400,
 		"icon": "res://assets/icons/tools/tool_animate.png",
@@ -21,12 +22,50 @@ const SUPPLY_ITEMS: Dictionary = {
 	},
 	&"ghost_trap": {
 		"name": "Служебная ловушка для привидений",
+		"catalog_name": "Ловушка для привидений",
 		"category": "Полевое снаряжение",
 		"price": 250,
 		"icon": "res://assets/objects/ghost_trap/empty.png",
 		"description": "Переносной зачарованный контейнер. После двухминутной установки позволяет поймать бестелесное существо без открытия портала.",
 	},
+	&"thermal_regulator": {
+		"name": "Рунический терморегулятор", "catalog_name": "Рунический терморегулятор", "category": "Полевое снаряжение", "price": 280,
+		"icon": "res://assets/objects/frozen_bath/regulator.png",
+		"description": "Переносной регулятор с рунами тепла и холода. Стабилизирует магическую температуру крана после установки.",
+	},
+	&"freeze_grimoire": {
+		"name": "Основы практической заморозки", "catalog_name": "Практическая заморозка", "category": "Книга заклинания", "price": 350,
+		"icon": "res://assets/icons/tools/tool_freeze.png",
+		"description": "Практический курс управления холодом. Открывает однодневное обучение заморозке для совместимого сотрудника.",
+		"training_id": "freeze",
+	},
+	&"heat_grimoire": {
+		"name": "Управляемое магическое пламя", "catalog_name": "Магическое пламя", "category": "Книга заклинания", "price": 350,
+		"icon": "res://assets/icons/tools/tool_heat.png",
+		"description": "Учебник безопасного нагрева и магического огня. Открывает однодневное обучение для совместимого сотрудника.",
+		"training_id": "heat",
+	},
+	&"telekinesis_grimoire": {
+		"name": "Телекинез для полевых работ", "catalog_name": "Полевой телекинез", "category": "Книга заклинания", "price": 400,
+		"icon": "res://assets/icons/tools/tool_move.png",
+		"description": "Курс дистанционного перемещения незакреплённых предметов. Открывает однодневное обучение телекинезу.",
+		"training_id": "telekinesis",
+	},
+	&"antimagic_grimoire": {
+		"name": "Прикладная антимагия", "catalog_name": "Прикладная антимагия", "category": "Книга заклинания", "price": 550,
+		"icon": "res://assets/icons/tools/tool_antimagic.png",
+		"description": "Лицензированное руководство по подавлению чар и закрытию магических каналов. Открывает однодневное обучение антимагии.",
+		"training_id": "antimagic",
+	},
 }
+const REPUTATION_TITLE_RULES: Array[Dictionary] = [
+	{"metric": &"denied_claims", "threshold": 2, "title": "Скупая контора"},
+	{"metric": &"damaged_jobs", "threshold": 2, "title": "Гроза интерьеров"},
+	{"metric": &"clean_jobs", "threshold": 3, "title": "Безупречные мастера"},
+	{"metric": &"action_types", "threshold": 4, "title": "Смелые экспериментаторы"},
+	{"metric": &"crew_members", "threshold": 4, "title": "Мастера на все руки"},
+	{"metric": &"completed_jobs", "threshold": 3, "title": "Проверенные делом"},
+]
 const TRAINING_DEFINITIONS: Dictionary = {
 	&"animate": {
 		"name": "Оживление",
@@ -35,6 +74,10 @@ const TRAINING_DEFINITIONS: Dictionary = {
 		"duration_days": 1,
 		"description": "Наделяет подходящие неживые объекты автономным поведением. Неосторожное применение может усилить уже действующие чары.",
 	},
+	&"freeze": {"name": "Заморозка", "supply_item_id": &"freeze_grimoire", "category": &"magic", "duration_days": 1, "description": "Контроль холода и остановка опасных потоков."},
+	&"heat": {"name": "Магия огня", "supply_item_id": &"heat_grimoire", "category": &"magic", "duration_days": 1, "description": "Управляемый нагрев и магическое пламя."},
+	&"telekinesis": {"name": "Телекинез", "supply_item_id": &"telekinesis_grimoire", "category": &"magic", "duration_days": 1, "description": "Дистанционное перемещение незакреплённых предметов."},
+	&"antimagic": {"name": "Антимагия", "supply_item_id": &"antimagic_grimoire", "category": &"magic", "duration_days": 1, "description": "Подавление чар и закрытие магических каналов."},
 }
 const ABILITY_NAMES: Dictionary = {
 	&"freeze": "Заморозка",
@@ -128,6 +171,10 @@ var employees: Dictionary = {
 		"strength": "Сильная сторона: контроль температуры и стихий",
 		"weakness": "Ограничение: силовой ремонт требует напарника",
 		"traits": "Наблюдательна • осторожна • любит точные формулировки",
+		"ability_reactions": {
+			&"freeze": "Добавлю холода ровно столько, сколько нужно. Ни градусом больше.",
+			&"heat": "Прогрею постепенно. Резкие перепады оставим погоде.",
+		},
 		"action_reactions": [
 			{"action_ids": ["heat"], "object_equals": {"burning": true}, "text": "Возражаю: нагрев усилит пожар."},
 			{"action_ids": ["freeze"], "object_equals": {"burning": true}, "text": "Потушу холодом, но древесина станет хрупкой."},
@@ -161,7 +208,8 @@ var employees: Dictionary = {
 		"role": "Мастер-сантехник",
 		"portrait": "res://assets/portraits/employees/boris.png",
 		"actor_neutral_pose": "res://assets/characters/employees/boris/full_body.png",
-		"actor_walk_pose": "res://assets/characters/employees/boris/walk_pose.png",
+		"actor_walk_pose": "res://assets/characters/employees/boris/walk_pose_1.png",
+		"actor_walk_pose_alt": "res://assets/characters/employees/boris/walk_pose_2.png",
 		"actor_work_pose": "res://assets/characters/employees/boris/work_pose.png",
 		"actor_action_style": &"physical",
 		"status": "Свободен",
@@ -201,6 +249,11 @@ var employees: Dictionary = {
 		"strength": "Сильная сторона: дистанционное и бережное перемещение",
 		"weakness": "Ограничение: мало полевого опыта",
 		"traits": "Любознательна • энергична • ведёт слишком подробные записи",
+		"ability_reactions": {
+			&"freeze": "Попробую заморозку. Для отчёта уже придумала отдельную колонку «неожиданный иней».",
+			&"heat": "Добавлю тепла аккуратно. Заметки о пожаре сегодня не планировала.",
+			&"telekinesis": "Подниму всё разом и постараюсь ничего не уронить. Особенно важна вторая часть.",
+		},
 		"action_reactions": [
 			{"action_ids": ["telekinesis"], "object_equals": {"destroyed": true}, "text": "Перемещать уже нечего."},
 			{"action_ids": ["telekinesis"], "object_equals": {"anchored": true}, "text": "Объект закреплён. Тянуть опасно."},
@@ -228,6 +281,11 @@ var employees: Dictionary = {
 		"strength": "Сильная сторона: антимагия и безопасность",
 		"weakness": "Ограничение: действует медленно и по инструкции",
 		"traits": "Методичен • невозмутим • замечает нарушения с порога",
+		"ability_reactions": {
+			&"freeze": "Применю контролируемое охлаждение. Неконтролируемого здесь и без нас достаточно.",
+			&"heat": "Выполняю регулируемый нагрев. Любые языки пламени сверх нормы будут занесены в протокол.",
+			&"antimagic": "Сниму активные чары. Прошу до окончания проверки не накладывать новые.",
+		},
 		"action_reactions": [
 			{"action_ids": ["antimagic"], "object_equals": {"destroyed": true}, "text": "Подавлять уже нечего. Оформляю акт."},
 			{"action_ids": ["antimagic"], "object_equals": {"burning": true}, "text": "Возражаю: антимагия пожар не тушит."},
@@ -341,6 +399,26 @@ var jobs: Dictionary = {
 		"repair_scene": "res://scenes/GhostMirrorRoom.tscn",
 		"assigned": PackedStringArray(),
 	},
+	&"frozen_bath": {
+		"title": "Вода в ванной замерзает сама",
+		"card_title": "Замёрзшая ванна",
+		"objective": "Остановить магическое замерзание ванны",
+		"address": "Старый квартал, 5",
+		"resident": "Господин Рагнар",
+		"resident_portrait": "res://assets/portraits/residents/ragnar.png",
+		"resident_portrait_region": Rect2(0, 0, 1122, 1402),
+		"description": "После ремонта лавового крана вода начала замерзать прямо в тёплой ванной. На кране остался устойчивый холодный магический след.",
+		"urgency": "Обычная",
+		"initial_time": 110,
+		"time_left": 110,
+		"unlocked": false,
+		"overdue": false,
+		"dispatched": false,
+		"danger": "Холод • бытовая магия",
+		"base_reward": 260,
+		"repair_scene": "res://scenes/FrozenBathRoom.tscn",
+		"assigned": PackedStringArray(),
+	},
 }
 
 
@@ -435,6 +513,7 @@ func advance_day(days: int = 1) -> void:
 	if completed_job_ids.has("walking_wardrobe") and completed_job_ids.has("portal_mirror"):
 		_unlock_gargoyle_job()
 	_unlock_escaped_ghost_job_if_due()
+	_unlock_frozen_bath_job_if_due()
 	for employee_id: StringName in EMPLOYEE_ORDER:
 		var employee: Dictionary = employees[employee_id]
 		employee["arrival_until"] = 0
@@ -775,7 +854,8 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 	var base_reward: int = int(job.get("base_reward", 0))
 	var overdue: bool = bool(job.get("overdue", false))
 	var reward_adjustment: int = int(result.get("reward_adjustment", 0)) - (OVERDUE_PAYMENT_PENALTY if overdue else 0)
-	var reward: int = maxi(0, base_reward + reward_adjustment)
+	var expense_reimbursement: int = maxi(0, int(result.get("expense_reimbursement", 0)))
+	var reward: int = maxi(0, base_reward + reward_adjustment + expense_reimbursement)
 	var compensation: int = maxi(0, int(result.get("compensation_cost", 0)))
 	var assigned: PackedStringArray = job["assigned"]
 	var crew_names: PackedStringArray = PackedStringArray()
@@ -805,6 +885,7 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		"reward": reward,
 		"base_reward": base_reward,
 		"reward_adjustment": reward_adjustment,
+		"expense_reimbursement": expense_reimbursement,
 		"maximum_payment": reward_adjustment == 0 and compensation == 0,
 		"compensation": 0,
 		"claim_amount": compensation,
@@ -934,6 +1015,56 @@ func _sync_pending_report_to_history() -> void:
 
 func format_time() -> String:
 	return "%02d:%02d" % [floori(float(time_minutes) / 60.0), time_minutes % 60]
+
+
+func get_reputation_titles(max_titles: int = 2) -> PackedStringArray:
+	var metrics := {
+		&"completed_jobs": 0,
+		&"clean_jobs": 0,
+		&"damaged_jobs": 0,
+		&"denied_claims": 0,
+		&"action_types": 0,
+		&"crew_members": 0,
+	}
+	var action_types := {}
+	var crew_members := {}
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		metrics[&"completed_jobs"] += 1
+		var claim_amount := maxi(int(report.get("claim_amount", 0)), int(report.get("compensation", 0)))
+		if claim_amount > 0:
+			metrics[&"damaged_jobs"] += 1
+		elif not bool(report.get("overdue", false)) and int(report.get("reputation_change", 0)) >= 0:
+			metrics[&"clean_jobs"] += 1
+		if str(report.get("claim_status", "none")) == "denied":
+			metrics[&"denied_claims"] += 1
+		var actions_value: Variant = report.get("actions", [])
+		if actions_value is Array:
+			for action_value: Variant in actions_value:
+				if action_value is Dictionary:
+					var action_id := str((action_value as Dictionary).get("action_id", (action_value as Dictionary).get("intent", "")))
+					if not action_id.is_empty():
+						action_types[action_id] = true
+		var crew_value: Variant = report.get("crew", [])
+		if crew_value is Array:
+			for member_value: Variant in crew_value:
+				var member := str(member_value)
+				if not member.is_empty():
+					crew_members[member] = true
+	metrics[&"action_types"] = action_types.size()
+	metrics[&"crew_members"] = crew_members.size()
+	var result := PackedStringArray()
+	for rule: Dictionary in REPUTATION_TITLE_RULES:
+		var metric := StringName(str(rule.get("metric", "")))
+		if int(metrics.get(metric, 0)) >= int(rule.get("threshold", 0)):
+			result.append(str(rule.get("title", "")))
+			if result.size() >= maxi(1, max_titles):
+				break
+	if result.is_empty():
+		result.append("Новая служба")
+	return result
 
 
 func save_slot_path(slot: int) -> String:
@@ -1209,13 +1340,14 @@ func load_game(slot: int = 0) -> Error:
 		)
 		_set_gargoyle_job_unlocked(day > last_second_day_completion)
 	_unlock_escaped_ghost_job_if_due()
+	_unlock_frozen_bath_job_if_due()
 	if not is_job_available(selected_job_id):
 		selected_job_id = _first_available_job_id()
 	var loaded_pending_report: Variant = save_data.get("pending_job_report", {})
 	if loaded_pending_report is Dictionary:
 		var pending_report: Dictionary = loaded_pending_report
 		_migrate_claim_fields(pending_report)
-		pending_job_report = pending_report.duplicate(true)
+		pending_job_report = pending_report.duplicate(true) if _is_valid_pending_report(pending_report) else {}
 	else:
 		pending_job_report = {}
 	financial_ledger = []
@@ -1318,6 +1450,12 @@ func _migrate_claim_fields(report: Dictionary) -> void:
 	report["claim_amount"] = legacy_compensation
 	report["claim_status"] = "paid" if legacy_compensation > 0 else "none"
 	report["claim_reputation_penalty"] = 0
+
+
+func _is_valid_pending_report(report: Dictionary) -> bool:
+	var job_id := str(report.get("job_id", "")).strip_edges()
+	var title := str(report.get("title", "")).strip_edges()
+	return not job_id.is_empty() and not title.is_empty() and completed_job_ids.has(job_id)
 
 
 func _financial_event(kind: StringName, amount: int, title: String) -> Dictionary:
@@ -1441,6 +1579,24 @@ func _unlock_escaped_ghost_job_if_due() -> void:
 	jobs[job_id] = job
 
 
+func _unlock_frozen_bath_job_if_due() -> void:
+	var source_day := 0
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		var follow_up: Variant = report.get("follow_up", {})
+		if follow_up is Dictionary and str((follow_up as Dictionary).get("type", "")) == "frozen_bath":
+			source_day = int(report.get("completed_day", 0))
+			break
+	var job_id := &"frozen_bath"
+	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
+		return
+	var job: Dictionary = jobs[job_id]
+	job["unlocked"] = source_day > 0 and day > source_day
+	jobs[job_id] = job
+
+
 func _job_completed_day(job_id: StringName) -> int:
 	for report_value: Variant in job_reports:
 		if report_value is Dictionary:
@@ -1477,7 +1633,7 @@ func _update_employee_statuses() -> void:
 		elif not job_id.is_empty() and str(pending_action.get("employee_id", "")) == String(employee_id):
 			employee["status"] = "Работает • до %s" % _format_minutes(int(pending_action.get("ends_at", time_minutes)))
 		elif not job_id.is_empty():
-			employee["status"] = "На заявке: %s" % jobs[job_id]["title"]
+			employee["status"] = "На заявке: %s" % jobs[job_id].get("card_title", jobs[job_id]["title"])
 		employees[employee_id] = employee
 
 

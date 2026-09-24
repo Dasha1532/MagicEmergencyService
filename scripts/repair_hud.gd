@@ -4,6 +4,7 @@ signal employee_selected(employee_id: StringName)
 signal completion_requested
 signal long_action_started(employee_id: StringName)
 signal long_action_finished(employee_id: StringName)
+signal dialogue_finished
 
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
 const COLOR_CARD := Color(0.13, 0.09, 0.055, 0.96)
@@ -466,6 +467,7 @@ func clear_employee_reaction() -> void:
 		employee_reaction_panel.visible = false
 	if employee_panel != null:
 		employee_panel.visible = work_ui_visible
+	dialogue_finished.emit()
 
 
 func clear_all_dialogues() -> void:

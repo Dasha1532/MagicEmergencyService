@@ -54,10 +54,17 @@ var personnel_cards: Dictionary = {}
 var selected_employee_id: StringName = &"liliya"
 var supply_layer: Control
 var supply_money_label: Label
-var supply_catalog_status: Label
+var supply_catalog_list: VBoxContainer
+var supply_catalog_cards: Dictionary = {}
+var supply_catalog_statuses: Dictionary = {}
 var supply_purchase_button: Button
-var trap_supply_status: Label
-var trap_purchase_button: Button
+var supply_detail_heading: Label
+var supply_detail_category: Label
+var supply_detail_icon: TextureRect
+var supply_detail_description: Label
+var supply_delivery_note: Label
+var selected_supply_item_id: StringName = &"animation_kit"
+var selected_training_id: StringName = &"animate"
 var city_map_layer: Control
 var books_layer: Control
 var section_dialog: Panel
@@ -201,6 +208,7 @@ func _build_detail_panel() -> void:
 	warning_label.position = Vector2(22, 346)
 	warning_label.size = Vector2(371, 34)
 	warning_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	warning_label.visible = false
 	panel.add_child(warning_label)
 
 	depart_button = _button("ОТПРАВИТЬ БРИГАДУ", Vector2(22, 384), Vector2(371, 52))
@@ -539,109 +547,97 @@ func _build_supply_shop() -> void:
 	catalog_heading.position = Vector2(22, 17)
 	catalog_heading.size = Vector2(386, 34)
 	catalog_panel.add_child(catalog_heading)
+	var catalog_scroll := ScrollContainer.new()
+	catalog_scroll.position = Vector2(18, 60)
+	catalog_scroll.size = Vector2(394, 548)
+	catalog_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	catalog_panel.add_child(catalog_scroll)
+	supply_catalog_list = VBoxContainer.new()
+	supply_catalog_list.custom_minimum_size = Vector2(350, 0)
+	supply_catalog_list.add_theme_constant_override("separation", 10)
+	catalog_scroll.add_child(supply_catalog_list)
+	_add_supply_catalog_section("СНАРЯЖЕНИЕ", [&"ghost_trap", &"thermal_regulator"])
+	_add_supply_catalog_section("МАГИЧЕСКИЕ КУРСЫ", [&"animation_kit", &"freeze_grimoire", &"heat_grimoire", &"telekinesis_grimoire", &"antimagic_grimoire"])
 
-	var item: Dictionary = game_state.SUPPLY_ITEMS[&"animation_kit"]
-	var item_name: String = str(item["name"])
-	var item_category: String = str(item["category"])
-	var item_icon_path: String = str(item["icon"])
-	var item_description: String = str(item["description"])
-	var item_card := _button("", Vector2(18, 68), Vector2(394, 178))
-	item_card.add_theme_stylebox_override("normal", _style(COLOR_SELECTED, COLOR_GOLD, 2, 9))
-	catalog_panel.add_child(item_card)
-	var catalog_icon := TextureRect.new()
-	catalog_icon.position = Vector2(16, 22)
-	catalog_icon.size = Vector2(118, 118)
-	catalog_icon.texture = load(item_icon_path) as Texture2D
-	catalog_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	catalog_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	catalog_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	item_card.add_child(catalog_icon)
-	var catalog_name := _label(item_name, 17, COLOR_GOLD)
-	catalog_name.position = Vector2(146, 22)
-	catalog_name.size = Vector2(228, 72)
-	catalog_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	catalog_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	item_card.add_child(catalog_name)
-	supply_catalog_status = _label("", 15, COLOR_PARCHMENT)
-	supply_catalog_status.position = Vector2(146, 112)
-	supply_catalog_status.size = Vector2(228, 34)
-	supply_catalog_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	item_card.add_child(supply_catalog_status)
-
-	var trap_item: Dictionary = game_state.SUPPLY_ITEMS[&"ghost_trap"]
-	var trap_card := Panel.new()
-	trap_card.position = Vector2(18, 260)
-	trap_card.size = Vector2(394, 190)
-	trap_card.add_theme_stylebox_override("panel", _style(COLOR_CARD, COLOR_BRASS, 2, 9))
-	catalog_panel.add_child(trap_card)
-	var trap_icon := TextureRect.new()
-	trap_icon.position = Vector2(12, 18)
-	trap_icon.size = Vector2(108, 108)
-	trap_icon.texture = load(str(trap_item["icon"])) as Texture2D
-	trap_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	trap_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	trap_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	trap_card.add_child(trap_icon)
-	var trap_name := _label(str(trap_item["name"]), 16, COLOR_GOLD)
-	trap_name.position = Vector2(132, 16)
-	trap_name.size = Vector2(246, 58)
-	trap_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	trap_card.add_child(trap_name)
-	trap_supply_status = _label("", 14, COLOR_PARCHMENT)
-	trap_supply_status.position = Vector2(132, 76)
-	trap_supply_status.size = Vector2(246, 28)
-	trap_card.add_child(trap_supply_status)
-	trap_purchase_button = _button("", Vector2(132, 118), Vector2(246, 54))
-	trap_purchase_button.pressed.connect(_buy_ghost_trap)
-	trap_card.add_child(trap_purchase_button)
-
-	var catalog_hint := _label("Ассортимент городской службы пока невелик. Зато каждая покупка проходит через три журнала.", 15, COLOR_MUTED)
-	catalog_hint.position = Vector2(28, 474)
-	catalog_hint.size = Vector2(374, 64)
-	catalog_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var catalog_hint := _label("Книги открывают курсы. Снаряжение остаётся у службы.", 13, COLOR_MUTED)
+	catalog_hint.position = Vector2(28, 622)
+	catalog_hint.size = Vector2(374, 38)
+	catalog_hint.clip_text = true
 	catalog_panel.add_child(catalog_hint)
-	if OS.is_debug_build():
-		var debug_day_button := _button("ТЕСТ: СЛЕДУЮЩИЙ ДЕНЬ", Vector2(62, 558), Vector2(306, 46))
-		debug_day_button.pressed.connect(_advance_debug_day)
-		catalog_panel.add_child(debug_day_button)
-		var debug_money_button := _button("ТЕСТ: +500 МОНЕТ", Vector2(62, 616), Vector2(306, 46))
-		debug_money_button.pressed.connect(_grant_debug_money)
-		catalog_panel.add_child(debug_money_button)
+	var debug_money_button := _button("ТЕСТ: +500 МОНЕТ", Vector2(28, 669), Vector2(374, 42))
+	debug_money_button.add_theme_font_size_override("font_size", 14)
+	debug_money_button.pressed.connect(_grant_debug_money)
+	catalog_panel.add_child(debug_money_button)
 
 	var detail_panel := _panel(Vector2(610, 124), Vector2(830, 726), 12)
 	supply_layer.add_child(detail_panel)
-	var detail_heading := _label(item_name, 27, COLOR_GOLD)
-	detail_heading.position = Vector2(258, 36)
-	detail_heading.size = Vector2(530, 82)
-	detail_heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail_panel.add_child(detail_heading)
-	var category_label := _label(item_category, 17, COLOR_MUTED)
-	category_label.position = Vector2(260, 120)
-	category_label.size = Vector2(500, 28)
-	detail_panel.add_child(category_label)
-	var detail_icon := TextureRect.new()
-	detail_icon.position = Vector2(38, 38)
-	detail_icon.size = Vector2(180, 180)
-	detail_icon.texture = load(item_icon_path) as Texture2D
-	detail_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	detail_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	detail_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	detail_panel.add_child(detail_icon)
-	var description := _label(item_description, 19, COLOR_PARCHMENT)
-	description.position = Vector2(42, 260)
-	description.size = Vector2(746, 140)
-	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail_panel.add_child(description)
-	var delivery_note := _label("После покупки комплект поступит в собственность службы. Запустить обучение можно будет из личного дела совместимого сотрудника.", 16, COLOR_MUTED)
-	delivery_note.position = Vector2(42, 420)
-	delivery_note.size = Vector2(746, 92)
-	delivery_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail_panel.add_child(delivery_note)
+	supply_detail_heading = _label("", 27, COLOR_GOLD)
+	supply_detail_heading.position = Vector2(258, 36)
+	supply_detail_heading.size = Vector2(530, 96)
+	supply_detail_heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail_panel.add_child(supply_detail_heading)
+	supply_detail_category = _label("", 17, COLOR_MUTED)
+	supply_detail_category.position = Vector2(260, 134)
+	supply_detail_category.size = Vector2(500, 28)
+	detail_panel.add_child(supply_detail_category)
+	supply_detail_icon = TextureRect.new()
+	supply_detail_icon.position = Vector2(38, 38)
+	supply_detail_icon.size = Vector2(180, 180)
+	supply_detail_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	supply_detail_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	supply_detail_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	detail_panel.add_child(supply_detail_icon)
+	supply_detail_description = _label("", 19, COLOR_PARCHMENT)
+	supply_detail_description.position = Vector2(42, 260)
+	supply_detail_description.size = Vector2(746, 160)
+	supply_detail_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail_panel.add_child(supply_detail_description)
+	supply_delivery_note = _label("", 16, COLOR_MUTED)
+	supply_delivery_note.position = Vector2(42, 438)
+	supply_delivery_note.size = Vector2(746, 92)
+	supply_delivery_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail_panel.add_child(supply_delivery_note)
 	supply_purchase_button = _button("", Vector2(236, 596), Vector2(360, 68))
-	supply_purchase_button.pressed.connect(_buy_animation_kit)
+	supply_purchase_button.pressed.connect(_buy_selected_supply_item)
 	detail_panel.add_child(supply_purchase_button)
 
 	_refresh_supply_shop()
+
+
+func _add_supply_catalog_section(title: String, item_ids: Array[StringName]) -> void:
+	var section_label := _label(title, 15, COLOR_MUTED)
+	section_label.custom_minimum_size = Vector2(350, 30)
+	section_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	supply_catalog_list.add_child(section_label)
+	for item_id: StringName in item_ids:
+		var item: Dictionary = game_state.SUPPLY_ITEMS[item_id]
+		var item_card := _button("", Vector2.ZERO, Vector2(350, 106))
+		item_card.custom_minimum_size = Vector2(350, 106)
+		item_card.pressed.connect(_select_supply_item.bind(item_id))
+		supply_catalog_list.add_child(item_card)
+		var catalog_icon := TextureRect.new()
+		catalog_icon.position = Vector2(10, 10)
+		catalog_icon.size = Vector2(82, 82)
+		catalog_icon.texture = load(str(item["icon"])) as Texture2D
+		catalog_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		catalog_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		catalog_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		item_card.add_child(catalog_icon)
+		var catalog_name := _label(str(item.get("catalog_name", item["name"])), 14, COLOR_GOLD)
+		catalog_name.position = Vector2(100, 12)
+		catalog_name.size = Vector2(234, 46)
+		catalog_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		catalog_name.clip_text = true
+		catalog_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		item_card.add_child(catalog_name)
+		var status := _label("", 13, COLOR_PARCHMENT)
+		status.position = Vector2(100, 68)
+		status.size = Vector2(234, 24)
+		status.clip_text = true
+		status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		item_card.add_child(status)
+		supply_catalog_cards[item_id] = item_card
+		supply_catalog_statuses[item_id] = status
 
 
 func _personnel_label(label_position: Vector2, label_size: Vector2, font_size: int, color: Color) -> Label:
@@ -1024,6 +1020,9 @@ func _refresh_job_report() -> void:
 	var crew_text: String = ", ".join(PackedStringArray(crew)) if not crew.is_empty() else "бригада не указана"
 	var compensation: int = int(report.get("compensation", 0))
 	var finance_text: String = "Оплата: %d монет" % int(report.get("reward", 0))
+	var expense_reimbursement := int(report.get("expense_reimbursement", 0))
+	if expense_reimbursement > 0:
+		finance_text += "\nВключено возмещение снаряжения: %d монет" % expense_reimbursement
 	if bool(report.get("maximum_payment", false)):
 		finance_text += " — максимальная по заявке\nОценка выполнения: отлично"
 	if compensation > 0:
@@ -1072,7 +1071,7 @@ func _hire_selected_personnel() -> void:
 
 
 func _train_selected_personnel() -> void:
-	game_state.train_employee(selected_employee_id, &"animate")
+	game_state.train_employee(selected_employee_id, selected_training_id)
 
 
 func _open_specializations() -> void:
@@ -1154,12 +1153,18 @@ func _forget_state_text(state: StringName) -> String:
 	return "Специализацию сейчас нельзя забыть."
 
 
-func _buy_animation_kit() -> void:
-	game_state.buy_supply_item(&"animation_kit")
+func _select_supply_item(item_id: StringName) -> void:
+	if not game_state.SUPPLY_ITEMS.has(item_id):
+		return
+	selected_supply_item_id = item_id
+	var training_id := StringName(str(game_state.SUPPLY_ITEMS[item_id].get("training_id", "")))
+	if not training_id.is_empty():
+		selected_training_id = training_id
+	_refresh_supply_shop()
 
 
-func _buy_ghost_trap() -> void:
-	game_state.buy_supply_item(&"ghost_trap")
+func _buy_selected_supply_item() -> void:
+	game_state.buy_supply_item(selected_supply_item_id)
 
 
 func _grant_debug_money() -> void:
@@ -1177,49 +1182,39 @@ func _finish_day() -> void:
 func _refresh_supply_shop() -> void:
 	if supply_purchase_button == null:
 		return
-	var item: Dictionary = game_state.SUPPLY_ITEMS[&"animation_kit"]
+	if not game_state.SUPPLY_ITEMS.has(selected_supply_item_id):
+		selected_supply_item_id = &"animation_kit"
+	var item: Dictionary = game_state.SUPPLY_ITEMS[selected_supply_item_id]
 	var price := int(item["price"])
-	var owned: bool = game_state.has_supply_item(&"animation_kit")
+	var owned: bool = game_state.has_supply_item(selected_supply_item_id)
 	supply_money_label.text = "В казне: %d монет" % game_state.money
+	for item_id_value: Variant in game_state.SUPPLY_ITEMS:
+		var item_id := StringName(str(item_id_value))
+		var catalog_item: Dictionary = game_state.SUPPLY_ITEMS[item_id]
+		var card: Button = supply_catalog_cards.get(item_id)
+		var status: Label = supply_catalog_statuses.get(item_id)
+		var catalog_owned: bool = game_state.has_supply_item(item_id)
+		status.text = "ПРИОБРЕТЕНО" if catalog_owned else "%d МОНЕТ" % int(catalog_item["price"])
+		status.add_theme_color_override("font_color", COLOR_GOLD if catalog_owned else COLOR_PARCHMENT)
+		card.add_theme_stylebox_override("normal", _style(COLOR_SELECTED if item_id == selected_supply_item_id else COLOR_CARD, COLOR_GOLD if item_id == selected_supply_item_id else COLOR_BRASS, 2, 9))
+	supply_detail_heading.text = str(item["name"])
+	supply_detail_category.text = str(item["category"])
+	supply_detail_icon.texture = load(str(item["icon"])) as Texture2D
+	supply_detail_description.text = str(item["description"])
+	var training_id := StringName(str(item.get("training_id", "")))
+	if training_id.is_empty():
+		supply_delivery_note.text = "После покупки снаряжение поступит в собственность службы и станет доступно на подходящих заявках."
+	else:
+		supply_delivery_note.text = "После покупки книга откроет курс «%s». Выберите её в каталоге, затем откройте личное дело совместимого сотрудника." % game_state.TRAINING_DEFINITIONS[training_id]["name"]
 	if owned:
-		supply_catalog_status.text = "ПРИОБРЕТЕНО"
-		supply_catalog_status.add_theme_color_override("font_color", COLOR_GOLD)
 		supply_purchase_button.text = "ПРИОБРЕТЕНО"
 		supply_purchase_button.disabled = true
 	elif game_state.money < price:
-		supply_catalog_status.text = "%d МОНЕТ" % price
-		supply_catalog_status.add_theme_color_override("font_color", COLOR_PARCHMENT)
 		supply_purchase_button.text = "НЕ ХВАТАЕТ МОНЕТ • %d" % price
 		supply_purchase_button.disabled = true
 	else:
-		supply_catalog_status.text = "%d МОНЕТ" % price
-		supply_catalog_status.add_theme_color_override("font_color", COLOR_PARCHMENT)
 		supply_purchase_button.text = "КУПИТЬ • %d МОНЕТ" % price
 		supply_purchase_button.disabled = false
-	_refresh_ghost_trap_offer()
-
-
-func _refresh_ghost_trap_offer() -> void:
-	if trap_purchase_button == null:
-		return
-	var item: Dictionary = game_state.SUPPLY_ITEMS[&"ghost_trap"]
-	var price := int(item["price"])
-	var owned: bool = game_state.has_supply_item(&"ghost_trap")
-	if owned:
-		trap_supply_status.text = "ПРИОБРЕТЕНО"
-		trap_supply_status.add_theme_color_override("font_color", COLOR_GOLD)
-		trap_purchase_button.text = "ПРИОБРЕТЕНО"
-		trap_purchase_button.disabled = true
-	elif game_state.money < price:
-		trap_supply_status.text = "%d МОНЕТ" % price
-		trap_supply_status.add_theme_color_override("font_color", COLOR_PARCHMENT)
-		trap_purchase_button.text = "НЕ ХВАТАЕТ МОНЕТ"
-		trap_purchase_button.disabled = true
-	else:
-		trap_supply_status.text = "%d МОНЕТ" % price
-		trap_supply_status.add_theme_color_override("font_color", COLOR_PARCHMENT)
-		trap_purchase_button.text = "КУПИТЬ • %d МОНЕТ" % price
-		trap_purchase_button.disabled = false
 
 
 func _refresh_personnel() -> void:
@@ -1255,8 +1250,10 @@ func _refresh_personnel() -> void:
 	personnel_weakness.text = employee["weakness"]
 	var abilities: PackedStringArray = employee["abilities"]
 	var specialization: String = _employee_specialization_text(employee)
-	var training_state: StringName = game_state.get_training_availability(selected_employee_id, &"animate")
-	var training_definition: Dictionary = game_state.TRAINING_DEFINITIONS[&"animate"]
+	if not game_state.TRAINING_DEFINITIONS.has(selected_training_id):
+		selected_training_id = &"animate"
+	var training_state: StringName = game_state.get_training_availability(selected_employee_id, selected_training_id)
+	var training_definition: Dictionary = game_state.TRAINING_DEFINITIONS[selected_training_id]
 	personnel_traits.text = "ОСОБЕННОСТИ\n%s\n\nСПЕЦИАЛИЗАЦИЯ\n%s\n\nКУРС «%s»\n%s" % [
 		employee["traits"], specialization, training_definition["name"], _training_state_text(training_state, employee),
 	]
@@ -1412,10 +1409,11 @@ func _rebuild_employees() -> void:
 
 		var status_color := COLOR_MUTED if in_transit or returning else (COLOR_GOLD if selected else COLOR_MUTED)
 		var status_text: String = _employee_card_status(employee, pending_selected, selected, on_site, in_transit, returning)
-		var status_label := _label(status_text, 12 if returning else 13, status_color)
-		status_label.position = Vector2(180, 170 if returning else 184)
-		status_label.size = Vector2(198, 42 if returning else 26)
+		var status_label := _label(status_text, 12, status_color)
+		status_label.position = Vector2(180, 168)
+		status_label.size = Vector2(198, 44)
 		status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(status_label)
 
@@ -1458,16 +1456,9 @@ func _refresh_details() -> void:
 		assignment_label.text = "Бригада:\n%s" % ", ".join(names)
 
 	warning_label.text = ""
-	if game_state.get_job_repair_scene(selected_job_id).is_empty():
-		warning_label.text = "Объект этой заявки ещё готовится. Выезд пока недоступен."
 	var dispatched: bool = game_state.is_job_dispatched(selected_job_id)
 	var confirming_extra_employees: bool = dispatched and not pending_dispatch_employee_ids.is_empty()
 	var can_cancel_trip: bool = dispatched and pending_dispatch_employee_ids.is_empty() and game_state.clock_paused and game_state.has_employees_in_transit(selected_job_id)
-	if confirming_extra_employees:
-		var pending_names := PackedStringArray()
-		for employee_id: String in pending_dispatch_employee_ids:
-			pending_names.append(str(game_state.employees[StringName(employee_id)]["name"]))
-		warning_label.text = "К отправке: %s" % ", ".join(pending_names)
 	depart_button.text = "ОТПРАВИТЬ ВЫБРАННЫХ" if confirming_extra_employees else ("ОТКРЫТЬ ОБЪЕКТ" if dispatched else "ОТПРАВИТЬ БРИГАДУ")
 	depart_button.position = Vector2(22, 384)
 	depart_button.custom_minimum_size = Vector2(371, 52) if confirming_extra_employees or not dispatched else Vector2(177, 52)
@@ -1516,18 +1507,15 @@ func _cancel_pending_dispatch() -> void:
 
 func _depart() -> void:
 	if selected_job_id.is_empty() or not game_state.is_job_available(selected_job_id):
-		warning_label.text = "Нет доступной заявки для выезда."
 		return
 	var repair_scene: String = game_state.get_job_repair_scene(selected_job_id)
 	if repair_scene.is_empty():
-		warning_label.text = "Для этой заявки ещё не подготовлена отдельная локация."
 		return
 	if game_state.is_job_dispatched(selected_job_id) and not pending_dispatch_employee_ids.is_empty():
 		var employee_ids := pending_dispatch_employee_ids.duplicate()
 		pending_dispatch_employee_ids.clear()
 		for employee_id: String in employee_ids:
 			game_state.assign_employee(StringName(employee_id), selected_job_id)
-		warning_label.text = "Выбранные сотрудники отправлены на объект."
 		return
 	if not game_state.is_job_dispatched(selected_job_id):
 		var assigned: PackedStringArray = game_state.jobs[selected_job_id]["assigned"]
@@ -1579,10 +1567,7 @@ func _start_auto_wait() -> void:
 func _recall_crew() -> void:
 	if selected_job_id.is_empty():
 		return
-	if game_state.recall_job(selected_job_id):
-		warning_label.text = "Бригада едет обратно. Состояние объекта сохранено."
-	else:
-		warning_label.text = "Сначала дождитесь завершения текущей работы."
+	game_state.recall_job(selected_job_id)
 
 
 func _panel(panel_position: Vector2, panel_size: Vector2, radius: int) -> Panel:

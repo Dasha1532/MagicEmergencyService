@@ -86,7 +86,8 @@ func _build_accounting() -> void:
 
 func _build_reviews() -> void:
 	heading.text = "КНИГА ОТЗЫВОВ"
-	summary.text = "Репутация службы: %d • Отзывов: %d" % [game_state.reputation, game_state.job_reports.size()]
+	var titles: PackedStringArray = game_state.get_reputation_titles(2)
+	summary.text = "Репутация: %d • %s • Отзывов: %d" % [game_state.reputation, " • ".join(titles), game_state.job_reports.size()]
 	detail_title.text = "ОТЗЫВЫ ЖИЛЬЦОВ"
 	detail_body.text = "Здесь появятся оценки завершённых заявок."
 	if game_state.job_reports.is_empty():

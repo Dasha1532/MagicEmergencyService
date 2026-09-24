@@ -1,0 +1,144 @@
+[gd_scene format=3 uid="uid://bobljkelysxg5"]
+
+[ext_resource type="Texture2D" uid="uid://c6j80jpcray8f" path="res://assets/backgrounds/bathroom_closeup.png" id="1_background"]
+[ext_resource type="Texture2D" uid="uid://bhrvp23l6m8gt" path="res://assets/objects/frozen_bath/bath_frozen.png" id="2_bath_frozen"]
+[ext_resource type="Texture2D" uid="uid://bbo28tpurpb7q" path="res://assets/objects/frozen_bath/bath_broken.png" id="3_bath_broken"]
+[ext_resource type="Texture2D" uid="uid://y25dy6xi41y4" path="res://assets/objects/frozen_bath/faucet_frozen.png" id="4_faucet_frozen"]
+[ext_resource type="Texture2D" uid="uid://blmudaa4ipao5" path="res://assets/objects/frozen_bath/faucet_regulated.png" id="5_faucet_regulated"]
+[ext_resource type="Texture2D" uid="uid://b185tabh6ktan" path="res://assets/objects/lava_faucet/faucet_normal.png" id="6_faucet_normal"]
+[ext_resource type="PackedScene" path="res://scenes/EmployeeActor.tscn" id="7_actor"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ToolBar.tscn" id="8_toolbar"]
+[ext_resource type="PackedScene" path="res://scenes/ui/RepairHUD.tscn" id="9_hud"]
+[ext_resource type="Script" uid="uid://c4uc7axd7qj3" path="res://scripts/frozen_bath_room.gd" id="10_script"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="11_pause"]
+[ext_resource type="Texture2D" path="res://assets/objects/frozen_bath/bath_broken_empty.png" id="12_bath_broken_empty"]
+[ext_resource type="Texture2D" uid="uid://chrmgeu0c11dy" path="res://assets/effects/status/frost.png" id="13_frost"]
+
+[node name="FrozenBathRoom" type="Node2D" unique_id=498516223]
+script = ExtResource("10_script")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1683269253]
+offset_left = 3.0
+offset_right = 1600.0
+offset_bottom = 900.0
+mouse_filter = 2
+texture = ExtResource("1_background")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="FrozenBath" type="TextureRect" parent="." unique_id=140447667]
+offset_left = 189.0
+offset_top = 358.0
+offset_right = 1025.0
+offset_bottom = 817.0
+mouse_filter = 2
+texture = ExtResource("2_bath_frozen")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="BrokenBath" type="TextureRect" parent="." unique_id=1337184794]
+visible = false
+offset_left = 220.0
+offset_top = 418.0
+offset_right = 999.0
+offset_bottom = 790.0
+mouse_filter = 2
+texture = ExtResource("3_bath_broken")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="BrokenEmptyBath" type="TextureRect" parent="."]
+visible = false
+offset_left = 220.0
+offset_top = 418.0
+offset_right = 999.0
+offset_bottom = 790.0
+mouse_filter = 2
+texture = ExtResource("12_bath_broken_empty")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Faucet" type="Control" parent="." unique_id=2057437053]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 424.0
+offset_top = 374.0
+offset_right = 744.0
+offset_bottom = 580.0
+mouse_filter = 2
+
+[node name="Frozen" type="TextureRect" parent="Faucet" unique_id=1990104290]
+layout_mode = 0
+offset_left = -175.0
+offset_top = -45.0
+offset_right = -22.0
+offset_bottom = 69.0
+mouse_filter = 2
+texture = ExtResource("4_faucet_frozen")
+expand_mode = 1
+
+[node name="FrostOverlay" type="TextureRect" parent="Faucet"]
+visible = false
+layout_mode = 0
+offset_left = -175.0
+offset_top = -45.0
+offset_right = -22.0
+offset_bottom = 69.0
+mouse_filter = 2
+texture = ExtResource("13_frost")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Normal" type="TextureRect" parent="Faucet" unique_id=720372073]
+visible = false
+layout_mode = 0
+offset_left = -175.0
+offset_top = -45.0
+offset_right = -22.0
+offset_bottom = 69.0
+mouse_filter = 2
+texture = ExtResource("6_faucet_normal")
+expand_mode = 1
+
+[node name="Regulated" type="TextureRect" parent="Faucet" unique_id=785340023]
+visible = false
+layout_mode = 0
+offset_left = -175.0
+offset_top = -45.0
+offset_right = -22.0
+offset_bottom = 69.0
+mouse_filter = 2
+texture = ExtResource("5_faucet_regulated")
+expand_mode = 1
+
+[node name="InteractionButton" type="Button" parent="." unique_id=1329957694]
+offset_left = 205.0
+offset_top = 150.0
+offset_right = 1010.0
+offset_bottom = 780.0
+mouse_default_cursor_shape = 2
+flat = true
+
+[node name="Target" type="Marker2D" parent="." unique_id=1040473960]
+position = Vector2(560, 430)
+
+[node name="EmployeeActor" parent="." unique_id=778589956 instance=ExtResource("7_actor")]
+offset_left = 748.0
+offset_top = 208.0
+offset_right = 1254.0
+offset_bottom = 889.0
+
+[node name="PhysicalApproach" type="Marker2D" parent="." unique_id=1630095530]
+position = Vector2(208, 198)
+
+[node name="Interface" type="CanvasLayer" parent="." unique_id=2056739950]
+
+[node name="ToolBar" parent="Interface" unique_id=265980295 instance=ExtResource("8_toolbar")]
+
+[node name="RepairHUD" parent="Interface" unique_id=635670711 instance=ExtResource("9_hud")]
+offset_left = -14.0
+offset_top = 4.0
+offset_bottom = 7.0
+
+[node name="PauseMenu" parent="." instance=ExtResource("11_pause")]
+show_default_menu_button = false

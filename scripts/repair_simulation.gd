@@ -191,7 +191,7 @@ func get_completion_result() -> Dictionary:
 	if damage > 0:
 		summary += " За дополнительный перегрев удержана компенсация за повреждение отделки."
 		review = "Лаву вы остановили — это главное. А подпалины я назову авторской отделкой, пока не увижу счёт за ремонт."
-	return {
+	var result := {
 		"reward_adjustment": -80 * damage,
 		"reputation_change": 1 if damage == 0 else -damage,
 		"summary": summary,
@@ -199,6 +199,9 @@ func get_completion_result() -> Dictionary:
 		"consequences": ["Дополнительного ущерба не зафиксировано."] if damage == 0 else ["Отделка ванной повреждена дополнительным перегревом."],
 		"actions": action_log.duplicate(true),
 	}
+	if bool(world_object.get("frozen", false)):
+		result["follow_up"] = {"type": "frozen_bath", "source_job_id": "lava_leak"}
+	return result
 
 
 func _apply_freeze() -> String:

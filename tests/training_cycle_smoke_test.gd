@@ -15,7 +15,17 @@ func _run() -> void:
 	game_state.start_new_game()
 	_check(game_state.get_training_availability(&"liliya", &"animate") == &"no_slots", "Две специализации Лилии занимают обе учебные ячейки")
 	_check(game_state.get_training_availability(&"grog", &"animate") == &"incompatible", "Несовместимый сотрудник отклоняется")
+	_check(game_state.get_training_availability(&"boris", &"freeze") == &"incompatible", "Бориса нельзя обучить магии")
+	_check("замороз" in EMPLOYEE_REACTION_RESOLVER_SCRIPT.reaction_for(game_state.employees[&"nika"], &"freeze", {}, &"", "", true).to_lower(), "Обучаемый маг получает личную реплику заморозки")
+	_check(not EMPLOYEE_REACTION_RESOLVER_SCRIPT.reaction_for(game_state.employees[&"grog"], &"antimagic", {}, &"", "", true).is_empty(), "Для способности предусмотрена общая запасная реплика")
 	_check(game_state.get_training_availability(&"nika", &"animate") == &"not_hired", "Ненанятый сотрудник не может учиться")
+	var actor := (load("res://scenes/EmployeeActor.tscn") as PackedScene).instantiate()
+	root.add_child(actor)
+	await process_frame
+	_check(actor.configure_employee(&"boris", game_state.employees[&"boris"]), "Две новые шагающие позы Бориса загружаются")
+	actor._set_walk_frame(true)
+	_check(actor.walk_pose_alt.visible and not actor.walk_pose.visible, "Кадры ходьбы Бориса переключаются попеременно")
+	actor.queue_free()
 
 	game_state.grant_debug_money(500)
 	_check(game_state.buy_supply_item(&"animation_kit"), "Учебный комплект покупается")
@@ -26,6 +36,7 @@ func _run() -> void:
 	var office := office_scene.instantiate()
 	root.add_child(office)
 	await process_frame
+	_check(not office.warning_label.visible, "Служебные подтверждения не выводятся поверх карточки заявки")
 	office._open_personnel()
 	var status_guide: Rect2 = office._personnel_guide_rect("StatusArea")
 	_check(office.personnel_specializations_button.visible and not office.personnel_training_button.visible, "При заполненных ячейках управление заменяет бесполезную кнопку курса")
@@ -79,6 +90,25 @@ func _run() -> void:
 	_check(not (game_state.employees[&"nika"]["abilities"] as PackedStringArray).has("animate"), "Забытая специализация исчезает из действий")
 	_check(not (game_state.employees[&"nika"]["learned_abilities"] as PackedStringArray).has("animate"), "Забытая специализация удаляется из прогресса")
 	_check(game_state.get_training_availability(&"nika", &"animate") == &"available", "Забытую специализацию можно изучить заново")
+	_check(game_state.TRAINING_DEFINITIONS.has(&"freeze") and game_state.TRAINING_DEFINITIONS.has(&"heat") and game_state.TRAINING_DEFINITIONS.has(&"telekinesis") and game_state.TRAINING_DEFINITIONS.has(&"antimagic"), "В лавку добавлены четыре базовых магических курса")
+	game_state.grant_debug_money(600)
+	_check(game_state.buy_supply_item(&"antimagic_grimoire"), "Книгу антимагии можно купить отдельно от найма Феликса")
+	office._open_supply_shop()
+	var debug_money_found := false
+	for button_node: Node in office.find_children("*", "Button", true, false):
+		if (button_node as Button).text == "ТЕСТ: +500 МОНЕТ":
+			debug_money_found = true
+			break
+	_check(debug_money_found, "В лавке доступна тестовая кнопка +500 монет")
+	_check(office.supply_catalog_cards.size() == game_state.SUPPLY_ITEMS.size(), "Каталог показывает всё снаряжение и учебные книги")
+	_check(office.supply_catalog_list.get_child(0).text == "СНАРЯЖЕНИЕ" and office.supply_catalog_list.get_child(3).text == "МАГИЧЕСКИЕ КУРСЫ", "Снаряжение и магические курсы разделены в каталоге")
+	office._select_supply_item(&"antimagic_grimoire")
+	_check("антимаг" in office.supply_detail_heading.text.to_lower(), "Выбранная книга показывается без обрезанного названия")
+	office._open_personnel()
+	office._select_personnel_employee(&"nika")
+	_check("АНТИМАГ" in office.personnel_training_button.text, "Из выбранной книги курс антимагии предлагается Нике")
+	office.personnel_training_button.pressed.emit()
+	_check(StringName(str(game_state.employees[&"nika"].get("training_id", ""))) == &"antimagic", "Ника начинает обучение антимагии")
 	_finish()
 
 

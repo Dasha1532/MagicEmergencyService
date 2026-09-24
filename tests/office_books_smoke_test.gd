@@ -25,6 +25,7 @@ func _run() -> void:
 	await process_frame
 	books.open_section(&"reviews")
 	_check("Отзывов: 0" in books.summary.text, "Книга отзывов показывает пустое состояние")
+	_check("Новая служба" in books.summary.text, "Книга отзывов показывает репутационное прозвище")
 	books.open_section(&"archive")
 	_check("Завершённых дел: 0" in books.summary.text, "Архив показывает пустое состояние")
 

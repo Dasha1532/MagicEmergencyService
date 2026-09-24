@@ -1,28 +1,45 @@
 class_name EmployeeReactionResolver
 extends RefCounted
 
+const ABILITY_REACTION_FALLBACKS: Dictionary = {
+	&"freeze": "Понижу температуру. Надеюсь, в этот раз холод действительно нужен.",
+	&"heat": "Подниму температуру постепенно, без новых аварийных эффектов.",
+	&"telekinesis": "Уберу это с дороги, ничего лишнего не задевая.",
+	&"antimagic": "Сниму активные чары и проверю, что магический след исчез.",
+	&"animate": "Попробую оживление. Сначала убедимся, что предмет настроен дружелюбно.",
+}
 
-static func reaction_for(employee: Dictionary, action_id: StringName, world_object: Dictionary, intent: StringName = &"") -> String:
+
+static func reaction_for(employee: Dictionary, action_id: StringName, world_object: Dictionary, intent: StringName = &"", contextual_text: String = "", include_ability_fallback: bool = false) -> String:
+	if not contextual_text.strip_edges().is_empty():
+		return contextual_text.strip_edges()
 	var rules: Variant = employee.get("action_reactions", [])
-	if not rules is Array:
-		return ""
-	for rule_variant: Variant in rules:
-		if not rule_variant is Dictionary:
-			continue
-		var rule: Dictionary = rule_variant
-		if not _matches_ids(rule.get("action_ids", []), action_id):
-			continue
-		if rule.has("intent_ids") and not _matches_ids(rule.get("intent_ids", []), intent):
-			continue
-		if not _matches_object(rule, world_object):
-			continue
-		var text := str(rule.get("text", ""))
-		if not text.is_empty():
-			return text
-		var texts: Variant = rule.get("texts", [])
-		if texts is Array and not texts.is_empty():
-			var variant_index := posmod(hash([String(action_id), String(intent), world_object]), texts.size())
-			return str(texts[variant_index])
+	if rules is Array:
+		for rule_variant: Variant in rules:
+			if not rule_variant is Dictionary:
+				continue
+			var rule: Dictionary = rule_variant
+			if not _matches_ids(rule.get("action_ids", []), action_id):
+				continue
+			if rule.has("intent_ids") and not _matches_ids(rule.get("intent_ids", []), intent):
+				continue
+			if not _matches_object(rule, world_object):
+				continue
+			var text := str(rule.get("text", ""))
+			if not text.is_empty():
+				return text
+			var texts: Variant = rule.get("texts", [])
+			if texts is Array and not texts.is_empty():
+				var variant_index := posmod(hash([String(action_id), String(intent), world_object]), texts.size())
+				return str(texts[variant_index])
+	if include_ability_fallback:
+		var personal_value: Variant = employee.get("ability_reactions", {})
+		if personal_value is Dictionary:
+			var personal: Dictionary = personal_value
+			var personal_text := str(personal.get(action_id, "")).strip_edges()
+			if not personal_text.is_empty():
+				return personal_text
+		return str(ABILITY_REACTION_FALLBACKS.get(action_id, "")).strip_edges()
 	return ""
 
 
