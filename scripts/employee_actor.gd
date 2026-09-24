@@ -19,6 +19,7 @@ var action_origin_from_data: bool = false
 var home_position: Vector2
 var walk_pose_base_position: Vector2
 var walk_pose_alt_base_position: Vector2
+var walk_pose_faces_right: bool = false
 var persistent_work_pose: bool = false
 var employee_positions: Dictionary = {}
 var walking_z_index: int
@@ -58,6 +59,7 @@ func configure_employee(new_employee_id: StringName, employee_data: Dictionary) 
 	work_pose.texture = load(work_path)
 	var walk_path := str(employee_data.get("actor_walk_pose", ""))
 	var walk_alt_path := str(employee_data.get("actor_walk_pose_alt", ""))
+	walk_pose_faces_right = bool(employee_data.get("actor_walk_pose_faces_right", false))
 	var hold_path := str(employee_data.get("actor_hold_pose", ""))
 	walk_pose.texture = load(walk_path) as Texture2D if not walk_path.is_empty() else null
 	walk_pose_alt.texture = load(walk_alt_path) as Texture2D if not walk_alt_path.is_empty() else null
@@ -218,34 +220,37 @@ func _walk_to(target_position: Vector2) -> void:
 	walk_pose_alt.modulate = Color(1, 1, 1, 0)
 	walk_pose.pivot_offset = walk_pose.size * 0.5
 	walk_pose_alt.pivot_offset = walk_pose_alt.size * 0.5
-	var desired_direction: float = -1.0 if target_position.x > position.x else 1.0
-	var parent_direction: float = -1.0 if horizontal_flip else 1.0
-	walk_pose.scale = Vector2(desired_direction / parent_direction, 1.0)
+	walk_pose.scale = Vector2(_walk_scale_x(target_position.x), 1.0)
 	walk_pose_alt.scale = walk_pose.scale
 	var duration: float = clampf(distance / 260.0, 0.45, 1.45)
 	var movement: Tween = create_tween()
 	movement.tween_property(self, "position", target_position, duration).set_trans(Tween.TRANS_LINEAR)
 	var frame_cycle: Tween = null
-	if walk_pose_alt.texture != null:
+	var has_alternate_walk_pose := walk_pose_alt.texture != null
+	if has_alternate_walk_pose:
 		# Пауза между шагами делает походку спокойнее, а короткое перекрытие
 		# сглаживает разницу между двумя нарисованными силуэтами.
 		walk_pose_alt.visible = true
 		frame_cycle = create_tween().set_loops()
-		frame_cycle.tween_interval(0.24)
-		frame_cycle.tween_property(walk_pose, "modulate:a", 0.0, 0.10).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		frame_cycle.parallel().tween_property(walk_pose_alt, "modulate:a", 1.0, 0.10).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		frame_cycle.tween_interval(0.24)
-		frame_cycle.tween_property(walk_pose_alt, "modulate:a", 0.0, 0.10).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		frame_cycle.parallel().tween_property(walk_pose, "modulate:a", 1.0, 0.10).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		frame_cycle.tween_interval(0.30)
+		frame_cycle.tween_property(walk_pose, "modulate:a", 0.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		frame_cycle.parallel().tween_property(walk_pose_alt, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		frame_cycle.tween_interval(0.30)
+		frame_cycle.tween_property(walk_pose_alt, "modulate:a", 0.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		frame_cycle.parallel().tween_property(walk_pose, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	var step_lift := 4.0 if has_alternate_walk_pose else 7.0
+	var step_duration := 0.24 if has_alternate_walk_pose else 0.16
+	var step_rotation_forward := 0.006 if has_alternate_walk_pose else 0.009
+	var step_rotation_back := -0.004 if has_alternate_walk_pose else -0.007
 	var steps: Tween = create_tween().set_loops()
-	steps.tween_property(walk_pose, "position:y", walk_pose_base_position.y - 7.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	steps.parallel().tween_property(walk_pose, "rotation", 0.009, 0.16).set_trans(Tween.TRANS_SINE)
-	steps.parallel().tween_property(walk_pose_alt, "position:y", walk_pose_alt_base_position.y - 7.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	steps.parallel().tween_property(walk_pose_alt, "rotation", 0.009, 0.16).set_trans(Tween.TRANS_SINE)
-	steps.tween_property(walk_pose, "position:y", walk_pose_base_position.y, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	steps.parallel().tween_property(walk_pose, "rotation", -0.007, 0.16).set_trans(Tween.TRANS_SINE)
-	steps.parallel().tween_property(walk_pose_alt, "position:y", walk_pose_alt_base_position.y, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	steps.parallel().tween_property(walk_pose_alt, "rotation", -0.007, 0.16).set_trans(Tween.TRANS_SINE)
+	steps.tween_property(walk_pose, "position:y", walk_pose_base_position.y - step_lift, step_duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	steps.parallel().tween_property(walk_pose, "rotation", step_rotation_forward, step_duration).set_trans(Tween.TRANS_SINE)
+	steps.parallel().tween_property(walk_pose_alt, "position:y", walk_pose_alt_base_position.y - step_lift, step_duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	steps.parallel().tween_property(walk_pose_alt, "rotation", step_rotation_forward, step_duration).set_trans(Tween.TRANS_SINE)
+	steps.tween_property(walk_pose, "position:y", walk_pose_base_position.y, step_duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	steps.parallel().tween_property(walk_pose, "rotation", step_rotation_back, step_duration).set_trans(Tween.TRANS_SINE)
+	steps.parallel().tween_property(walk_pose_alt, "position:y", walk_pose_alt_base_position.y, step_duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	steps.parallel().tween_property(walk_pose_alt, "rotation", step_rotation_back, step_duration).set_trans(Tween.TRANS_SINE)
 	await movement.finished
 	if frame_cycle != null:
 		frame_cycle.kill()
@@ -264,6 +269,13 @@ func _walk_to(target_position: Vector2) -> void:
 func _set_walk_frame(show_alternate: bool) -> void:
 	walk_pose.visible = not show_alternate
 	walk_pose_alt.visible = show_alternate and walk_pose_alt.texture != null
+
+
+func _walk_scale_x(target_x: float) -> float:
+	var desired_direction := -1.0 if target_x > position.x else 1.0
+	var source_direction := -1.0 if walk_pose_faces_right else 1.0
+	var parent_direction := -1.0 if horizontal_flip else 1.0
+	return desired_direction * source_direction / parent_direction
 
 
 func restore_hold_pose(target_position: Vector2, action_z_index: int = 20) -> void:

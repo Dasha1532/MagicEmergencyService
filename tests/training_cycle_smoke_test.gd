@@ -23,8 +23,13 @@ func _run() -> void:
 	root.add_child(actor)
 	await process_frame
 	_check(actor.configure_employee(&"boris", game_state.employees[&"boris"]), "Две новые шагающие позы Бориса загружаются")
+	_check(actor._walk_scale_x(actor.position.x + 100.0) < 0.0, "Борис разворачивается вправо из исходной позы лицом влево")
 	actor._set_walk_frame(true)
 	_check(actor.walk_pose_alt.visible and not actor.walk_pose.visible, "Кадры ходьбы Бориса переключаются попеременно")
+	_check(actor.configure_employee(&"grog", game_state.employees[&"grog"]), "Две новые шагающие позы Грога загружаются")
+	_check(actor._walk_scale_x(actor.position.x + 100.0) > 0.0, "Грог идёт лицом вправо без лишнего отражения позы")
+	actor._set_walk_frame(true)
+	_check(actor.walk_pose_alt.visible and not actor.walk_pose.visible, "Кадры ходьбы Грога переключаются попеременно")
 	actor.queue_free()
 
 	game_state.grant_debug_money(500)
