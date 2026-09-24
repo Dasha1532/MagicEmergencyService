@@ -17,6 +17,9 @@ config/features=PackedStringArray("4.7")
 [autoload]
 
 GameState="*res://scripts/game_state.gd"
+SettingsManager="*res://scripts/settings_manager.gd"
+AudioManager="*res://scripts/audio_manager.gd"
+CursorManager="*res://scripts/cursor_manager.gd"
 
 [display]
 

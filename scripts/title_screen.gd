@@ -34,9 +34,20 @@ func _ready() -> void:
 	# Главное меню всегда должно принимать ввод, даже если предыдущая сцена
 	# была закрыта или перезагружена во время паузы.
 	get_tree().paused = false
+	_call_audio_manager(&"play_main_menu_music")
 	_build_interface()
 	_build_slots_panel()
 	_logo_shine_loop()
+
+
+func _exit_tree() -> void:
+	_call_audio_manager(&"stop_main_menu_music")
+
+
+func _call_audio_manager(method: StringName) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method)
 
 
 func _build_interface() -> void:
@@ -99,45 +110,41 @@ func _build_title() -> void:
 
 
 func _build_navigation() -> void:
-	navigation = Panel.new()
-	navigation.position = Vector2(150, 742)
-	navigation.size = Vector2(1300, 126)
+	navigation = $Navigation
 	navigation.add_theme_stylebox_override("panel", _style(COLOR_NAV, COLOR_BRASS, 2, 3))
-	add_child(navigation)
+	navigation.move_to_front()
 
-	continue_button = _nav_button("▶\nПРОДОЛЖИТЬ", 0)
+	continue_button = $Navigation/ContinueButton
+	_configure_nav_button(continue_button)
 	continue_button.disabled = not game_state.has_save()
+	_set_nav_button_visual(continue_button, &"disabled" if continue_button.disabled else &"normal")
 	continue_button.tooltip_text = "Нет сохранённой игры" if continue_button.disabled else "Продолжить последнее сохранение"
 	continue_button.pressed.connect(_continue_game)
-	navigation.add_child(continue_button)
 
-	var new_button := _nav_button("＋\nНОВАЯ ИГРА", 1)
+	var new_button := $Navigation/NewGameButton as Button
+	_configure_nav_button(new_button)
 	new_button.pressed.connect(_new_game)
-	navigation.add_child(new_button)
 
-	var load_button := _nav_button("▱\nЗАГРУЗИТЬ ИГРУ", 2)
+	var load_button := $Navigation/LoadButton as Button
+	_configure_nav_button(load_button)
 	load_button.disabled = not game_state.has_save()
+	_set_nav_button_visual(load_button, &"disabled" if load_button.disabled else &"normal")
 	load_button.tooltip_text = "Нет сохранённой игры" if load_button.disabled else "Открыть сохранённую игру"
 	load_button.pressed.connect(_show_load_slots)
-	navigation.add_child(load_button)
 
-	var settings_button := _nav_button("⚙\nНАСТРОЙКИ", 3)
+	var settings_button := $Navigation/SettingsButton as Button
+	_configure_nav_button(settings_button)
 	settings_button.pressed.connect(_show_settings)
-	navigation.add_child(settings_button)
 
-	var exit_button := _nav_button("⏻\nВЫЙТИ", 4)
+	var exit_button := $Navigation/ExitButton as Button
+	_configure_nav_button(exit_button)
 	exit_button.pressed.connect(_exit_game)
-	navigation.add_child(exit_button)
 
 	status_label = _label("", 15, COLOR_GOLD)
-	status_label.position = Vector2(470, 696)
+	status_label.position = Vector2(470, 636)
 	status_label.size = Vector2(660, 34)
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(status_label)
-
-	var initially_active := continue_button if not continue_button.disabled else new_button
-	initially_active.add_theme_stylebox_override("normal", _style(COLOR_ACTIVE, COLOR_GOLD, 2, 0))
-	initially_active.add_theme_color_override("font_color", Color(0.13, 0.075, 0.025))
 
 
 func _build_settings() -> void:
@@ -173,7 +180,7 @@ func _build_settings() -> void:
 	fullscreen_check.text = "Полноэкранный режим"
 	fullscreen_check.position = Vector2(55, 214)
 	fullscreen_check.size = Vector2(490, 48)
-	fullscreen_check.button_pressed = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
+	fullscreen_check.button_pressed = _is_fullscreen()
 	fullscreen_check.add_theme_font_size_override("font_size", 18)
 	fullscreen_check.add_theme_color_override("font_color", COLOR_PARCHMENT)
 	fullscreen_check.toggled.connect(_set_fullscreen)
@@ -276,32 +283,61 @@ func _exit_game() -> void:
 
 
 func _set_volume(value: float) -> void:
-	var bus_index := AudioServer.get_bus_index("Master")
-	AudioServer.set_bus_mute(bus_index, value <= 0.0)
-	if value > 0.0:
-		AudioServer.set_bus_volume_db(bus_index, linear_to_db(value / 100.0))
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	if settings_manager != null:
+		settings_manager.call(&"set_master_volume", value)
 
 
 func _current_volume_percent() -> float:
-	var bus_index := AudioServer.get_bus_index("Master")
-	if AudioServer.is_bus_mute(bus_index):
-		return 0.0
-	return db_to_linear(AudioServer.get_bus_volume_db(bus_index)) * 100.0
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	return float(settings_manager.call(&"get_master_volume")) if settings_manager != null else 100.0
 
 
 func _set_fullscreen(enabled: bool) -> void:
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if enabled else DisplayServer.WINDOW_MODE_WINDOWED)
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	if settings_manager != null:
+		settings_manager.call(&"set_fullscreen", enabled)
 
 
-func _nav_button(text_value: String, index: int) -> Button:
-	var button := Button.new()
-	button.text = text_value
-	button.position = Vector2(index * 260 + 2, 2)
-	button.size = Vector2(260, 122)
-	button.add_theme_font_size_override("font_size", 17)
-	button.add_theme_constant_override("line_spacing", 9)
-	_apply_button_theme(button)
-	return button
+func _is_fullscreen() -> bool:
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	return bool(settings_manager.call(&"is_fullscreen")) if settings_manager != null else false
+
+
+func _configure_nav_button(button: Button) -> void:
+	var empty_style := StyleBoxEmpty.new()
+	for state: StringName in [&"normal", &"hover", &"pressed", &"focus", &"disabled"]:
+		button.add_theme_stylebox_override(state, empty_style)
+	button.mouse_entered.connect(_set_nav_button_visual.bind(button, &"hover"))
+	button.mouse_exited.connect(_set_nav_button_visual.bind(button, &"normal"))
+	button.button_down.connect(_set_nav_button_visual.bind(button, &"pressed"))
+	button.button_up.connect(_set_nav_button_visual.bind(button, &"hover"))
+	_set_nav_button_visual(button, &"normal")
+
+
+func _set_nav_button_visual(button: Button, state: StringName) -> void:
+	if button.disabled:
+		state = &"disabled"
+	var plaque := button.get_node("Plaque") as TextureRect
+	var medallion := button.get_node("Medallion") as TextureRect
+	var caption := button.get_node("Caption") as Label
+	match state:
+		&"hover":
+			plaque.modulate = Color(1.0, 0.92, 0.76)
+			medallion.modulate = Color(0.88, 0.86, 0.82)
+			caption.add_theme_color_override("font_color", COLOR_SHINE)
+		&"pressed":
+			plaque.modulate = Color(0.70, 0.66, 0.58)
+			medallion.modulate = Color(0.66, 0.64, 0.60)
+			caption.add_theme_color_override("font_color", COLOR_GOLD)
+		&"disabled":
+			plaque.modulate = Color(0.34, 0.33, 0.31, 0.76)
+			medallion.modulate = Color(0.34, 0.32, 0.30, 0.72)
+			caption.add_theme_color_override("font_color", Color(0.48, 0.45, 0.40))
+		_:
+			plaque.modulate = Color(0.82, 0.82, 0.82)
+			medallion.modulate = Color(0.78, 0.78, 0.78)
+			caption.add_theme_color_override("font_color", COLOR_PARCHMENT)
 
 
 func _apply_button_theme(button: Button) -> void:

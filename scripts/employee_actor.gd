@@ -154,6 +154,8 @@ func play_action(
 			selected_pose = hold_pose
 		elif physical_pose == &"neutral":
 			selected_pose = neutral_pose
+		if employee_id == &"boris" and action_id == &"repair":
+			_play_audio_cue(&"play_boris_repair")
 		await _show_action_pose(selected_pose)
 		await get_tree().create_timer(0.38).timeout
 		action_impact.emit(action_id)
@@ -296,6 +298,7 @@ func restore_hold_pose(target_position: Vector2, action_z_index: int = 20) -> vo
 
 
 func _play_magic_impact(action_id: StringName, target_global_position: Vector2) -> void:
+	_play_audio_cue(&"play_spell")
 	var charge := _create_charge_effect(action_id)
 	var charge_tween := create_tween().set_parallel(true)
 	charge_tween.tween_property(charge, "scale", Vector2(1.15, 1.15), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -316,6 +319,12 @@ func _play_magic_impact(action_id: StringName, target_global_position: Vector2) 
 	flash.tween_property(projectile, "modulate", Color(1, 1, 1, 0), 0.13)
 	await flash.finished
 	projectile.queue_free()
+
+
+func _play_audio_cue(method: StringName) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method)
 
 
 func _create_projectile(action_id: StringName, target_global_position: Vector2) -> Node2D:

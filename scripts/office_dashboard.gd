@@ -325,6 +325,7 @@ func _build_cat_easter_egg() -> void:
 	cat_button.flat = true
 	cat_button.focus_mode = Control.FOCUS_NONE
 	cat_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	cat_button.set_meta(&"cat_purr_sound", true)
 	cat_button.pressed.connect(_on_cat_pressed)
 	hub_layer.add_child(cat_button)
 
@@ -1172,25 +1173,26 @@ func _add_equipment_card(item_name: String, status_text: String, icon_path: Stri
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(icon)
 	var title := _label(item_name, 21, COLOR_GOLD)
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.position = Vector2(28, 270)
 	title.size = Vector2(339, 62)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	card.add_child(title)
 	var status := _label(status_text, 14, Color(0.96, 0.68, 0.34))
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status.position = Vector2(24, 342)
 	status.size = Vector2(347, 44)
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status.clip_text = true
 	card.add_child(status)
 	var body := _label(description, 15, COLOR_PARCHMENT)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.position = Vector2(34, 404)
 	body.size = Vector2(327, 72)
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	body.clip_text = true
 	card.add_child(body)
 
@@ -1369,6 +1371,9 @@ func _dismiss_job_report() -> void:
 func _show_claim_dialog() -> void:
 	var report: Dictionary = game_state.pending_job_report
 	var amount := int(report.get("claim_amount", 0))
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(&"play_complaint"):
+		audio_manager.call(&"play_complaint")
 	claim_title.text = "ПРЕТЕНЗИЯ • %s" % str(report.get("resident", "Жилец"))
 	claim_body.text = "%s\n\nТребование за причинённый ущерб: %d монет.\n\nКомпенсировать ущерб или отказать жильцу?" % [report.get("title", "Завершённая заявка"), amount]
 	claim_pay_button.text = "КОМПЕНСИРОВАТЬ • %d" % amount

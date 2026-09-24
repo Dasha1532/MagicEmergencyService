@@ -1,8 +1,14 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://dsesl4la3jsre"]
 
-[ext_resource type="Script" path="res://scripts/title_screen.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://deg8db5mnl13s" path="res://scripts/title_screen.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dhmo7nn4y70f5" path="res://assets/ui/menu_button_plaque.png" id="2_plaque"]
+[ext_resource type="Texture2D" uid="uid://dwa5wi8v0h4be" path="res://assets/ui/menu_medallions/continue.png" id="3_continue"]
+[ext_resource type="Texture2D" uid="uid://ciu71b71fv8dn" path="res://assets/ui/menu_medallions/new_game.png" id="4_new"]
+[ext_resource type="Texture2D" uid="uid://cdi1pbjp5xhna" path="res://assets/ui/menu_medallions/load.png" id="5_load"]
+[ext_resource type="Texture2D" uid="uid://cjp7qlrkjmmsd" path="res://assets/ui/menu_medallions/settings.png" id="6_settings"]
+[ext_resource type="Texture2D" uid="uid://bqf1rkat7ovi2" path="res://assets/ui/menu_medallions/exit.png" id="7_exit"]
 
-[node name="TitleScreen" type="Control"]
+[node name="TitleScreen" type="Control" unique_id=1010919655]
 process_mode = 3
 layout_mode = 3
 anchors_preset = 15
@@ -11,3 +17,230 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
+
+[node name="Navigation" type="Panel" parent="." unique_id=379647481]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 742.0
+offset_right = 1450.0
+offset_bottom = 868.0
+
+[node name="ContinueButton" type="Button" parent="Navigation" unique_id=549284969]
+layout_mode = 0
+offset_left = -6.0
+offset_top = -2.0
+offset_right = 271.0
+offset_bottom = 159.0
+
+[node name="Plaque" type="TextureRect" parent="Navigation/ContinueButton" unique_id=1931756276]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -13.0
+offset_top = -55.0
+offset_right = 18.0
+offset_bottom = 36.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_plaque")
+expand_mode = 1
+
+[node name="Medallion" type="TextureRect" parent="Navigation/ContinueButton" unique_id=1616070312]
+layout_mode = 0
+offset_left = 70.0
+offset_top = -50.0
+offset_right = 196.0
+offset_bottom = 76.0
+mouse_filter = 2
+texture = ExtResource("3_continue")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Caption" type="Label" parent="Navigation/ContinueButton" unique_id=2114637782]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 66.0
+offset_right = 254.0
+offset_bottom = 112.0
+theme_override_font_sizes/font_size = 17
+text = "ПРОДОЛЖИТЬ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="NewGameButton" type="Button" parent="Navigation" unique_id=315405648]
+layout_mode = 0
+offset_left = 252.0
+offset_top = -2.0
+offset_right = 529.0
+offset_bottom = 159.0
+
+[node name="Plaque" type="TextureRect" parent="Navigation/NewGameButton" unique_id=1611756346]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -13.0
+offset_top = -55.0
+offset_right = 18.0
+offset_bottom = 36.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_plaque")
+expand_mode = 1
+
+[node name="Medallion" type="TextureRect" parent="Navigation/NewGameButton" unique_id=1171379151]
+layout_mode = 0
+offset_left = 70.0
+offset_top = -50.0
+offset_right = 196.0
+offset_bottom = 76.0
+mouse_filter = 2
+texture = ExtResource("4_new")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Caption" type="Label" parent="Navigation/NewGameButton" unique_id=667436007]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 66.0
+offset_right = 254.0
+offset_bottom = 112.0
+theme_override_font_sizes/font_size = 17
+text = "НОВАЯ ИГРА"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LoadButton" type="Button" parent="Navigation" unique_id=1760818573]
+layout_mode = 0
+offset_left = 510.0
+offset_top = -2.0
+offset_right = 787.0
+offset_bottom = 159.0
+
+[node name="Plaque" type="TextureRect" parent="Navigation/LoadButton" unique_id=632851085]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -13.0
+offset_top = -55.0
+offset_right = 18.0
+offset_bottom = 36.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_plaque")
+expand_mode = 1
+
+[node name="Medallion" type="TextureRect" parent="Navigation/LoadButton" unique_id=2072439494]
+layout_mode = 0
+offset_left = 70.0
+offset_top = -50.0
+offset_right = 196.0
+offset_bottom = 76.0
+mouse_filter = 2
+texture = ExtResource("5_load")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Caption" type="Label" parent="Navigation/LoadButton" unique_id=665015314]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 66.0
+offset_right = 254.0
+offset_bottom = 112.0
+theme_override_font_sizes/font_size = 17
+text = "ЗАГРУЗИТЬ ИГРУ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SettingsButton" type="Button" parent="Navigation" unique_id=121327747]
+layout_mode = 0
+offset_left = 768.0
+offset_top = -2.0
+offset_right = 1045.0
+offset_bottom = 159.0
+
+[node name="Plaque" type="TextureRect" parent="Navigation/SettingsButton" unique_id=1161669132]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -13.0
+offset_top = -55.0
+offset_right = 18.0
+offset_bottom = 36.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_plaque")
+expand_mode = 1
+
+[node name="Medallion" type="TextureRect" parent="Navigation/SettingsButton" unique_id=682125595]
+layout_mode = 0
+offset_left = 70.0
+offset_top = -50.0
+offset_right = 196.0
+offset_bottom = 76.0
+mouse_filter = 2
+texture = ExtResource("6_settings")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Caption" type="Label" parent="Navigation/SettingsButton" unique_id=416113125]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 66.0
+offset_right = 254.0
+offset_bottom = 112.0
+theme_override_font_sizes/font_size = 17
+text = "НАСТРОЙКИ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ExitButton" type="Button" parent="Navigation" unique_id=1754368228]
+layout_mode = 0
+offset_left = 1026.0
+offset_top = -2.0
+offset_right = 1303.0
+offset_bottom = 159.0
+
+[node name="Plaque" type="TextureRect" parent="Navigation/ExitButton" unique_id=316457421]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -13.0
+offset_top = -55.0
+offset_right = 18.0
+offset_bottom = 36.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_plaque")
+expand_mode = 1
+
+[node name="Medallion" type="TextureRect" parent="Navigation/ExitButton" unique_id=442124008]
+layout_mode = 0
+offset_left = 70.0
+offset_top = -50.0
+offset_right = 196.0
+offset_bottom = 76.0
+mouse_filter = 2
+texture = ExtResource("7_exit")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Caption" type="Label" parent="Navigation/ExitButton" unique_id=1259481904]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 66.0
+offset_right = 254.0
+offset_bottom = 112.0
+theme_override_font_sizes/font_size = 17
+text = "ВЫЙТИ"
+horizontal_alignment = 1
+vertical_alignment = 1

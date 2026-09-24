@@ -46,6 +46,7 @@ var employee_detail_labels: Dictionary = {}
 
 
 func _ready() -> void:
+	_call_audio_manager(&"play_job_music")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tool_bar = get_node("../ToolBar")
@@ -63,6 +64,16 @@ func _ready() -> void:
 	_refresh_job_time()
 	_select_first_employee()
 	set_process(true)
+
+
+func _exit_tree() -> void:
+	_call_audio_manager(&"stop_job_music")
+
+
+func _call_audio_manager(method: StringName) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method)
 
 
 func _process(_delta: float) -> void:

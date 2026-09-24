@@ -160,7 +160,7 @@ func _build_settings_panel() -> void:
 	fullscreen_check.text = "Полноэкранный режим"
 	fullscreen_check.position = Vector2(55, 246)
 	fullscreen_check.size = Vector2(420, 48)
-	fullscreen_check.button_pressed = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
+	fullscreen_check.button_pressed = _is_fullscreen()
 	fullscreen_check.add_theme_font_size_override("font_size", 18)
 	fullscreen_check.add_theme_color_override("font_color", COLOR_PARCHMENT)
 	fullscreen_check.toggled.connect(_set_fullscreen)
@@ -282,21 +282,25 @@ func _return_to_title() -> void:
 
 
 func _set_volume(value: float) -> void:
-	var bus_index := AudioServer.get_bus_index("Master")
-	AudioServer.set_bus_mute(bus_index, value <= 0.0)
-	if value > 0.0:
-		AudioServer.set_bus_volume_db(bus_index, linear_to_db(value / 100.0))
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	if settings_manager != null:
+		settings_manager.call(&"set_master_volume", value)
 
 
 func _current_volume_percent() -> float:
-	var bus_index := AudioServer.get_bus_index("Master")
-	if AudioServer.is_bus_mute(bus_index):
-		return 0.0
-	return db_to_linear(AudioServer.get_bus_volume_db(bus_index)) * 100.0
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	return float(settings_manager.call(&"get_master_volume")) if settings_manager != null else 100.0
 
 
 func _set_fullscreen(enabled: bool) -> void:
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if enabled else DisplayServer.WINDOW_MODE_WINDOWED)
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	if settings_manager != null:
+		settings_manager.call(&"set_fullscreen", enabled)
+
+
+func _is_fullscreen() -> bool:
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	return bool(settings_manager.call(&"is_fullscreen")) if settings_manager != null else false
 
 
 func _exit_game() -> void:

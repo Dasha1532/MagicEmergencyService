@@ -916,6 +916,9 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 	job_repair_states.erase(String(completed_id))
 	active_job_id = &""
 	_update_employee_statuses()
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(&"play_task_complete"):
+		audio_manager.call(&"play_task_complete")
 	state_changed.emit()
 	return true
 
