@@ -10,6 +10,21 @@ const MAIN_MENU_MUSIC := preload("res://assets/audio/The_Archivist_s_Ledger.mp3"
 const OFFICE_MUSIC := preload("res://assets/audio/Clockwork_Correspondence.mp3")
 const JOB_MUSIC := preload("res://assets/audio/The_Investigators_Ledger.mp3")
 const COMPLAINT := preload("res://assets/audio/complaint.wav")
+const BREAKING_WOOD := preload("res://assets/audio/breaking-pieces.wav")
+const HEAVY_IMPACT := preload("res://assets/audio/udar.wav")
+const WARDROBE_MOVE := preload("res://assets/audio/dvagaetskaf.wav")
+const TRAP_INSTALL := preload("res://assets/audio/reitanna__drop-metal-thing.wav")
+const GHOST_FLIGHT := preload("res://assets/audio/ghost.ogg")
+const GHOST_TRAP := preload("res://assets/audio/lovuska.wav")
+const GLASS_DEBRIS := preload("res://assets/audio/glass-debris.wav")
+const MIRROR_SHATTER := preload("res://assets/audio/glass-shatter-5.wav")
+const PORTAL_CLOSE := preload("res://assets/audio/magic-whoosh.wav")
+const GHOST_SCREAM := preload("res://assets/audio/ghost-scream.mp3")
+const STEPS := preload("res://assets/audio/steps.wav")
+const RUNNING_WATER := preload("res://assets/audio/water.ogg")
+const RAIN := preload("res://assets/audio/rain.ogg")
+const GARGOYLE_WAKE := preload("res://assets/audio/rubble-trouble-wet-reverb.wav")
+const LAVA_FLOW := preload("res://assets/audio/lava.ogg")
 
 const CAT_SOUND_META := &"cat_purr_sound"
 const MUSIC_FADE_SECONDS := 2.0
@@ -26,6 +41,21 @@ var main_menu_music_player: AudioStreamPlayer
 var office_music_player: AudioStreamPlayer
 var job_music_player: AudioStreamPlayer
 var complaint_player: AudioStreamPlayer
+var breaking_wood_player: AudioStreamPlayer
+var heavy_impact_player: AudioStreamPlayer
+var wardrobe_move_player: AudioStreamPlayer
+var trap_install_player: AudioStreamPlayer
+var ghost_flight_player: AudioStreamPlayer
+var ghost_trap_player: AudioStreamPlayer
+var glass_debris_player: AudioStreamPlayer
+var mirror_shatter_player: AudioStreamPlayer
+var portal_close_player: AudioStreamPlayer
+var ghost_scream_player: AudioStreamPlayer
+var steps_player: AudioStreamPlayer
+var running_water_player: AudioStreamPlayer
+var rain_player: AudioStreamPlayer
+var gargoyle_wake_player: AudioStreamPlayer
+var lava_flow_player: AudioStreamPlayer
 var music_fades: Dictionary = {}
 
 
@@ -48,6 +78,21 @@ func _ready() -> void:
 	looping_job_music.loop = true
 	job_music_player = _create_player(looping_job_music)
 	complaint_player = _create_player(COMPLAINT)
+	breaking_wood_player = _create_player(BREAKING_WOOD)
+	heavy_impact_player = _create_player(HEAVY_IMPACT)
+	wardrobe_move_player = _create_player(WARDROBE_MOVE)
+	trap_install_player = _create_player(TRAP_INSTALL)
+	ghost_flight_player = _create_player(_looped_stream(GHOST_FLIGHT), linear_to_db(0.5))
+	ghost_trap_player = _create_player(GHOST_TRAP)
+	glass_debris_player = _create_player(GLASS_DEBRIS)
+	mirror_shatter_player = _create_player(MIRROR_SHATTER)
+	portal_close_player = _create_player(PORTAL_CLOSE)
+	ghost_scream_player = _create_player(GHOST_SCREAM)
+	steps_player = _create_player(STEPS)
+	running_water_player = _create_player(_looped_stream(RUNNING_WATER), linear_to_db(0.5))
+	rain_player = _create_player(_looped_stream(RAIN), linear_to_db(0.5))
+	gargoyle_wake_player = _create_player(GARGOYLE_WAKE)
+	lava_flow_player = _create_player(_looped_stream(LAVA_FLOW), linear_to_db(0.5))
 	get_tree().node_added.connect(_on_node_added)
 	_connect_buttons_in(get_tree().root)
 
@@ -90,6 +135,66 @@ func stop_job_music() -> void:
 
 func play_complaint() -> void:
 	complaint_player.play()
+
+
+func play_breaking_wood() -> void:
+	breaking_wood_player.play()
+
+
+func play_heavy_impact() -> void:
+	heavy_impact_player.play()
+
+
+func play_wardrobe_move() -> void:
+	wardrobe_move_player.play()
+
+
+func play_trap_install() -> void:
+	trap_install_player.play()
+
+
+func play_ghost_trap() -> void:
+	ghost_trap_player.play()
+
+
+func play_glass_debris() -> void:
+	glass_debris_player.play()
+
+
+func play_mirror_shatter() -> void:
+	mirror_shatter_player.play()
+
+
+func play_portal_close() -> void:
+	portal_close_player.play()
+
+
+func play_ghost_scream() -> void:
+	ghost_scream_player.play()
+
+
+func play_steps() -> void:
+	steps_player.play()
+
+
+func play_gargoyle_wake() -> void:
+	gargoyle_wake_player.play()
+
+
+func set_ghost_flight_playing(enabled: bool) -> void:
+	_set_loop_playing(ghost_flight_player, enabled)
+
+
+func set_running_water_playing(enabled: bool) -> void:
+	_set_loop_playing(running_water_player, enabled)
+
+
+func set_rain_playing(enabled: bool) -> void:
+	_set_loop_playing(rain_player, enabled)
+
+
+func set_lava_flow_playing(enabled: bool) -> void:
+	_set_loop_playing(lava_flow_player, enabled)
 
 
 func _fade_music_in(player: AudioStreamPlayer) -> void:
@@ -138,6 +243,25 @@ func _create_player(stream: AudioStream, volume_db: float = 0.0) -> AudioStreamP
 	player.max_polyphony = 4
 	add_child(player)
 	return player
+
+
+func _looped_stream(stream: AudioStream) -> AudioStream:
+	var looped := stream.duplicate()
+	if looped is AudioStreamWAV:
+		(looped as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+	elif looped is AudioStreamMP3:
+		(looped as AudioStreamMP3).loop = true
+	elif looped is AudioStreamOggVorbis:
+		(looped as AudioStreamOggVorbis).loop = true
+	return looped
+
+
+func _set_loop_playing(player: AudioStreamPlayer, enabled: bool) -> void:
+	if enabled:
+		if not player.playing:
+			player.play()
+	elif player.playing:
+		player.stop()
 
 
 func _on_node_added(node: Node) -> void:

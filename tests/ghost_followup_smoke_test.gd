@@ -75,6 +75,7 @@ func _run() -> void:
 	_check(bool(trap_route.apply_ghost_action(&"boris", &"trap")["applied"]), "После установки привидение можно загнать в ловушку")
 	_check(trap_route.is_resolved() and StringName(trap_route.world_object["mirror_state"]) == &"covered", "Ловушка завершает заявку без открытия портала")
 	_check(int(trap_route.get_completion_result()["reward_adjustment"]) < 0, "Альтернативное решение оплачивается ниже идеального")
+	_check(int(trap_route.get_completion_result()["expense_reimbursement"]) == 250, "Стоимость занятой ловушки включается в оплату заявки")
 	var captured_uncover: Dictionary = trap_route.uncover_mirror(&"boris", true)
 	_check(bool(captured_uncover["applied"]) and not str(captured_uncover["message"]).contains("вернуть"), "После поимки снятие полотна не предлагает возвращать привидение в портал")
 	_check(not trap_route.is_resolved(), "Открытый портал после поимки ещё требуется закрыть")

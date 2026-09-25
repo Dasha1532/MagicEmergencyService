@@ -119,15 +119,8 @@ vertical_alignment = 1
 autowrap_mode = 2
 clip_text = true
 
-[node name="ContinueButton" type="Button" parent="DemoCompletionLayer" unique_id=1996241193]
-layout_mode = 0
-offset_left = 294.0
-offset_top = 660.0
-offset_right = 684.0
-offset_bottom = 718.0
-text = "ОСТАТЬСЯ В ОФИСЕ"
-
 [node name="MenuButton" type="Button" parent="DemoCompletionLayer" unique_id=1183926646]
+editor_description = "Кнопка запускает финальный ролик, после которого игра переходит в главное меню. Размер и положение можно менять мышкой."
 layout_mode = 0
 offset_left = 928.0
 offset_top = 658.0

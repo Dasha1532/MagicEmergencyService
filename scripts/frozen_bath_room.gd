@@ -149,6 +149,9 @@ func _on_action_impact(action_id: StringName) -> void:
 
 func _resolve_action(action_id: StringName) -> void:
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, game_state.has_supply_item(&"thermal_regulator"))
+	if bool(result.get("applied", false)) and action_id == &"physical_move":
+		_play_audio_cue(&"play_heavy_impact")
+		_play_audio_cue(&"play_glass_debris")
 	_save_state()
 	_apply_visual_state()
 	var message := str(result["message"])
@@ -163,6 +166,12 @@ func _resolve_action(action_id: StringName) -> void:
 	if action_id == &"install_regulator" or action_id == &"repair":
 		action_in_progress = false
 		interaction_button.disabled = simulation.is_fully_resolved()
+
+
+func _play_audio_cue(method: StringName) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method)
 
 
 func _on_action_finished() -> void:

@@ -40,6 +40,12 @@ func _ready() -> void:
 		simulation.world_object["resident_intro_seen"] = true
 		game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 		repair_hud.show_resident_dialogue(simulation.get_resident_request())
+	_set_audio_loop(&"set_rain_playing", true)
+
+
+func _exit_tree() -> void:
+	_set_audio_loop(&"set_rain_playing", false)
+	_set_audio_loop(&"set_running_water_playing", false)
 
 
 func _on_long_action_started(employee_id: StringName) -> void:
@@ -120,7 +126,13 @@ func _on_action_impact(action_id: StringName) -> void:
 
 
 func _resolve_action(action_id: StringName) -> void:
+	var was_awake := bool(simulation.world_object.get("awake", false))
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
+	if bool(result.get("applied", false)):
+		if action_id == &"physical_move":
+			_play_audio_cue(&"play_heavy_impact")
+		elif action_id == &"animate" and not was_awake and bool(simulation.world_object.get("awake", false)):
+			_play_audio_cue(&"play_gargoyle_wake")
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	_apply_visual_state()
 	repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
@@ -148,9 +160,22 @@ func _apply_visual_state() -> void:
 	var water_state: StringName = simulation.flooding_state()
 	flooding.visible = water_state == &"water"
 	frozen_flooding.visible = water_state == &"frozen"
+	_set_audio_loop(&"set_running_water_playing", water_state == &"water" and bool(simulation.world_object.get("clogged", false)))
 	gargoyle.set_interaction_enabled(not simulation.is_terminal() and not action_in_progress)
 	if repair_hud.has_method("set_completion_ready"):
 		repair_hud.call("set_completion_ready", simulation.is_resolved())
+
+
+func _play_audio_cue(method: StringName) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method)
+
+
+func _set_audio_loop(method: StringName, enabled: bool) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method, enabled)
 
 
 func _attempt_complete_job() -> void:

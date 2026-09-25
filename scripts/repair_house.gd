@@ -55,6 +55,11 @@ func _ready() -> void:
 	_restore_repair_state()
 	_resume_pending_action()
 	call_deferred("_open_bathroom")
+	_set_lava_audio(_is_lava_flowing())
+
+
+func _exit_tree() -> void:
+	_set_lava_audio(false)
 
 
 func _on_long_action_started(employee_id: StringName) -> void:
@@ -227,6 +232,8 @@ func _resolve_action(action_id: StringName) -> void:
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object)
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
+	if bool(result.get("applied", false)) and action_id == &"physical_move":
+		_play_audio_cue(&"play_heavy_impact")
 	var visual_state: StringName = result.get("visual_state", &"emergency")
 	if visual_state == &"repaired":
 		lava_faucet.show_repaired_state()
@@ -238,6 +245,7 @@ func _resolve_action(action_id: StringName) -> void:
 		lava_faucet.show_emergency_state(_is_lava_flowing())
 	lava_faucet.set_damage_visible(_has_damage())
 	faucet_status_effects.call("sync_from_state", simulation.world_object)
+	_set_lava_audio(_is_lava_flowing())
 	_update_resident_reaction()
 	var resident_message: String = simulation.get_resident_reaction()
 	if action_id == &"diagnose":
@@ -254,6 +262,18 @@ func _resolve_action(action_id: StringName) -> void:
 		repair_hud.queue_resident_dialogue(resident_message)
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+
+
+func _set_lava_audio(enabled: bool) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(&"set_lava_flow_playing"):
+		audio_manager.call(&"set_lava_flow_playing", enabled)
+
+
+func _play_audio_cue(method: StringName) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method)
 
 
 func _schedule_action(action_id: StringName) -> void:

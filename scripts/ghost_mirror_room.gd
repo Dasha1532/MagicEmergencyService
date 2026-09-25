@@ -48,6 +48,10 @@ func _ready() -> void:
 		repair_hud.show_resident_dialogue(simulation.get_resident_request())
 
 
+func _exit_tree() -> void:
+	_set_audio_loop(&"set_ghost_flight_playing", false)
+
+
 func _on_employee_selected(employee_id: StringName) -> void:
 	selected_employee_id = employee_id
 	tool_bar.visible = false
@@ -147,6 +151,8 @@ func _on_action_impact(action_id: StringName) -> void:
 
 
 func _resolve_action(action_id: StringName) -> void:
+	var previous_ghost_state := StringName(simulation.world_object.get("ghost_state", &"calm"))
+	var previous_mirror_state := StringName(simulation.world_object.get("mirror_state", &"covered"))
 	var result: Dictionary
 	if selected_target == &"mirror":
 		if action_id == &"uncover":
@@ -157,6 +163,18 @@ func _resolve_action(action_id: StringName) -> void:
 			result = simulation.close_portal(selected_employee_id, _selected_employee_has(&"antimagic"))
 	else:
 		result = simulation.install_trap(selected_employee_id, game_state.has_supply_item(&"ghost_trap")) if action_id == &"install_trap" else simulation.apply_ghost_action(selected_employee_id, action_id)
+	if bool(result.get("applied", false)):
+		if action_id == &"install_trap":
+			_play_audio_cue(&"play_trap_install")
+		elif action_id == &"trap":
+			_play_audio_cue(&"play_ghost_trap")
+		elif action_id == &"physical_move" and StringName(simulation.world_object.get("mirror_state", &"")) == &"destroyed":
+			_play_audio_cue(&"play_heavy_impact")
+			_play_audio_cue(&"play_mirror_shatter")
+		elif previous_mirror_state == &"open" and StringName(simulation.world_object.get("mirror_state", &"")) == &"closed":
+			_play_audio_cue(&"play_portal_close")
+		if previous_ghost_state != &"angry" and StringName(simulation.world_object.get("ghost_state", &"")) == &"angry":
+			_play_audio_cue(&"play_ghost_scream")
 	_save_state()
 	_apply_visual_state()
 	repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
@@ -208,7 +226,20 @@ func _apply_visual_state() -> void:
 	empty_trap.visible = trap_state == &"installed"
 	occupied_trap.visible = trap_state == &"occupied"
 	_update_angry_motion(ghost_state == &"angry")
+	_set_audio_loop(&"set_ghost_flight_playing", ghost_state in [&"calm", &"angry"])
 	repair_hud.set_completion_ready(simulation.is_resolved())
+
+
+func _play_audio_cue(method: StringName) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method)
+
+
+func _set_audio_loop(method: StringName, enabled: bool) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method, enabled)
 
 
 func _update_angry_motion(is_angry: bool) -> void:

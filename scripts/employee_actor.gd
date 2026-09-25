@@ -213,6 +213,7 @@ func _walk_to(target_position: Vector2) -> void:
 	var distance: float = position.distance_to(target_position)
 	if distance < 2.0:
 		return
+	_play_audio_cue(&"play_steps")
 	neutral_pose.visible = false
 	work_pose.visible = false
 	hold_pose.visible = false

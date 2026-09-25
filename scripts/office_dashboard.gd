@@ -87,6 +87,10 @@ var dispatch_warning_body: Label
 var demo_completion_layer: Control
 var demo_completion_title: Label
 var demo_completion_summary: Label
+var demo_video_layer: Control
+var demo_video_player: VideoStreamPlayer
+var demo_video_can_skip: bool = false
+var demo_video_transitioning: bool = false
 var cat_click_count: int = 0
 var cat_message_revision: int = 0
 var cat_phrase_panel: Panel
@@ -125,6 +129,7 @@ func _build_interface() -> void:
 	_build_arrival_dialog()
 	_build_dispatch_warning_dialog()
 	_build_demo_completion_dialog()
+	_build_demo_video()
 	_build_personnel_screen()
 	_build_supply_shop()
 	_build_equipment_storage()
@@ -1002,12 +1007,81 @@ func _build_demo_completion_dialog() -> void:
 	demo_completion_layer.visible = false
 	demo_completion_title = $DemoCompletionLayer/Title
 	demo_completion_summary = $DemoCompletionLayer/Summary
-	var continue_button: Button = $DemoCompletionLayer/ContinueButton
-	_style_button(continue_button)
-	continue_button.pressed.connect(_continue_after_demo)
 	var menu_button: Button = $DemoCompletionLayer/MenuButton
 	_style_button(menu_button)
-	menu_button.pressed.connect(_finish_demo_to_menu)
+	menu_button.pressed.connect(_start_demo_video)
+
+
+func _build_demo_video() -> void:
+	demo_video_layer = Control.new()
+	demo_video_layer.name = "DemoVideoLayer"
+	demo_video_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	demo_video_layer.z_index = 310
+	demo_video_layer.visible = false
+	add_child(demo_video_layer)
+
+	var background := ColorRect.new()
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.color = Color.BLACK
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	demo_video_layer.add_child(background)
+
+	demo_video_player = VideoStreamPlayer.new()
+	demo_video_player.name = "LiliyaFarewell"
+	demo_video_player.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	demo_video_player.expand = true
+	demo_video_player.modulate = Color(1, 1, 1, 0)
+	demo_video_player.stream = load("res://assets/video/lili_buy.ogv") as VideoStream
+	demo_video_player.finished.connect(_finish_demo_video)
+	demo_video_layer.add_child(demo_video_player)
+
+
+func _input(event: InputEvent) -> void:
+	var is_action_button := event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton
+	if not is_action_button or not event.is_pressed() or event.is_echo():
+		return
+	if demo_completion_layer != null and demo_completion_layer.visible:
+		get_viewport().set_input_as_handled()
+		_start_demo_video()
+	elif demo_video_layer != null and demo_video_layer.visible and demo_video_can_skip:
+		get_viewport().set_input_as_handled()
+		_finish_demo_video()
+
+
+func _start_demo_video() -> void:
+	if demo_video_transitioning or demo_video_layer == null or demo_video_player == null:
+		return
+	demo_video_transitioning = true
+	demo_video_can_skip = false
+	demo_completion_layer.visible = false
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(&"stop_office_music"):
+		audio_manager.call(&"stop_office_music")
+	demo_video_layer.modulate = Color.WHITE
+	demo_video_layer.visible = true
+	demo_video_layer.move_to_front()
+	demo_video_player.modulate = Color(1, 1, 1, 0)
+	await get_tree().create_timer(0.4).timeout
+	demo_video_player.play()
+	var fade := create_tween()
+	fade.tween_property(demo_video_player, "modulate:a", 1.0, 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	await get_tree().create_timer(0.55).timeout
+	demo_video_can_skip = true
+	demo_video_transitioning = false
+
+
+func _finish_demo_video() -> void:
+	if demo_video_transitioning or demo_video_layer == null or not demo_video_layer.visible:
+		return
+	demo_video_transitioning = true
+	demo_video_can_skip = false
+	game_state.mark_demo_completion_seen()
+	var fade := create_tween()
+	fade.tween_property(demo_video_player, "modulate:a", 0.0, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	await fade.finished
+	demo_video_player.stop()
+	await get_tree().create_timer(0.35).timeout
+	get_tree().change_scene_to_file("res://scenes/TitleScreen.tscn")
 
 
 func _open_jobs() -> void:
@@ -1295,16 +1369,6 @@ func _refresh_demo_completion() -> void:
 		int(summary.get("claims", 0)), int(summary.get("compensation_paid", 0)),
 	]
 	demo_completion_layer.move_to_front()
-
-
-func _continue_after_demo() -> void:
-	game_state.mark_demo_completion_seen()
-	demo_completion_layer.visible = false
-
-
-func _finish_demo_to_menu() -> void:
-	game_state.mark_demo_completion_seen()
-	get_tree().change_scene_to_file("res://scenes/TitleScreen.tscn")
 
 
 func _refresh_job_report() -> void:

@@ -313,6 +313,12 @@ func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, intent)
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, intent)
+	if bool(result.get("applied", false)) and action_id == &"physical_move":
+		if intent in [&"move_left", &"move_kitchen"]:
+			_play_audio_cue(&"play_wardrobe_move")
+		elif intent == &"break_legs":
+			_play_audio_cue(&"play_heavy_impact")
+			_play_audio_cue(&"play_breaking_wood")
 	_apply_visual_state()
 	var resident_message: String = simulation.get_resident_reaction()
 	if action_id == &"diagnose":
@@ -334,6 +340,12 @@ func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 		_start_fire_progression()
 	elif not is_burning and was_burning:
 		fire_progression_revision += 1
+
+
+func _play_audio_cue(method: StringName) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method)
 
 
 func _start_fire_progression() -> void:

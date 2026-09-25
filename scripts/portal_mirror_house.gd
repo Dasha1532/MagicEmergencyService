@@ -164,13 +164,26 @@ func _on_action_impact(action_id: StringName) -> void:
 
 
 func _resolve_timed_action(action_id: StringName) -> void:
+	var portal_was_open := bool(simulation.world_object.get("portal_open", true))
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
+	if bool(result.get("applied", false)):
+		if action_id == &"physical_move":
+			_play_audio_cue(&"play_heavy_impact")
+			_play_audio_cue(&"play_mirror_shatter")
+		elif action_id == &"antimagic" and portal_was_open and not bool(simulation.world_object.get("portal_open", true)):
+			_play_audio_cue(&"play_portal_close")
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	_apply_visual_state()
 	repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
 	var resident_reaction: String = simulation.get_resident_reaction(action_id)
 	if not resident_reaction.is_empty():
 		repair_hud.queue_resident_dialogue(resident_reaction)
+
+
+func _play_audio_cue(method: StringName) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method)
 
 
 func _resume_pending_action() -> void:
