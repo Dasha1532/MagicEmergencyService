@@ -102,6 +102,7 @@ var auto_wait_running: bool = false
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	$CupSteam.visible = true
 	$HotspotEditorPreview.visible = false
 	$PersonnelEditorPreview.visible = false
 	$ObjectHotspots.visible = true
@@ -295,6 +296,8 @@ func _build_office_hub() -> void:
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hub_layer.add_child(background)
+	var cup_steam := $CupSteam
+	cup_steam.reparent(hub_layer, true)
 
 	_connect_editable_hotspot($ObjectHotspots/JobBoard, "ДОСКА ЗАЯВОК", "Что опять случилось?", _open_jobs)
 	_connect_editable_hotspot($ObjectHotspots/EmployeesBoard, "СОТРУДНИКИ", "Кто сегодня работает?", _open_personnel)
@@ -769,6 +772,7 @@ func _build_office_menu_button() -> void:
 		return
 
 	var button := TextureButton.new()
+	button.name = "OfficeMenuButton"
 	button.position = Vector2(-8, 650)
 	button.size = Vector2(350, 350)
 	button.texture_normal = menu_texture
@@ -778,6 +782,7 @@ func _build_office_menu_button() -> void:
 	button.tooltip_text = "Меню (Esc)"
 	button.pivot_offset = button.size * 0.5
 	button.z_index = 30
+	button.self_modulate = Color(0.68, 0.65, 0.72, 1.0)
 
 	var image := menu_texture.get_image()
 	if image != null:
@@ -787,11 +792,15 @@ func _build_office_menu_button() -> void:
 
 	button.mouse_entered.connect(func() -> void:
 		var tween := create_tween()
+		tween.set_parallel(true)
 		tween.tween_property(button, "scale", Vector2(1.035, 1.035), 0.14)
+		tween.tween_property(button, "self_modulate", Color(0.76, 0.72, 0.78, 1.0), 0.14)
 	)
 	button.mouse_exited.connect(func() -> void:
 		var tween := create_tween()
+		tween.set_parallel(true)
 		tween.tween_property(button, "scale", Vector2.ONE, 0.14)
+		tween.tween_property(button, "self_modulate", Color(0.68, 0.65, 0.72, 1.0), 0.14)
 	)
 	button.pressed.connect(_open_pause_menu)
 	hub_layer.add_child(button)

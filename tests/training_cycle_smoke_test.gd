@@ -12,6 +12,12 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var game_state := root.get_node("GameState")
+	var audio_manager := root.get_node("AudioManager")
+	_check(audio_manager.coin_player.stream != null, "Звук монет подключён")
+	audio_manager.set_wardrobe_steps_playing(true)
+	_check(audio_manager.wardrobe_steps_player.playing, "Шаги ходячего шкафа запускаются зацикленно")
+	audio_manager.set_wardrobe_steps_playing(false)
+	_check(not audio_manager.wardrobe_steps_player.playing, "Шаги шкафа можно остановить после обездвиживания")
 	game_state.start_new_game()
 	_check(game_state.get_training_availability(&"liliya", &"animate") == &"no_slots", "Две специализации Лилии занимают обе учебные ячейки")
 	_check(game_state.get_training_availability(&"grog", &"animate") == &"incompatible", "Несовместимый сотрудник отклоняется")
@@ -41,6 +47,11 @@ func _run() -> void:
 	var office := office_scene.instantiate()
 	root.add_child(office)
 	await process_frame
+	var steam := office.find_child("CupSteam", true, false)
+	_check(steam != null and steam.is_processing(), "Над кружкой работает анимированный пар")
+	_check(steam.position.x < 700.0 and steam.position.y < 500.0, "Пар привязан к области кружки, а не книги")
+	var office_menu := office.find_child("OfficeMenuButton", true, false) as TextureButton
+	_check(office_menu != null and office_menu.self_modulate.r < 0.75, "Главный рубильник приглушён относительно исходного ассета")
 	office._on_cat_pressed()
 	_check(office.cat_phrase_panel.visible and not office.cat_phrase_label.text.is_empty(), "Невидимая зона кота показывает шуточную реплику")
 	for click_index in range(9):

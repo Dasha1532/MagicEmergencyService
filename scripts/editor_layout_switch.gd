@@ -1,10 +1,10 @@
 @tool
 extends Node
 
-## Editor-only switch between office hotspot guides and personnel layout guides.
+## Editor-only switch between office, personnel and demo completion layouts.
 ## Runtime visibility is restored explicitly by office_dashboard.gd.
 
-@export_enum("Офисные зоны", "Кадровый экран") var edit_mode: int = 1:
+@export_enum("Офис", "Кадровый экран", "Финальная книга") var edit_mode: int = 0:
 	set(value):
 		edit_mode = value
 		if Engine.is_editor_hint() and is_inside_tree():
@@ -23,10 +23,14 @@ func _apply_editor_mode() -> void:
 	if scene_root == null:
 		return
 	var office_mode := edit_mode == 0
+	var personnel_mode := edit_mode == 1
+	var demo_mode := edit_mode == 2
 	_set_visible(scene_root, "HotspotEditorPreview", office_mode)
 	_set_visible(scene_root, "ObjectHotspots", office_mode)
 	_set_visible(scene_root, "BookHotspots", office_mode)
-	_set_visible(scene_root, "PersonnelEditorPreview", not office_mode)
+	_set_visible(scene_root, "CupSteam", office_mode)
+	_set_visible(scene_root, "PersonnelEditorPreview", personnel_mode)
+	_set_visible(scene_root, "DemoCompletionLayer", demo_mode)
 
 
 func _set_visible(scene_root: Node, node_name: String, value: bool) -> void:

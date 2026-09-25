@@ -86,6 +86,10 @@ func _ready() -> void:
 	call_deferred("_open_room")
 
 
+func _exit_tree() -> void:
+	_set_wardrobe_steps_playing(false)
+
+
 func _find_kitchen_passage_marker() -> Marker2D:
 	var marker: Marker2D = get_node_or_null("WardrobePositions/KitchenPassage") as Marker2D
 	if marker == null:
@@ -134,9 +138,11 @@ func _open_room() -> void:
 		game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 		repair_hud.show_resident_dialogue(simulation.get_resident_request())
 	feedback_panel.visible = false
+	_sync_wardrobe_steps()
 
 
 func _show_house_overview(animated: bool = true) -> void:
+	_set_wardrobe_steps_playing(false)
 	overview_background.visible = true
 	room_preview_backdrop.visible = true
 	room_preview.visible = true
@@ -399,6 +405,18 @@ func _apply_visual_state() -> void:
 	tween.set_parallel(true)
 	tween.tween_property(wardrobe, "position", target_position, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(wardrobe, "scale", target_scale, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_sync_wardrobe_steps()
+
+
+func _sync_wardrobe_steps() -> void:
+	var should_play := closeup_background.visible and wardrobe.visible and bool(simulation.world_object.get("moving", false))
+	_set_wardrobe_steps_playing(should_play)
+
+
+func _set_wardrobe_steps_playing(enabled: bool) -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager != null and audio_manager.has_method(&"set_wardrobe_steps_playing"):
+		audio_manager.call(&"set_wardrobe_steps_playing", enabled)
 
 
 func _wardrobe_target_global() -> Vector2:

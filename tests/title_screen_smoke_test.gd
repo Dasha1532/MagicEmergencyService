@@ -34,6 +34,8 @@ func _run() -> void:
 	_click(buttons[3])
 	await process_frame
 	_check(title_screen.settings_panel.visible, "Кнопка настроек принимает обычный щелчок мыши")
+	_check(title_screen.resolution_option.item_count == 3, "В настройках доступны три разрешения окна")
+	_check(title_screen.resolution_option.get_item_text(1) == "1600 × 900", "Базовое разрешение 1600 × 900 отображается в списке")
 	title_screen._show_main()
 	_click(buttons[1])
 	await process_frame

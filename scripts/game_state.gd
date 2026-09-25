@@ -1,6 +1,7 @@
 extends Node
 
 signal state_changed
+signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
@@ -474,6 +475,7 @@ func hire_employee(employee_id: StringName) -> bool:
 	if hire_cost <= 0 or money < hire_cost:
 		return false
 	money -= hire_cost
+	coins_spent.emit(hire_cost)
 	employee["available"] = true
 	employee["status"] = employee["idle_status"]
 	employees[employee_id] = employee
@@ -490,6 +492,7 @@ func buy_supply_item(item_id: StringName) -> bool:
 	if price <= 0 or money < price:
 		return false
 	money -= price
+	coins_spent.emit(price)
 	owned_supply_items.append(String(item_id))
 	_record_financial_event(&"purchase", -price, str(item["name"]), {"item_id": String(item_id)})
 	state_changed.emit()
@@ -996,6 +999,7 @@ func resolve_pending_claim(pay_compensation: bool) -> bool:
 		return false
 	if pay_compensation:
 		money -= claim_amount
+		coins_spent.emit(claim_amount)
 		pending_job_report["claim_status"] = "paid"
 		pending_job_report["compensation"] = claim_amount
 		pending_job_report["net_change"] = int(pending_job_report.get("reward", 0)) - claim_amount
@@ -1037,6 +1041,7 @@ func pay_denied_claim(job_id: String, completed_day: int, completed_time: int) -
 		if claim_amount <= 0:
 			return false
 		money -= claim_amount
+		coins_spent.emit(claim_amount)
 		var restored_reputation := maxi(0, int(report.get("claim_reputation_penalty", 0)))
 		reputation += restored_reputation
 		report["claim_status"] = "paid_after_denial"

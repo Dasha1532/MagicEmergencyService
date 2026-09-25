@@ -16,6 +16,11 @@ const COLOR_BRASS := Color(0.81, 0.59, 0.29)
 const COLOR_GOLD := Color(0.96, 0.78, 0.47)
 const COLOR_SHINE := Color(1.0, 0.96, 0.79)
 const COLOR_PARCHMENT := Color(0.95, 0.88, 0.76)
+const WINDOW_RESOLUTIONS: Array[Vector2i] = [
+	Vector2i(1280, 720),
+	Vector2i(1600, 900),
+	Vector2i(1920, 1080),
+]
 
 @onready var game_state: Node = get_node("/root/GameState")
 
@@ -26,6 +31,7 @@ var continue_button: Button
 var status_label: Label
 var volume_slider: HSlider
 var fullscreen_check: CheckButton
+var resolution_option: OptionButton
 var title_font: SystemFont
 var slots_panel
 
@@ -149,8 +155,8 @@ func _build_navigation() -> void:
 
 func _build_settings() -> void:
 	settings_panel = Panel.new()
-	settings_panel.position = Vector2(500, 235)
-	settings_panel.size = Vector2(600, 430)
+	settings_panel.position = Vector2(500, 195)
+	settings_panel.size = Vector2(600, 510)
 	settings_panel.visible = false
 	settings_panel.add_theme_stylebox_override("panel", _style(Color(0.025, 0.026, 0.032, 0.985), COLOR_BRASS, 2, 12))
 	add_child(settings_panel)
@@ -176,19 +182,36 @@ func _build_settings() -> void:
 	volume_slider.value_changed.connect(_set_volume)
 	settings_panel.add_child(volume_slider)
 
+	var resolution_label := _label("Разрешение окна", 18, COLOR_PARCHMENT)
+	resolution_label.position = Vector2(55, 195)
+	resolution_label.size = Vector2(490, 30)
+	settings_panel.add_child(resolution_label)
+
+	resolution_option = OptionButton.new()
+	resolution_option.position = Vector2(55, 230)
+	resolution_option.size = Vector2(490, 48)
+	resolution_option.add_theme_font_size_override("font_size", 18)
+	for resolution: Vector2i in WINDOW_RESOLUTIONS:
+		resolution_option.add_item("%d × %d" % [resolution.x, resolution.y])
+	resolution_option.select(_current_resolution_index())
+	resolution_option.item_selected.connect(_set_resolution)
+	settings_panel.add_child(resolution_option)
+
 	fullscreen_check = CheckButton.new()
 	fullscreen_check.text = "Полноэкранный режим"
-	fullscreen_check.position = Vector2(55, 214)
+	fullscreen_check.position = Vector2(55, 300)
 	fullscreen_check.size = Vector2(490, 48)
 	fullscreen_check.button_pressed = _is_fullscreen()
 	fullscreen_check.add_theme_font_size_override("font_size", 18)
 	fullscreen_check.add_theme_color_override("font_color", COLOR_PARCHMENT)
 	fullscreen_check.toggled.connect(_set_fullscreen)
 	settings_panel.add_child(fullscreen_check)
+	resolution_option.disabled = fullscreen_check.button_pressed
+	resolution_option.tooltip_text = "В полноэкранном режиме используется разрешение экрана." if resolution_option.disabled else "Размер игрового окна."
 
 	var back_button := Button.new()
 	back_button.text = "НАЗАД"
-	back_button.position = Vector2(55, 320)
+	back_button.position = Vector2(55, 400)
 	back_button.size = Vector2(490, 62)
 	_apply_button_theme(back_button)
 	back_button.pressed.connect(_show_main)
@@ -297,11 +320,31 @@ func _set_fullscreen(enabled: bool) -> void:
 	var settings_manager := get_node_or_null("/root/SettingsManager")
 	if settings_manager != null:
 		settings_manager.call(&"set_fullscreen", enabled)
+	if resolution_option != null:
+		resolution_option.disabled = enabled
+		resolution_option.tooltip_text = "В полноэкранном режиме используется разрешение экрана." if enabled else "Размер игрового окна."
 
 
 func _is_fullscreen() -> bool:
 	var settings_manager := get_node_or_null("/root/SettingsManager")
 	return bool(settings_manager.call(&"is_fullscreen")) if settings_manager != null else false
+
+
+func _set_resolution(index: int) -> void:
+	if index < 0 or index >= WINDOW_RESOLUTIONS.size():
+		return
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	if settings_manager != null:
+		settings_manager.call(&"set_window_resolution", WINDOW_RESOLUTIONS[index])
+
+
+func _current_resolution_index() -> int:
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	if settings_manager == null:
+		return 1
+	var current: Vector2i = settings_manager.call(&"get_window_resolution")
+	var index := WINDOW_RESOLUTIONS.find(current)
+	return index if index >= 0 else 1
 
 
 func _configure_nav_button(button: Button) -> void:

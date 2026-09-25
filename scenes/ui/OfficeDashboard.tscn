@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://bqh1uyugttds0" path="res://scripts/editor_layout_switch.gd" id="5_layout_switch"]
 [ext_resource type="Texture2D" uid="uid://mpvnyk5n57xb" path="res://assets/ui/demo_completion_book.png" id="6_demo_book"]
 [ext_resource type="Texture2D" uid="uid://cuqp2660o5mdi" path="res://assets/ui/demo_completion_felix.png" id="7_demo_felix"]
+[ext_resource type="Script" uid="uid://ckwkqs4um01xl" path="res://scripts/steam_effect.gd" id="8_steam"]
 
 [node name="OfficeDashboard" type="Control" unique_id=1064504089]
 layout_mode = 3
@@ -17,8 +18,19 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
+[node name="CupSteam" type="Node2D" parent="." unique_id=1291806373]
+editor_description = "Анимированный пар над кружкой. Положение можно менять мышкой в 2D-редакторе."
+z_index = 8
+position = Vector2(636, 449)
+script = ExtResource("8_steam")
+rise_height = 32.0
+rise_speed = 0.25
+sway_width = 6.0
+maximum_opacity = 0.11
+
 [node name="DemoCompletionLayer" type="Control" parent="." unique_id=1277321968]
 editor_description = "Финальный экран демонстрации. Все элементы ниже можно выбирать и перемещать мышкой в 2D-редакторе."
+visible = false
 z_index = 300
 layout_mode = 1
 anchors_preset = 15
@@ -133,7 +145,6 @@ editor_description = "Выберите в инспекторе, какие сл�
 script = ExtResource("5_layout_switch")
 
 [node name="HotspotEditorPreview" type="TextureRect" parent="." unique_id=1519010469]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -146,6 +157,7 @@ expand_mode = 1
 stretch_mode = 6
 
 [node name="PersonnelEditorPreview" type="Control" parent="." unique_id=482139442]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -315,7 +327,6 @@ mouse_filter = 2
 color = Color(1, 0.18, 0.62, 0.28)
 
 [node name="BookHotspots" type="Control" parent="." unique_id=870727771]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -370,7 +381,6 @@ color = Color(1, 0.72, 0.2, 0.1)
 polygon = PackedVector2Array(-21, 31, 57, 29, 90, 68, 85, 71, 87, 79, 91, 86, -12, 85, -28, 47, -27, 38)
 
 [node name="ObjectHotspots" type="Control" parent="." unique_id=607918311]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

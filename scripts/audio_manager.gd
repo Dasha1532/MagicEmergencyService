@@ -25,6 +25,8 @@ const RUNNING_WATER := preload("res://assets/audio/water.ogg")
 const RAIN := preload("res://assets/audio/rain.ogg")
 const GARGOYLE_WAKE := preload("res://assets/audio/rubble-trouble-wet-reverb.wav")
 const LAVA_FLOW := preload("res://assets/audio/lava.ogg")
+const WARDROBE_STEPS := preload("res://assets/audio/skafhodit.wav")
+const COIN_SOUND := preload("res://assets/audio/coin-sound.wav")
 
 const CAT_SOUND_META := &"cat_purr_sound"
 const MUSIC_FADE_SECONDS := 2.0
@@ -56,6 +58,8 @@ var running_water_player: AudioStreamPlayer
 var rain_player: AudioStreamPlayer
 var gargoyle_wake_player: AudioStreamPlayer
 var lava_flow_player: AudioStreamPlayer
+var wardrobe_steps_player: AudioStreamPlayer
+var coin_player: AudioStreamPlayer
 var music_fades: Dictionary = {}
 
 
@@ -93,6 +97,11 @@ func _ready() -> void:
 	rain_player = _create_player(_looped_stream(RAIN), linear_to_db(0.5))
 	gargoyle_wake_player = _create_player(GARGOYLE_WAKE)
 	lava_flow_player = _create_player(_looped_stream(LAVA_FLOW), linear_to_db(0.5))
+	wardrobe_steps_player = _create_player(_looped_stream(WARDROBE_STEPS), linear_to_db(0.6))
+	coin_player = _create_player(COIN_SOUND)
+	var game_state := get_node_or_null("/root/GameState")
+	if game_state != null and game_state.has_signal(&"coins_spent"):
+		game_state.connect(&"coins_spent", _on_coins_spent)
 	get_tree().node_added.connect(_on_node_added)
 	_connect_buttons_in(get_tree().root)
 
@@ -195,6 +204,18 @@ func set_rain_playing(enabled: bool) -> void:
 
 func set_lava_flow_playing(enabled: bool) -> void:
 	_set_loop_playing(lava_flow_player, enabled)
+
+
+func set_wardrobe_steps_playing(enabled: bool) -> void:
+	_set_loop_playing(wardrobe_steps_player, enabled)
+
+
+func play_coin_sound() -> void:
+	coin_player.play()
+
+
+func _on_coins_spent(_amount: int) -> void:
+	play_coin_sound()
 
 
 func _fade_music_in(player: AudioStreamPlayer) -> void:
