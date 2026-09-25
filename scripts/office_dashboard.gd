@@ -998,46 +998,16 @@ func _build_dispatch_warning_dialog() -> void:
 
 
 func _build_demo_completion_dialog() -> void:
-	demo_completion_layer = Control.new()
-	demo_completion_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	demo_completion_layer = $DemoCompletionLayer
 	demo_completion_layer.visible = false
-	demo_completion_layer.z_index = 300
-	add_child(demo_completion_layer)
-	var shade := ColorRect.new()
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color(0.012, 0.008, 0.006, 0.88)
-	shade.mouse_filter = Control.MOUSE_FILTER_STOP
-	demo_completion_layer.add_child(shade)
-	var panel := _panel(Vector2(335, 118), Vector2(930, 664), 16)
-	demo_completion_layer.add_child(panel)
-	demo_completion_title = _label("ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА", 34, COLOR_GOLD)
-	demo_completion_title.position = Vector2(60, 48)
-	demo_completion_title.size = Vector2(810, 52)
-	demo_completion_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	demo_completion_title.clip_text = true
-	panel.add_child(demo_completion_title)
-	var message := _label("Первые рабочие дни позади.\nГород и сотрудники уцелели — уже хороший результат.", 19, COLOR_PARCHMENT)
-	message.position = Vector2(125, 122)
-	message.size = Vector2(680, 68)
-	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	message.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	message.clip_text = true
-	panel.add_child(message)
-	demo_completion_summary = _label("", 21, COLOR_PARCHMENT)
-	demo_completion_summary.position = Vector2(150, 210)
-	demo_completion_summary.size = Vector2(630, 300)
-	demo_completion_summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	demo_completion_summary.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	demo_completion_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	demo_completion_summary.clip_text = true
-	panel.add_child(demo_completion_summary)
-	var continue_button := _button("ОСТАТЬСЯ В ОФИСЕ", Vector2(70, 558), Vector2(370, 66))
+	demo_completion_title = $DemoCompletionLayer/Title
+	demo_completion_summary = $DemoCompletionLayer/Summary
+	var continue_button: Button = $DemoCompletionLayer/ContinueButton
+	_style_button(continue_button)
 	continue_button.pressed.connect(_continue_after_demo)
-	panel.add_child(continue_button)
-	var menu_button := _button("В ГЛАВНОЕ МЕНЮ", Vector2(490, 558), Vector2(370, 66))
+	var menu_button: Button = $DemoCompletionLayer/MenuButton
+	_style_button(menu_button)
 	menu_button.pressed.connect(_finish_demo_to_menu)
-	panel.add_child(menu_button)
 
 
 func _open_jobs() -> void:
@@ -1926,6 +1896,11 @@ func _button(text_value: String, button_position: Vector2, button_size: Vector2)
 	button.position = button_position
 	button.custom_minimum_size = button_size
 	button.size = button_size
+	_style_button(button)
+	return button
+
+
+func _style_button(button: Button) -> void:
 	button.add_theme_font_size_override("font_size", 17)
 	button.add_theme_color_override("font_color", COLOR_PARCHMENT)
 	button.add_theme_color_override("font_hover_color", Color.WHITE)
@@ -1935,7 +1910,6 @@ func _button(text_value: String, button_position: Vector2, button_size: Vector2)
 	button.add_theme_stylebox_override("pressed", _style(COLOR_SELECTED, COLOR_GOLD, 3, 8))
 	button.add_theme_stylebox_override("focus", _style(COLOR_CARD_HOVER, COLOR_GOLD, 2, 8))
 	button.add_theme_stylebox_override("disabled", _style(Color(0.07, 0.055, 0.045, 0.90), Color(0.28, 0.24, 0.19), 1, 8))
-	return button
 
 
 func _style(background: Color, border: Color, width: int, radius: int) -> StyleBoxFlat:

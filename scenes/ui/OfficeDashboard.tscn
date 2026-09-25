@@ -5,6 +5,8 @@
 [ext_resource type="Script" uid="uid://dkginrqomyptg" path="res://scripts/polygon_hotspot.gd" id="3_polygon"]
 [ext_resource type="Texture2D" uid="uid://d3w6xggshn2k6" path="res://assets/ui/personnel_department_background_neutral.png" id="4_personnel"]
 [ext_resource type="Script" uid="uid://bqh1uyugttds0" path="res://scripts/editor_layout_switch.gd" id="5_layout_switch"]
+[ext_resource type="Texture2D" uid="uid://mpvnyk5n57xb" path="res://assets/ui/demo_completion_book.png" id="6_demo_book"]
+[ext_resource type="Texture2D" uid="uid://cuqp2660o5mdi" path="res://assets/ui/demo_completion_felix.png" id="7_demo_felix"]
 
 [node name="OfficeDashboard" type="Control" unique_id=1064504089]
 layout_mode = 3
@@ -14,6 +16,124 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
+
+[node name="DemoCompletionLayer" type="Control" parent="." unique_id=1277321968]
+editor_description = "Финальный экран демонстрации. Все элементы ниже можно выбирать и перемещать мышкой в 2D-редакторе."
+z_index = 300
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Shade" type="ColorRect" parent="DemoCompletionLayer" unique_id=1598793798]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.012, 0.008, 0.006, 0.88)
+
+[node name="Book" type="TextureRect" parent="DemoCompletionLayer" unique_id=1075325613]
+editor_description = "Фоновое изображение раскрытой книги. Меняйте размер и положение мышкой."
+layout_mode = 0
+offset_left = 28.0
+offset_top = 15.0
+offset_right = 1572.0
+offset_bottom = 885.0
+mouse_filter = 2
+texture = ExtResource("6_demo_book")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="FelixIllustration" type="TextureRect" parent="DemoCompletionLayer" unique_id=1103139267]
+editor_description = "Иллюстрация Феликса. Меняйте размер и положение мышкой."
+layout_mode = 0
+offset_left = 214.0
+offset_top = 156.0
+offset_right = 766.0
+offset_bottom = 437.0
+mouse_filter = 2
+texture = ExtResource("7_demo_felix")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="DemoCompletionLayer" unique_id=652792448]
+editor_description = "Заголовок финала."
+layout_mode = 0
+offset_left = 843.0
+offset_top = 242.00002
+offset_right = 1383.0
+offset_bottom = 292.0
+rotation = 0.0075149797
+theme_override_colors/font_color = Color(0.356863, 0.196078, 0.113725, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.25)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 32
+text = "ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА"
+horizontal_alignment = 1
+clip_text = true
+
+[node name="Message" type="Label" parent="DemoCompletionLayer" unique_id=287308852]
+editor_description = "Вступительная строка над итогами."
+layout_mode = 0
+offset_left = 205.0
+offset_top = 458.0
+offset_right = 740.0
+offset_bottom = 585.0
+theme_override_colors/font_color = Color(0.396078, 0.25098, 0.164706, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.2)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 18
+text = "Первые рабочие дни позади. Город и сотрудники уцелели — уже хороший результат."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+clip_text = true
+
+[node name="Summary" type="Label" parent="DemoCompletionLayer" unique_id=1330689020]
+editor_description = "Здесь во время игры автоматически появятся итоги прохождения. Размер и положение можно менять мышкой."
+layout_mode = 0
+offset_left = 852.0
+offset_top = 231.0
+offset_right = 1365.0
+offset_bottom = 651.0
+theme_override_colors/font_color = Color(0.290196, 0.168627, 0.105882, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.2)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 18
+text = "Выполнено заявок: 0 из 0
+Репутация: 0
+Прозвище службы: Новая служба
+Казна: 0 монет
+Заявок с ущербом: 0
+Претензий жильцов: 0
+Выплачено компенсаций: 0 монет"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+clip_text = true
+
+[node name="ContinueButton" type="Button" parent="DemoCompletionLayer" unique_id=1996241193]
+layout_mode = 0
+offset_left = 294.0
+offset_top = 660.0
+offset_right = 684.0
+offset_bottom = 718.0
+text = "ОСТАТЬСЯ В ОФИСЕ"
+
+[node name="MenuButton" type="Button" parent="DemoCompletionLayer" unique_id=1183926646]
+layout_mode = 0
+offset_left = 928.0
+offset_top = 658.0
+offset_right = 1318.0
+offset_bottom = 716.0
+text = "В ГЛАВНОЕ МЕНЮ"
 
 [node name="EditorLayoutSwitch" type="Node" parent="." unique_id=1176466727]
 editor_description = "Выберите в инспекторе, какие служебные области показывать в 2D-редакторе. Переключатель не меняет координаты узлов и не влияет на игру."
@@ -46,6 +166,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 63.0
+offset_top = -97.0
+offset_right = 63.0
+offset_bottom = -97.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
