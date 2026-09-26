@@ -20,6 +20,7 @@ var selected_job_id: StringName
 var job_list: VBoxContainer
 var employee_list: HBoxContainer
 var money_label: Label
+var reputation_label: Label
 var day_label: Label
 var detail_title: Label
 var detail_body: Label
@@ -80,6 +81,7 @@ var claim_layer: Control
 var claim_title: Label
 var claim_body: Label
 var claim_pay_button: Button
+var claim_deny_button: Button
 var arrival_dialog: Control
 var arrival_dialog_title: Label
 var arrival_dialog_body: Label
@@ -171,9 +173,10 @@ func _build_top_bar() -> void:
 	panel.add_child(money_label)
 
 	_add_stat_icon(panel, 1, Vector2(1338, 18))
-	var reputation_label := _label("Репутация %d" % game_state.reputation, 18, COLOR_PARCHMENT)
+	reputation_label = _label("", 15, COLOR_PARCHMENT)
 	reputation_label.position = Vector2(1372, 20)
-	reputation_label.size = Vector2(132, 34)
+	reputation_label.size = Vector2(170, 40)
+	reputation_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	panel.add_child(reputation_label)
 
 
@@ -238,7 +241,7 @@ func _build_detail_panel() -> void:
 	depart_button = _button("ОТПРАВИТЬ БРИГАДУ", Vector2(22, 384), Vector2(371, 52))
 	depart_button.pressed.connect(_depart)
 	panel.add_child(depart_button)
-	recall_button = _button("ОТОЗВАТЬ • 15 МИН.", Vector2(216, 384), Vector2(177, 52))
+	recall_button = _button("ОТОЗВАТЬ: 15 МИН.", Vector2(216, 384), Vector2(177, 52))
 	recall_button.add_theme_font_size_override("font_size", 15)
 	recall_button.visible = false
 	recall_button.pressed.connect(_recall_crew)
@@ -254,7 +257,7 @@ func _build_employee_panel() -> void:
 	var panel := _panel(Vector2(180, 585), Vector2(1240, 295), 12)
 	dashboard_layer.add_child(panel)
 
-	var heading := _label("СОТРУДНИКИ  •  выберите заявку, затем назначьте специалистов", 18, COLOR_GOLD)
+	var heading := _label("СОТРУДНИКИ — выберите заявку, затем назначьте специалистов", 18, COLOR_GOLD)
 	heading.position = Vector2(20, 10)
 	heading.size = Vector2(1200, 28)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -947,9 +950,9 @@ func _build_claim_dialog() -> void:
 	claim_pay_button = _button("", Vector2(55, 340), Vector2(330, 68))
 	claim_pay_button.pressed.connect(_resolve_claim.bind(true))
 	panel.add_child(claim_pay_button)
-	var deny_button := _button("ОТКАЗАТЬ В КОМПЕНСАЦИИ", Vector2(435, 340), Vector2(330, 68))
-	deny_button.pressed.connect(_resolve_claim.bind(false))
-	panel.add_child(deny_button)
+	claim_deny_button = _button("", Vector2(435, 340), Vector2(330, 68))
+	claim_deny_button.pressed.connect(_resolve_claim.bind(false))
+	panel.add_child(claim_deny_button)
 
 
 func _build_arrival_dialog() -> void:
@@ -1265,11 +1268,11 @@ func _equipment_status(item_id: StringName) -> String:
 		if item_id == &"ghost_trap":
 			var trap_state := StringName(str((active_object as Dictionary).get("trap_state", "packed")))
 			if trap_state == &"occupied":
-				return "ЗАНЯТА • ПРИВИДЕНИЕ В ЛОВУШКЕ"
+				return "ЗАНЯТА: ПРИВИДЕНИЕ В ЛОВУШКЕ"
 			if trap_state == &"installed":
 				return "УСТАНОВЛЕНА НА ОБЪЕКТЕ"
 		elif bool((active_object as Dictionary).get("regulator_installed", false)):
-			return "УСТАНОВЛЕН • СТАРЫЙ КВАРТАЛ, 5"
+			return "УСТАНОВЛЕН: СТАРЫЙ КВАРТАЛ, 5"
 	for report_value: Variant in game_state.job_reports:
 		if not report_value is Dictionary:
 			continue
@@ -1279,10 +1282,10 @@ func _equipment_status(item_id: StringName) -> String:
 				if action_value is Dictionary and str((action_value as Dictionary).get("action_id", "")) == "trap":
 					var action_result: Variant = (action_value as Dictionary).get("result", {})
 					if action_result is Dictionary and bool((action_result as Dictionary).get("applied", false)):
-						return "ЗАНЯТА • ПРИВИДЕНИЕ В ЛОВУШКЕ"
+						return "ЗАНЯТА: ПРИВИДЕНИЕ В ЛОВУШКЕ"
 		elif item_id == &"thermal_regulator" and str(report.get("job_id", "")) == "frozen_bath" and int(report.get("expense_reimbursement", 0)) > 0:
-			return "УСТАНОВЛЕН • СТАРЫЙ КВАРТАЛ, 5"
-	return "НА СКЛАДЕ • ГОТОВО К ВЫЕЗДУ"
+			return "УСТАНОВЛЕН: СТАРЫЙ КВАРТАЛ, 5"
+	return "НА СКЛАДЕ, ГОТОВО К ВЫЕЗДУ"
 
 
 func _build_city_map() -> void:
@@ -1357,6 +1360,11 @@ func _refresh() -> void:
 				break
 	day_label.text = "День %d" % game_state.day
 	money_label.text = "%d монет" % game_state.money
+	if game_state.money < 0:
+		money_label.text = "Долг: %d" % absi(game_state.money)
+	money_label.tooltip_text = "Текущая казна службы. При долге покупки и найм недоступны до восстановления положительного баланса."
+	reputation_label.text = "Репутация %d\n%s" % [game_state.reputation, game_state.get_reputation_status()]
+	reputation_label.tooltip_text = "35 и выше — надёжная служба; 25–34 — под наблюдением; ниже 25 — риск отзыва лицензии."
 	_rebuild_jobs()
 	_rebuild_employees()
 	_refresh_details()
@@ -1379,10 +1387,14 @@ func _refresh_demo_completion() -> void:
 		return
 	var summary: Dictionary = game_state.get_demo_summary()
 	var titles: PackedStringArray = summary.get("titles", PackedStringArray(["Новая служба"]))
-	demo_completion_summary.text = "Выполнено заявок: %d из %d\nРепутация: %d\nПрозвища службы:\n%s\nКазна: %d монет\nЗаявок с ущербом: %d\nПретензий жильцов: %d\nВыплачено компенсаций: %d монет" % [
+	var inspection: Dictionary = summary.get("inspection", {})
+	demo_completion_summary.add_theme_font_size_override("font_size", 16)
+	demo_completion_summary.text = "ЗАКЛЮЧЕНИЕ: %s\n%s\n\nВыполнено заявок: %d из %d\nРепутация: %d — %s\nПрозвища: %s\nКазна: %d монет%s\nОтклонённые претензии: %d монет\nФинансовый риск: %s\nВыплачено компенсаций: %d монет" % [
+		str(inspection.get("title", "Итоги службы")), str(inspection.get("text", "")),
 		int(summary.get("completed_jobs", 0)), int(summary.get("required_jobs", 0)), int(summary.get("reputation", 0)),
-		", ".join(titles), int(summary.get("money", 0)), int(summary.get("damaged_jobs", 0)),
-		int(summary.get("claims", 0)), int(summary.get("compensation_paid", 0)),
+		str(summary.get("reputation_status", "")), ", ".join(titles), int(summary.get("money", 0)),
+		" (долг)" if int(summary.get("money", 0)) < 0 else "", int(summary.get("denied_claims_total", 0)),
+		str(summary.get("financial_risk", "нет")), int(summary.get("compensation_paid", 0)),
 	]
 	demo_completion_layer.move_to_front()
 
@@ -1424,9 +1436,17 @@ func _show_claim_dialog() -> void:
 	var audio_manager := get_node_or_null("/root/AudioManager")
 	if audio_manager != null and audio_manager.has_method(&"play_complaint"):
 		audio_manager.call(&"play_complaint")
-	claim_title.text = "ПРЕТЕНЗИЯ • %s" % str(report.get("resident", "Жилец"))
-	claim_body.text = "%s\n\nТребование за причинённый ущерб: %d монет.\n\nКомпенсировать ущерб или отказать жильцу?" % [report.get("title", "Завершённая заявка"), amount]
-	claim_pay_button.text = "КОМПЕНСИРОВАТЬ • %d" % amount
+	claim_title.text = "ПРЕТЕНЗИЯ: %s" % str(report.get("resident", "Жилец"))
+	var balance_after_payment: int = int(game_state.money) - amount
+	var denial_penalty: int = int(game_state.get_claim_denial_penalty(amount))
+	var payment_warning := "После выплаты в казне останется %d монет." % balance_after_payment
+	if balance_after_payment < 0:
+		payment_warning = "После выплаты долг службы составит %d монет. Покупки и найм будут недоступны." % absi(balance_after_payment)
+	claim_body.text = "%s\n\nТребование: %d монет.\n%s\n\nПри отказе репутация снизится на %d, а претензия останется в архиве и повысит финансовый риск." % [
+		report.get("title", "Завершённая заявка"), amount, payment_warning, denial_penalty,
+	]
+	claim_pay_button.text = "КОМПЕНСИРОВАТЬ: −%d МОНЕТ" % amount
+	claim_deny_button.text = "ОТКАЗАТЬ: −%d РЕПУТАЦИИ" % denial_penalty
 	claim_layer.visible = true
 	claim_layer.move_to_front()
 
@@ -1475,18 +1495,18 @@ func _refresh_specialization_dialog() -> void:
 		return
 	_clear(specialization_slots)
 	var employee: Dictionary = game_state.employees[selected_employee_id]
-	specialization_title.text = "СПЕЦИАЛИЗАЦИИ • %s" % employee["name"]
+	specialization_title.text = "СПЕЦИАЛИЗАЦИИ: %s" % employee["name"]
 	var abilities: PackedStringArray = employee["abilities"]
 	var slot_count: int = int(employee.get("max_special_abilities", 2))
 	for slot_index in slot_count:
 		if slot_index >= abilities.size():
-			var empty_button := _button("ЯЧЕЙКА %d • СВОБОДНА" % (slot_index + 1), Vector2.ZERO, Vector2(480, 58))
+			var empty_button := _button("ЯЧЕЙКА %d — СВОБОДНА" % (slot_index + 1), Vector2.ZERO, Vector2(480, 58))
 			empty_button.disabled = true
 			specialization_slots.add_child(empty_button)
 			continue
 		var ability_id := StringName(abilities[slot_index])
 		var forget_state: StringName = game_state.get_forget_availability(selected_employee_id, ability_id)
-		var ability_button := _button("%s  •  ЗАБЫТЬ" % game_state.get_ability_name(ability_id).to_upper(), Vector2.ZERO, Vector2(480, 58))
+		var ability_button := _button("%s — ЗАБЫТЬ" % game_state.get_ability_name(ability_id).to_upper(), Vector2.ZERO, Vector2(480, 58))
 		ability_button.disabled = forget_state != &"available"
 		ability_button.tooltip_text = _forget_state_text(forget_state)
 		ability_button.pressed.connect(_request_forget_specialization.bind(ability_id))
@@ -1569,7 +1589,7 @@ func _refresh_supply_shop() -> void:
 	var item: Dictionary = game_state.SUPPLY_ITEMS[selected_supply_item_id]
 	var price := int(item["price"])
 	var owned: bool = game_state.has_supply_item(selected_supply_item_id)
-	supply_money_label.text = "В казне: %d монет" % game_state.money
+	supply_money_label.text = "Долг: %d монет" % absi(game_state.money) if game_state.money < 0 else "В казне: %d монет" % game_state.money
 	for item_id_value: Variant in game_state.SUPPLY_ITEMS:
 		var item_id := StringName(str(item_id_value))
 		var catalog_item: Dictionary = game_state.SUPPLY_ITEMS[item_id]
@@ -1592,10 +1612,10 @@ func _refresh_supply_shop() -> void:
 		supply_purchase_button.text = "ПРИОБРЕТЕНО"
 		supply_purchase_button.disabled = true
 	elif game_state.money < price:
-		supply_purchase_button.text = "НЕ ХВАТАЕТ МОНЕТ • %d" % price
+		supply_purchase_button.text = "НЕ ХВАТАЕТ МОНЕТ: %d" % price
 		supply_purchase_button.disabled = true
 	else:
-		supply_purchase_button.text = "КУПИТЬ • %d МОНЕТ" % price
+		supply_purchase_button.text = "КУПИТЬ: %d МОНЕТ" % price
 		supply_purchase_button.disabled = false
 
 
@@ -1648,7 +1668,10 @@ func _refresh_personnel() -> void:
 	if is_candidate:
 		var hire_cost := int(employee.get("hire_cost", 0))
 		personnel_hire_button.disabled = game_state.money < hire_cost
-		personnel_hire_button.text = "НАНЯТЬ • %d МОНЕТ" % hire_cost if not personnel_hire_button.disabled else "НУЖНО %d МОНЕТ" % hire_cost
+		if game_state.money < 0:
+			personnel_hire_button.text = "СЛУЖБА В ДОЛГУ"
+		else:
+			personnel_hire_button.text = "НАНЯТЬ: %d МОНЕТ" % hire_cost if not personnel_hire_button.disabled else "НУЖНО %d МОНЕТ" % hire_cost
 	else:
 		var action_rect := _personnel_guide_rect("StatusArea")
 		personnel_training_button.position = action_rect.position + Vector2(-10 if training_state == &"available" else 10, -2)
@@ -1656,7 +1679,7 @@ func _refresh_personnel() -> void:
 		personnel_training_button.disabled = training_state != &"available"
 		match training_state:
 			&"available":
-				personnel_training_button.text = "НАЧАТЬ КУРС «%s» • %d ДЕНЬ" % [training_definition["name"].to_upper(), int(training_definition["duration_days"])]
+				personnel_training_button.text = "НАЧАТЬ КУРС «%s»: %d ДЕНЬ" % [training_definition["name"].to_upper(), int(training_definition["duration_days"])]
 			&"missing_supply":
 				personnel_training_button.text = "НУЖЕН КОМПЛЕКТ ИЗ ЛАВКИ"
 			&"assigned":
@@ -1708,7 +1731,7 @@ func _employee_specialization_text(employee: Dictionary) -> String:
 		specialization_names.append(game_state.get_ability_name(StringName(ability_id_string)))
 	if specialization_names.is_empty():
 		return "Нет изученных специализаций"
-	return " • ".join(specialization_names)
+	return ", ".join(specialization_names)
 
 
 func _rebuild_jobs() -> void:
@@ -1721,7 +1744,7 @@ func _rebuild_jobs() -> void:
 		var crew_text := "Бригада не назначена" if assigned.is_empty() else "Назначено: %d" % assigned.size()
 		var deadline_text := "ПРОСРОЧЕНО" if bool(job.get("overdue", false)) else "осталось %d мин." % int(job["time_left"])
 		var button := _button(
-			"%s\n%s\n%s  •  %s\n%s" % [job["title"], job["address"], job["urgency"], deadline_text, crew_text],
+			"%s\n%s\n%s, %s\n%s" % [job["title"], job["address"], job["urgency"], deadline_text, crew_text],
 			Vector2.ZERO,
 			Vector2(379, 150)
 		)
@@ -1804,7 +1827,7 @@ func _employee_card_status(employee: Dictionary, pending_selected: bool, selecte
 	if pending_selected:
 		return "Выбран для отправки"
 	if returning:
-		return str(employee["status"]).replace(" • прибудет в ", "\nПрибудет в ")
+		return str(employee["status"]).replace(", прибудет в ", "\nПрибудет в ")
 	if in_transit:
 		return str(employee["status"])
 	if selected and on_site:

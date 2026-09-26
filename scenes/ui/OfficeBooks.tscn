@@ -55,12 +55,14 @@ text = "КНИГА УЧЁТА"
 [node name="Summary" type="Label" parent="Header"]
 layout_mode = 0
 offset_left = 25.0
-offset_top = 54.0
-offset_right = 760.0
-offset_bottom = 82.0
+offset_top = 50.0
+offset_right = 735.0
+offset_bottom = 94.0
 theme_override_colors/font_color = Color(0.92, 0.84, 0.69, 1)
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 14
 text = "Сводка"
+autowrap_mode = 2
+clip_text = true
 
 [node name="Accounting" type="Button" parent="Header"]
 layout_mode = 0

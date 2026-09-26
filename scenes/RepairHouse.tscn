@@ -62,7 +62,7 @@ stretch_mode = 6
 offset_left = 1283.0
 offset_right = 1596.0
 offset_bottom = 262.0
-tooltip_text = "Ванная • из крана течёт лава"
+tooltip_text = "Ванная: из крана течёт лава"
 mouse_default_cursor_shape = 2
 
 [node name="ProblemRoomMarker" type="Panel" parent="." unique_id=1440761099]
@@ -82,7 +82,7 @@ theme_override_colors/font_color = Color(1, 0.78, 0.38, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.035, 0.015, 0.95)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 14
-text = "АВАРИЯ • ЛАВОВЫЙ КРАН"
+text = "АВАРИЯ: ЛАВОВЫЙ КРАН"
 horizontal_alignment = 1
 vertical_alignment = 1
 

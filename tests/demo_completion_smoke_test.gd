@@ -25,6 +25,14 @@ func _run() -> void:
 	var summary: Dictionary = game_state.get_demo_summary()
 	_check(int(summary["completed_jobs"]) == 5 and int(summary["required_jobs"]) == 5, "Итог показывает фактическое число заявок выбранной ветки")
 	_check(int(summary["damaged_jobs"]) == 1 and int(summary["compensation_paid"]) == 180, "Итог учитывает ущерб и компенсации")
+	_check(str(summary["reputation_status"]) == "Надёжная служба", "Итог показывает словесный статус репутации")
+	_check(str((summary["inspection"] as Dictionary).get("title", "")) == "Лицензия подтверждена", "Устойчивой службе инспекция подтверждает лицензию")
+	game_state.money = -50
+	_check(str(game_state.get_demo_inspection_verdict().get("title", "")) == "Финансовое оздоровление", "Долг влияет на заключение инспекции")
+	game_state.reputation = 24
+	_check(str(game_state.get_demo_inspection_verdict().get("title", "")) == "Лицензия под угрозой", "Долг вместе с низкой репутацией создаёт худшее заключение")
+	game_state.money = 600
+	game_state.reputation = 37
 
 	var office := (load("res://scenes/ui/OfficeDashboard.tscn") as PackedScene).instantiate()
 	root.add_child(office)
@@ -32,6 +40,7 @@ func _run() -> void:
 	_check(office.demo_completion_layer.visible, "После последней заявки появляется явный финальный экран")
 	_check("ДЕМОНСТРАЦИЯ" in office.demo_completion_title.text, "Финальный экран явно сообщает о завершении демонстрации")
 	_check(not "ВЕРТИКАЛЬНЫЙ СРЕЗ" in office.demo_completion_title.text, "Техническая формулировка вертикального среза убрана")
+	_check("Лицензия подтверждена" in office.demo_completion_summary.text, "Финальная книга показывает заключение инспекции")
 	_check(office.get_node_or_null("DemoCompletionLayer/ContinueButton") == null, "На финальном экране нет возврата в офис")
 	_check(office.get_node_or_null("DemoCompletionLayer/MenuButton") != null, "На книге есть понятная кнопка перехода в главное меню")
 	_check(office.demo_video_player.stream != null, "К финалу подключён ролик Лилии")

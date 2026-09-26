@@ -72,7 +72,7 @@ func configure_for_employee(employee_name: String, ability_ids: PackedStringArra
 
 	_resize_for_action_count(available_count)
 	current_tool_id = &""
-	title_label.text = "%s  •  %s" % [employee_name, core_actions]
+	title_label.text = "%s — %s" % [employee_name, core_actions]
 	visible = false
 
 

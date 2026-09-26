@@ -11,6 +11,10 @@ const AUTOSAVE_PATH: String = "user://autosave.json"
 const SAVE_SLOT_COUNT: int = 5
 const TRAVEL_TIME_MINUTES: int = 15
 const OVERDUE_PAYMENT_PENALTY: int = 100
+const REPUTATION_RELIABLE_THRESHOLD: int = 35
+const REPUTATION_LICENSE_RISK_THRESHOLD: int = 25
+const ELEVATED_CLAIM_RISK_THRESHOLD: int = 300
+const HIGH_CLAIM_RISK_THRESHOLD: int = 600
 const REAL_SECONDS_PER_GAME_MINUTE: float = 3.0
 const DEMO_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle", "escaped_ghost", "frozen_bath"]
 const DEMO_CORE_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle"]
@@ -181,7 +185,7 @@ var employees: Dictionary = {
 		"description": "Полевой маг широкого профиля. Аккуратно меняет температуру повреждённых объектов и сдерживает стихийные аварии.",
 		"strength": "Сильная сторона: контроль температуры и стихий",
 		"weakness": "Ограничение: силовой ремонт требует напарника",
-		"traits": "Наблюдательна • осторожна • любит точные формулировки",
+		"traits": "Наблюдательна, осторожна, любит точные формулировки",
 		"ability_reactions": {
 			&"freeze": "Добавлю холода ровно столько, сколько нужно. Ни градусом больше.",
 			&"heat": "Прогрею постепенно. Резкие перепады оставим погоде.",
@@ -213,7 +217,7 @@ var employees: Dictionary = {
 		"description": "Такелажник для случаев, когда аварийный объект нужно удержать, передвинуть или убедительно поставить на место.",
 		"strength": "Сильная сторона: сила и устойчивость",
 		"weakness": "Ограничение: тонкая магия — не его участок",
-		"traits": "Надёжен • терпелив • бережёт казённый инструмент",
+		"traits": "Надёжен, терпелив, бережёт казённый инструмент",
 		"available": true,
 	},
 	&"boris": {
@@ -234,7 +238,7 @@ var employees: Dictionary = {
 		"description": "Опытный мастер по трубам, кранам и прочей инфраструктуре, которая обычно течёт в самый неподходящий момент.",
 		"strength": "Сильная сторона: аккуратный обычный ремонт",
 		"weakness": "Ограничение: не работает с чарами напрямую",
-		"traits": "Практичен • экономен • не доверяет говорящим вентилям",
+		"traits": "Практичен, экономен, не доверяет говорящим вентилям",
 		"action_reactions": [
 			{"action_ids": ["repair", "anchor"], "object_equals": {"burning": true}, "text": "Горящее не ремонтируют. Сначала тушим."},
 			{"action_ids": ["repair"], "required_tags": ["lava_flowing"], "text": "Сначала остановите поток лавы."},
@@ -261,7 +265,7 @@ var employees: Dictionary = {
 		"description": "Маг-телекинетик. Аккуратно перемещает незакреплённые объекты на расстоянии и быстро осваивает новые инструменты.",
 		"strength": "Сильная сторона: дистанционное и бережное перемещение",
 		"weakness": "Ограничение: мало полевого опыта",
-		"traits": "Любознательна • энергична • ведёт слишком подробные записи",
+		"traits": "Любознательна, энергична, ведёт слишком подробные записи",
 		"ability_reactions": {
 			&"freeze": "Попробую заморозку. Для отчёта уже придумала отдельную колонку «неожиданный иней».",
 			&"heat": "Добавлю тепла аккуратно. Заметки о пожаре сегодня не планировала.",
@@ -293,7 +297,7 @@ var employees: Dictionary = {
 		"description": "Инспектор по нестабильным чарам. Локализует магические утечки и безопасно подавляет опасные заклинания.",
 		"strength": "Сильная сторона: антимагия и безопасность",
 		"weakness": "Ограничение: действует медленно и по инструкции",
-		"traits": "Методичен • невозмутим • замечает нарушения с порога",
+		"traits": "Методичен, невозмутим, замечает нарушения с порога",
 		"ability_reactions": {
 			&"freeze": "Применю контролируемое охлаждение. Неконтролируемого здесь и без нас достаточно.",
 			&"heat": "Выполняю регулируемый нагрев. Любые языки пламени сверх нормы будут занесены в протокол.",
@@ -331,7 +335,7 @@ var jobs: Dictionary = {
 		"unlocked": true,
 		"overdue": false,
 		"dispatched": false,
-		"danger": "Огонь • давление",
+		"danger": "Огонь, давление",
 		"base_reward": 500,
 		"repair_scene": "res://scenes/RepairHouse.tscn",
 		"assigned": PackedStringArray(),
@@ -350,7 +354,7 @@ var jobs: Dictionary = {
 		"unlocked": false,
 		"overdue": false,
 		"dispatched": false,
-		"danger": "Магия • шум",
+		"danger": "Магия, шум",
 		"base_reward": 420,
 		"repair_scene": "res://scenes/WardrobeRoom.tscn",
 		"assigned": PackedStringArray(),
@@ -369,7 +373,7 @@ var jobs: Dictionary = {
 		"unlocked": false,
 		"overdue": false,
 		"dispatched": false,
-		"danger": "Магия • портал",
+		"danger": "Магия, портал",
 		"base_reward": 600,
 		"repair_scene": "res://scenes/PortalMirrorHouse.tscn",
 		"assigned": PackedStringArray(),
@@ -388,7 +392,7 @@ var jobs: Dictionary = {
 		"unlocked": false,
 		"overdue": false,
 		"dispatched": false,
-		"danger": "Магия • затопление",
+		"danger": "Магия, затопление",
 		"base_reward": 580,
 		"repair_scene": "res://scenes/GargoyleAttic.tscn",
 		"assigned": PackedStringArray(),
@@ -407,7 +411,7 @@ var jobs: Dictionary = {
 		"unlocked": false,
 		"overdue": false,
 		"dispatched": false,
-		"danger": "Магия • привидение",
+		"danger": "Магия, привидение",
 		"base_reward": 620,
 		"repair_scene": "res://scenes/GhostMirrorRoom.tscn",
 		"assigned": PackedStringArray(),
@@ -427,7 +431,7 @@ var jobs: Dictionary = {
 		"unlocked": false,
 		"overdue": false,
 		"dispatched": false,
-		"danger": "Холод • бытовая магия",
+		"danger": "Холод, бытовая магия",
 		"base_reward": 260,
 		"repair_scene": "res://scenes/FrozenBathRoom.tscn",
 		"assigned": PackedStringArray(),
@@ -1010,7 +1014,56 @@ func get_demo_summary() -> Dictionary:
 		"claims": claims,
 		"damaged_jobs": damaged_jobs,
 		"compensation_paid": compensation_paid,
+		"reputation_status": get_reputation_status(),
+		"denied_claims_total": get_denied_claims_total(),
+		"financial_risk": get_financial_risk_status(),
+		"inspection": get_demo_inspection_verdict(),
 	}
+
+
+func get_reputation_status() -> String:
+	if reputation >= REPUTATION_RELIABLE_THRESHOLD:
+		return "Надёжная служба"
+	if reputation >= REPUTATION_LICENSE_RISK_THRESHOLD:
+		return "Под наблюдением"
+	return "Риск отзыва лицензии"
+
+
+func get_denied_claims_total() -> int:
+	var total := 0
+	for report_value: Variant in job_reports:
+		if report_value is Dictionary:
+			var report: Dictionary = report_value
+			if str(report.get("claim_status", "none")) == "denied":
+				total += maxi(0, int(report.get("claim_amount", 0)))
+	return total
+
+
+func get_financial_risk_status() -> String:
+	var denied_total := get_denied_claims_total()
+	if denied_total <= 0:
+		return "нет"
+	if denied_total < ELEVATED_CLAIM_RISK_THRESHOLD:
+		return "низкий"
+	if denied_total < HIGH_CLAIM_RISK_THRESHOLD:
+		return "повышенный"
+	return "высокий"
+
+
+func get_demo_inspection_verdict() -> Dictionary:
+	var reputation_concern := reputation < REPUTATION_RELIABLE_THRESHOLD
+	var financial_concern := money < 0 or get_denied_claims_total() >= ELEVATED_CLAIM_RISK_THRESHOLD
+	if reputation_concern and financial_concern:
+		return {"title": "Лицензия под угрозой", "text": "Жалобы и финансовые риски требуют срочного вмешательства городской инспекции."}
+	if reputation_concern:
+		return {"title": "Испытательный срок", "text": "Служба продолжит работу под наблюдением, пока не восстановит доверие жителей."}
+	if financial_concern:
+		return {"title": "Финансовое оздоровление", "text": "Лицензия сохранена, но службе предстоит выбраться из долга и урегулировать отклонённые претензии."}
+	return {"title": "Лицензия подтверждена", "text": "Инспекция признаёт службу устойчивой и разрешает продолжить работу."}
+
+
+func get_claim_denial_penalty(claim_amount: int) -> int:
+	return 2 if claim_amount >= 300 else 1
 
 
 func resolve_pending_claim(pay_compensation: bool) -> bool:
@@ -1029,7 +1082,7 @@ func resolve_pending_claim(pay_compensation: bool) -> bool:
 			"job_id": str(pending_job_report.get("job_id", "")), "resident": str(pending_job_report.get("resident", "")),
 		})
 	else:
-		var reputation_penalty := 2 if claim_amount >= 300 else 1
+		var reputation_penalty := get_claim_denial_penalty(claim_amount)
 		reputation = maxi(0, reputation - reputation_penalty)
 		pending_job_report["claim_status"] = "denied"
 		pending_job_report["claim_reputation_penalty"] = reputation_penalty
@@ -1842,11 +1895,11 @@ func _update_employee_statuses() -> void:
 		var pending_action: Dictionary = get_pending_job_action(job_id)
 		employee["status"] = employee["idle_status"]
 		if int(employee.get("return_until", 0)) > time_minutes:
-			employee["status"] = "Возвращается • прибудет в %s" % _format_minutes(int(employee["return_until"]))
+			employee["status"] = "Возвращается, прибудет в %s" % _format_minutes(int(employee["return_until"]))
 		elif not job_id.is_empty() and int(employee.get("arrival_until", 0)) > time_minutes:
-			employee["status"] = "В пути • прибудет в %s" % _format_minutes(int(employee["arrival_until"]))
+			employee["status"] = "В пути, прибудет в %s" % _format_minutes(int(employee["arrival_until"]))
 		elif not job_id.is_empty() and str(pending_action.get("employee_id", "")) == String(employee_id):
-			employee["status"] = "Работает • до %s" % _format_minutes(int(pending_action.get("ends_at", time_minutes)))
+			employee["status"] = "Работает до %s" % _format_minutes(int(pending_action.get("ends_at", time_minutes)))
 		elif not job_id.is_empty():
 			employee["status"] = "На заявке: %s" % jobs[job_id].get("card_title", jobs[job_id]["title"])
 		employees[employee_id] = employee

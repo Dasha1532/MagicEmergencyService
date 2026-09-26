@@ -89,7 +89,7 @@ func _process(_delta: float) -> void:
 	task_panel.visible = duration > 1
 	if task_panel.visible:
 		task_progress.value = float(elapsed) / float(duration) * 100.0
-		task_label.text = "Работа выполняется • осталось %d мин." % maxi(0, task_ends_at - game_state.time_minutes)
+		task_label.text = "Работа выполняется, осталось %d мин." % maxi(0, task_ends_at - game_state.time_minutes)
 	if game_state.time_minutes < task_ends_at:
 		return
 	if not task_callback.is_valid():
@@ -161,7 +161,7 @@ func start_timed_action(employee_id: StringName, action_id: StringName, completi
 	task_callback = completion
 	task_panel.visible = actual_duration > 1
 	if task_panel.visible:
-		task_label.text = "%s работает • осталось %d мин." % [game_state.employees[employee_id]["name"], actual_duration]
+		task_label.text = "%s работает, осталось %d мин." % [game_state.employees[employee_id]["name"], actual_duration]
 		task_progress.value = 0.0
 		long_action_started.emit(employee_id)
 	game_state.set_clock_paused(false)
@@ -192,10 +192,10 @@ func _refresh_job_time() -> void:
 		job_time_label.text = game_state.format_time()
 		return
 	if bool(job.get("overdue", false)):
-		job_time_label.text = "%s  •  СРОК ИСТЁК" % game_state.format_time()
+		job_time_label.text = "%s — СРОК ИСТЁК" % game_state.format_time()
 		job_time_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.28))
 	else:
-		job_time_label.text = "%s  •  осталось %d мин." % [game_state.format_time(), int(job.get("time_left", 0))]
+		job_time_label.text = "%s, осталось %d мин." % [game_state.format_time(), int(job.get("time_left", 0))]
 		job_time_label.add_theme_color_override("font_color", COLOR_PARCHMENT)
 
 

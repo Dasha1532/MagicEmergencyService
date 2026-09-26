@@ -68,7 +68,7 @@ offset_left = 491.0
 offset_top = 297.0
 offset_right = 965.0
 offset_bottom = 560.0
-tooltip_text = "Гостиная • ходячий шкаф"
+tooltip_text = "Гостиная: ходячий шкаф"
 mouse_default_cursor_shape = 2
 
 [node name="ProblemRoomMarker" type="Panel" parent="." unique_id=1918999178]
@@ -88,7 +88,7 @@ theme_override_colors/font_color = Color(1, 0.78, 0.38, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.035, 0.015, 0.95)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 14
-text = "ЗАЯВКА • ХОДЯЧИЙ ШКАФ"
+text = "ЗАЯВКА: ХОДЯЧИЙ ШКАФ"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -125,7 +125,7 @@ theme_override_colors/font_color = Color(1, 0.82, 0.5, 1)
 theme_override_colors/font_outline_color = Color(0.04, 0.025, 0.015, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 17
-text = "LEFTWALL • У ЛЕВОЙ СТЕНЫ"
+text = "LEFTWALL — У ЛЕВОЙ СТЕНЫ"
 horizontal_alignment = 1
 
 [node name="CenterWall" type="Marker2D" parent="WardrobePositions" unique_id=764011033]
@@ -151,7 +151,7 @@ theme_override_colors/font_color = Color(1, 0.82, 0.5, 1)
 theme_override_colors/font_outline_color = Color(0.04, 0.025, 0.015, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 17
-text = "CENTERWALL • ПРОХОД НА КУХНЮ"
+text = "CENTERWALL — ПРОХОД НА КУХНЮ"
 horizontal_alignment = 1
 
 [node name="Wardrobe" type="Control" parent="." unique_id=1381638692]

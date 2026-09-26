@@ -71,7 +71,10 @@ func _build_accounting() -> void:
 				income += amount
 			else:
 				expenses += -amount
-	summary.text = "Сейчас: %d монет • Доходы: %d • Расходы: %d" % [game_state.money, income, expenses]
+	var denied_total: int = game_state.get_denied_claims_total()
+	summary.text = "Казна: %d, доходы: %d, расходы: %d\nОтклонённые претензии: %d, финансовый риск: %s" % [
+		game_state.money, income, expenses, denied_total, game_state.get_financial_risk_status(),
+	]
 	detail_title.text = "ДЕНЕЖНЫЕ ОПЕРАЦИИ"
 	detail_body.text = "Выберите запись слева, чтобы увидеть подробности."
 	if game_state.financial_ledger.is_empty():
@@ -81,13 +84,13 @@ func _build_accounting() -> void:
 		var event: Dictionary = game_state.financial_ledger[index]
 		var amount := int(event.get("amount", 0))
 		var sign_text := "+%d" % amount if amount >= 0 else str(amount)
-		_add_entry("%s\n%s • %s монет" % [event.get("title", "Операция"), _event_date(event), sign_text], _show_financial_event.bind(event))
+		_add_entry("%s\n%s, %s монет" % [event.get("title", "Операция"), _event_date(event), sign_text], _show_financial_event.bind(event))
 
 
 func _build_reviews() -> void:
 	heading.text = "КНИГА ОТЗЫВОВ"
 	var titles: PackedStringArray = game_state.get_reputation_titles(2)
-	summary.text = "Репутация: %d • %s • Отзывов: %d" % [game_state.reputation, " • ".join(titles), game_state.job_reports.size()]
+	summary.text = "Репутация: %d — %s\nПрозвища: %s. Отзывов: %d" % [game_state.reputation, game_state.get_reputation_status(), ", ".join(titles), game_state.job_reports.size()]
 	detail_title.text = "ОТЗЫВЫ ЖИЛЬЦОВ"
 	detail_body.text = "Здесь появятся оценки завершённых заявок."
 	if game_state.job_reports.is_empty():
@@ -96,7 +99,7 @@ func _build_reviews() -> void:
 	for index in range(game_state.job_reports.size() - 1, -1, -1):
 		var report: Dictionary = game_state.job_reports[index]
 		var rating := _report_rating(report)
-		_add_entry("%s\n%s • %s" % [report.get("resident", "Жилец"), _stars(rating), report.get("title", "Заявка")], _show_review.bind(report))
+		_add_entry("%s\n%s — %s" % [report.get("resident", "Жилец"), _stars(rating), report.get("title", "Заявка")], _show_review.bind(report))
 
 
 func _build_archive() -> void:
@@ -110,7 +113,7 @@ func _build_archive() -> void:
 	for index in range(game_state.job_reports.size() - 1, -1, -1):
 		var report: Dictionary = game_state.job_reports[index]
 		var damage_text := _claim_status_text(report)
-		_add_entry("%s\n%s • %s" % [report.get("title", "Заявка"), _report_date(report), damage_text], _show_archive_report.bind(report))
+		_add_entry("%s\n%s — %s" % [report.get("title", "Заявка"), _report_date(report), damage_text], _show_archive_report.bind(report))
 
 
 func _show_financial_event(event: Dictionary) -> void:
@@ -178,7 +181,7 @@ func _show_archive_report(report: Dictionary) -> void:
 		text += "\nРешение по претензии: выплачено после первоначального отказа"
 	text += "\n\nПОСЛЕДСТВИЯ"
 	for consequence: String in _report_consequences(report):
-		text += "\n• %s" % consequence
+		text += "\n— %s" % consequence
 	detail_body.text = text
 
 
@@ -198,7 +201,7 @@ func _report_consequences(report: Dictionary) -> PackedStringArray:
 		"paid_after_denial":
 			result.append("После первоначального отказа служба выплатила %d монет и восстановила потерянную из-за отказа репутацию." % int(report.get("compensation", 0)))
 		"denied":
-			result.append("В компенсации ущерба отказано; репутация службы снижена на %d." % int(report.get("claim_reputation_penalty", 0)))
+			result.append("В компенсации ущерба отказано; репутация службы снижена на %d, а сумма претензии учитывается как финансовый риск." % int(report.get("claim_reputation_penalty", 0)))
 	var follow_up: Variant = report.get("follow_up", {})
 	if follow_up is Dictionary and str((follow_up as Dictionary).get("type", "")) == "escaped_ghost":
 		var ghost_text := "Из портала выбрался призрак; это может создать новую заявку."

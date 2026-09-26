@@ -78,7 +78,7 @@ func _on_ghost_selected() -> void:
 	var custom_actions: Array[Dictionary] = []
 	if game_state.has_supply_item(&"ghost_trap"):
 		if StringName(simulation.world_object.get("trap_state", &"packed")) == &"packed":
-			custom_actions.append({"id": &"install_trap", "label": "Установить ловушку • 2 мин."})
+			custom_actions.append({"id": &"install_trap", "label": "Установить ловушку — 2 мин."})
 		elif StringName(simulation.world_object.get("trap_state", &"packed")) == &"installed":
 			custom_actions.append({"id": &"trap", "label": "Загнать в ловушку"})
 	tool_bar.show_for_object("Привидение", ghost.target_global_position(), {

@@ -88,7 +88,7 @@ func _run() -> void:
 	_check(is_equal_approx(office.personnel_hire_button.position.x + office.personnel_hire_button.size.x * 0.5, course_guide.get_center().x), "Кнопка найма независимо выровнена по центру")
 	_check(office.finish_day_button.get_parent() == office.dashboard_layer, "Кнопка завершения дня находится на доске заявок")
 	var returning_status: String = office._employee_card_status(
-		{"status": "Возвращается • прибудет в 09:36"}, false, false, false, false, true
+		{"status": "Возвращается, прибудет в 09:36"}, false, false, false, false, true
 	)
 	_check(returning_status == "Возвращается\nПрибудет в 09:36", "Статус возвращения разбит на две строки карточки")
 	office.personnel_training_button.pressed.emit()

@@ -35,6 +35,7 @@ func _run() -> void:
 	_check(dashboard.job_report_layer.visible, "После загрузки сначала показывается акт выполненных работ")
 	dashboard._dismiss_job_report()
 	_check(dashboard.claim_layer.visible and not dashboard.job_report_layer.visible, "После принятия акта открывается обязательное окно претензии")
+	_check(not "•" in dashboard.claim_pay_button.text and not "•" in dashboard.claim_deny_button.text, "Кнопки претензии используют понятные знаки вместо точек-разделителей")
 	dashboard.queue_free()
 	await process_frame
 	game_state.money = 100
@@ -56,6 +57,8 @@ func _run() -> void:
 	var denied_report: Dictionary = game_state.job_reports[-1]
 	_check(str(denied_report.get("claim_status", "")) == "denied", "Архив хранит отказ по претензии")
 	_check("отказали" in str(denied_report.get("review", "")), "Отказ отражается в отзыве жильца")
+	_check(game_state.get_denied_claims_total() == 300, "Отклонённая претензия учитывается отдельным финансовым риском")
+	_check(game_state.get_financial_risk_status() == "повышенный", "Для накопленной суммы определяется понятный уровень риска")
 	var balance_before_late_payment: int = game_state.money
 	var reputation_before_late_payment: int = game_state.reputation
 	_check(game_state.pay_denied_claim(
@@ -68,11 +71,19 @@ func _run() -> void:
 	_check(game_state.reputation == reputation_before_late_payment + 2, "Поздняя выплата возвращает штраф репутации за отказ")
 	_check(str(paid_late_report.get("claim_status", "")) == "paid_after_denial", "Архив хранит позднюю выплату")
 	_check(not "отказали" in str(paid_late_report.get("review", "")), "После выплаты отзыв больше не сообщает о действующем отказе")
+	_check(game_state.get_denied_claims_total() == 0 and game_state.get_financial_risk_status() == "нет", "Поздняя выплата снимает финансовый риск претензии")
 	_check(not game_state.pay_denied_claim(
 		str(denied_report.get("job_id", "")),
 		int(denied_report.get("completed_day", 0)),
 		int(denied_report.get("completed_time", -1))
 	), "Одну претензию нельзя оплатить повторно")
+	var books := (load("res://scenes/ui/OfficeBooks.tscn") as PackedScene).instantiate()
+	root.add_child(books)
+	await process_frame
+	books.open_section(&"reviews")
+	_check(not books.summary.get_global_rect().intersects(books.accounting_button.get_global_rect()), "Сводка книги отзывов не заходит под кнопку учёта")
+	_check("\n" in books.summary.text, "Длинная сводка книги отзывов переносится на отдельную строку")
+	books.queue_free()
 	_finish()
 
 

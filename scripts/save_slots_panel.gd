@@ -42,7 +42,7 @@ func refresh() -> void:
 	var autosave_summary: Dictionary = game_state.get_autosave_summary()
 	if bool(autosave_summary.get("exists", false)):
 		var tutorial_line := str(autosave_summary.get("tutorial_label", ""))
-		autosave_button.text = "АВТОСОХРАНЕНИЕ\nДень %d, %s  •  %d монет  •  репутация %d%s" % [
+		autosave_button.text = "АВТОСОХРАНЕНИЕ\nДень %d, %s, %d монет, репутация %d%s" % [
 			int(autosave_summary["day"]), str(autosave_summary["time"]), int(autosave_summary["money"]),
 			int(autosave_summary["reputation"]), "\n%s" % tutorial_line if not tutorial_line.is_empty() else "",
 		]
@@ -58,7 +58,7 @@ func refresh() -> void:
 			var overwrite_hint := ""
 			if mode == &"save":
 				overwrite_hint = "\nНажмите ещё раз, чтобы перезаписать" if pending_overwrite_slot == slot else "\nНажмите, чтобы выбрать"
-			button.text = "СЛОТ %d\nДень %d, %s  •  %d монет  •  репутация %d%s" % [
+			button.text = "СЛОТ %d\nДень %d, %s, %d монет, репутация %d%s" % [
 				slot, int(summary["day"]), str(summary["time"]), int(summary["money"]), int(summary["reputation"]),
 				overwrite_hint,
 			]

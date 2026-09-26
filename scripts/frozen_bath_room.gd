@@ -89,7 +89,7 @@ func _on_problem_selected() -> void:
 	tool_bar.configure_for_employee(str(employee["name"]), employee["abilities"], str(employee["core_actions"]))
 	var repair_label := "Осмотреть соединения крана"
 	if selected_employee_id == &"boris" and game_state.has_supply_item(&"thermal_regulator"):
-		repair_label = "Установить терморегулятор воды • 3 мин."
+		repair_label = "Установить терморегулятор воды — 3 мин."
 	tool_bar.show_for_object("Замёрзшая ванна", target.global_position, {
 		&"diagnose": "Осмотреть кран и лёд",
 		&"repair": repair_label,
