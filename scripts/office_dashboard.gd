@@ -14,6 +14,7 @@ const CANDIDATE_CLASP_TEXTURE = preload("res://assets/ui/candidate_clasp.png")
 const CLOCK_CONTROLS_SCRIPT = preload("res://scripts/game_clock_controls.gd")
 const CITY_MAP_SCENE = preload("res://scenes/ui/CityMap.tscn")
 const OFFICE_BOOKS_SCENE = preload("res://scenes/ui/OfficeBooks.tscn")
+const TUTORIAL_OVERLAY_SCRIPT = preload("res://scripts/tutorial_overlay.gd")
 
 var selected_job_id: StringName
 var job_list: VBoxContainer
@@ -97,6 +98,8 @@ var cat_phrase_panel: Panel
 var cat_phrase_label: Label
 var risk_dispatch_confirmed: bool = false
 var auto_wait_running: bool = false
+var tutorial_overlay: CanvasLayer
+var clock_controls: Control
 @onready var game_state: Node = get_node("/root/GameState")
 
 
@@ -109,6 +112,10 @@ func _ready() -> void:
 	$BookHotspots.visible = true
 	selected_job_id = game_state.selected_job_id
 	_build_interface()
+	dashboard_layer.visible = false
+	tutorial_overlay = TUTORIAL_OVERLAY_SCRIPT.new()
+	tutorial_overlay.configure(&"office", self)
+	add_child(tutorial_overlay)
 	game_state.state_changed.connect(_refresh)
 	_refresh()
 	set_process(true)
@@ -279,9 +286,9 @@ func _build_dashboard_return() -> void:
 
 
 func _build_clock_controls() -> void:
-	var controls := CLOCK_CONTROLS_SCRIPT.new()
-	controls.position = Vector2(625, 105)
-	dashboard_layer.add_child(controls)
+	clock_controls = CLOCK_CONTROLS_SCRIPT.new()
+	clock_controls.position = Vector2(625, 105)
+	dashboard_layer.add_child(clock_controls)
 
 
 func _build_office_hub() -> void:
@@ -311,7 +318,7 @@ func _build_office_hub() -> void:
 	_build_office_menu_button()
 	_build_cat_easter_egg()
 
-	var hint := _label("Наведите курсор. Кот занят важным, его не будите.", 19, COLOR_PARCHMENT)
+	var hint := _label("Наводите курсор на предметы. Кота не будите — он занят важным.", 19, COLOR_PARCHMENT)
 	hint.position = Vector2(470, 846)
 	hint.size = Vector2(660, 34)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -831,7 +838,7 @@ func _connect_editable_hotspot(hotspot: Control, title_text: String, subtitle_te
 	_attach_hotspot_caption(hotspot, hotspot.size, title_text, subtitle_text)
 
 
-func _attach_hotspot_caption(owner: Control, owner_size: Vector2, title_text: String, subtitle_text: String) -> void:
+func _attach_hotspot_caption(hotspot_owner: Control, owner_size: Vector2, title_text: String, subtitle_text: String) -> void:
 	var caption := Panel.new()
 	var caption_width := maxf(owner_size.x - 24, 320.0)
 	caption.position = Vector2((owner_size.x - caption_width) * 0.5, owner_size.y - 78)
@@ -840,7 +847,7 @@ func _attach_hotspot_caption(owner: Control, owner_size: Vector2, title_text: St
 	caption.z_index = 20
 	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	caption.add_theme_stylebox_override("panel", _style(Color(0.035, 0.025, 0.018, 0.94), COLOR_BRASS, 2, 7))
-	owner.add_child(caption)
+	hotspot_owner.add_child(caption)
 
 	var title_label := _label(title_text, 19, COLOR_GOLD)
 	title_label.position = Vector2(10, 7)
@@ -854,8 +861,8 @@ func _attach_hotspot_caption(owner: Control, owner_size: Vector2, title_text: St
 	subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	caption.add_child(subtitle_label)
 
-	owner.mouse_entered.connect(func() -> void: caption.visible = true)
-	owner.mouse_exited.connect(func() -> void: caption.visible = false)
+	hotspot_owner.mouse_entered.connect(func() -> void: caption.visible = true)
+	hotspot_owner.mouse_exited.connect(func() -> void: caption.visible = false)
 
 
 func _build_section_dialog() -> void:
@@ -1550,7 +1557,8 @@ func _advance_debug_day() -> void:
 
 
 func _finish_day() -> void:
-	game_state.try_finish_day()
+	if game_state.try_finish_day():
+		game_state.save_autosave()
 
 
 func _refresh_supply_shop() -> void:
@@ -1853,6 +1861,7 @@ func _crew_has_ability(assigned: PackedStringArray, ability_id: StringName) -> b
 
 
 func _select_job(job_id: StringName) -> void:
+	set_meta("tutorial_job_clicked", true)
 	pending_dispatch_employee_ids.clear()
 	selected_job_id = job_id
 	_refresh()

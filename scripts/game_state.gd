@@ -5,8 +5,9 @@ signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 12
+const SAVE_VERSION: int = 13
 const LEGACY_SAVE_PATH: String = "user://savegame.json"
+const AUTOSAVE_PATH: String = "user://autosave.json"
 const SAVE_SLOT_COUNT: int = 5
 const TRAVEL_TIME_MINUTES: int = 15
 const OVERDUE_PAYMENT_PENALTY: int = 100
@@ -106,6 +107,7 @@ var pending_job_report: Dictionary = {}
 var demo_completion_seen: bool = false
 var financial_ledger: Array = []
 var job_repair_states: Dictionary = {}
+var tutorial_state: Dictionary = {}
 var clock_paused: bool = true
 var clock_speed: int = 1
 var _clock_accumulator: float = 0.0
@@ -123,6 +125,11 @@ func _process(delta: float) -> void:
 		return
 	_clock_accumulator -= float(elapsed_minutes) * REAL_SECONDS_PER_GAME_MINUTE
 	advance_time(elapsed_minutes)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and not tutorial_state.is_empty():
+		save_autosave()
 
 
 func set_clock_paused(is_paused: bool) -> void:
@@ -543,6 +550,7 @@ func try_finish_day() -> bool:
 	if not can_finish_day():
 		return false
 	advance_day(1)
+	save_autosave()
 	return true
 
 
@@ -592,6 +600,7 @@ func train_employee(employee_id: StringName, training_id: StringName) -> bool:
 	employee["status"] = "Учится: %s" % TRAINING_DEFINITIONS[training_id]["name"]
 	employees[employee_id] = employee
 	state_changed.emit()
+	save_autosave()
 	return true
 
 
@@ -745,6 +754,7 @@ func start_job_action(job_id: StringName, employee_id: StringName, action_id: St
 	}
 	jobs[job_id] = job
 	state_changed.emit()
+	save_autosave()
 	return true
 
 
@@ -762,13 +772,20 @@ func clear_pending_job_action(job_id: StringName) -> void:
 	job["pending_action"] = {}
 	jobs[job_id] = job
 	state_changed.emit()
+	save_autosave()
 
 
 func advance_time(minutes: int, excluded_job_id: StringName = &"") -> PackedStringArray:
 	var newly_overdue := PackedStringArray()
 	if minutes <= 0:
 		return newly_overdue
+	var previous_clock := time_minutes
 	time_minutes += minutes
+	var employee_arrived := false
+	for employee_id: StringName in employees:
+		var arrival_until := int(employees[employee_id].get("arrival_until", 0))
+		if arrival_until > previous_clock and arrival_until <= time_minutes:
+			employee_arrived = true
 	_update_employee_statuses()
 	for job_id: StringName in jobs:
 		if job_id == excluded_job_id or not is_job_available(job_id):
@@ -782,6 +799,8 @@ func advance_time(minutes: int, excluded_job_id: StringName = &"") -> PackedStri
 			newly_overdue.append(String(job_id))
 		jobs[job_id] = job
 	state_changed.emit()
+	if employee_arrived or not newly_overdue.is_empty():
+		save_autosave()
 	return newly_overdue
 
 
@@ -821,12 +840,14 @@ func begin_job(job_id: StringName) -> bool:
 		state_changed.emit()
 	else:
 		state_changed.emit()
+	save_autosave()
 	return true
 
 
 func leave_active_job() -> void:
 	active_job_id = &""
 	state_changed.emit()
+	save_autosave()
 
 
 func recall_job(job_id: StringName) -> bool:
@@ -923,6 +944,7 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 	if audio_manager != null and audio_manager.has_method(&"play_task_complete"):
 		audio_manager.call(&"play_task_complete")
 	state_changed.emit()
+	save_autosave()
 	return true
 
 
@@ -1024,6 +1046,7 @@ func resolve_pending_claim(pay_compensation: bool) -> bool:
 	)
 	_sync_pending_report_to_history()
 	state_changed.emit()
+	save_autosave()
 	return true
 
 
@@ -1142,15 +1165,25 @@ func save_slot_path(slot: int) -> String:
 	return "user://save_slot_%d.json" % clampi(slot, 1, SAVE_SLOT_COUNT)
 
 
+func has_autosave() -> bool:
+	return FileAccess.file_exists(AUTOSAVE_PATH)
+
+
 func has_save(slot: int = 0) -> bool:
 	if slot > 0:
 		if slot > SAVE_SLOT_COUNT:
 			return false
 		return FileAccess.file_exists(save_slot_path(slot)) or (slot == 1 and FileAccess.file_exists(LEGACY_SAVE_PATH))
+	if has_autosave():
+		return true
 	for slot_index in range(1, SAVE_SLOT_COUNT + 1):
 		if has_save(slot_index):
 			return true
 	return false
+
+
+func get_autosave_summary() -> Dictionary:
+	return _save_summary_from_path(AUTOSAVE_PATH, 0)
 
 
 func get_latest_save_slot() -> int:
@@ -1169,6 +1202,10 @@ func get_latest_save_slot() -> int:
 
 func get_save_slot_summary(slot: int) -> Dictionary:
 	var path := _existing_save_slot_path(slot)
+	return _save_summary_from_path(path, slot)
+
+
+func _save_summary_from_path(path: String, slot: int) -> Dictionary:
 	if path.is_empty():
 		return {"exists": false, "slot": slot}
 	var file := FileAccess.open(path, FileAccess.READ)
@@ -1187,7 +1224,38 @@ func get_save_slot_summary(slot: int) -> Dictionary:
 		"money": int(data.get("money", 0)),
 		"reputation": int(data.get("reputation", 0)),
 		"active_job_id": str(data.get("active_job_id", "")),
+		"tutorial_label": _tutorial_summary_label(data.get("tutorial_state", {})),
 	}
+
+
+func _tutorial_summary_label(value: Variant) -> String:
+	if not value is Dictionary:
+		return ""
+	var saved_tutorial: Dictionary = value
+	var status := str(saved_tutorial.get("status", "inactive"))
+	if status == "completed":
+		return "Обучение завершено"
+	if status == "skipped":
+		return "Обучение пропущено"
+	if status != "active":
+		return ""
+	var labels := {
+		"office_welcome": "знакомство с офисом", "open_board": "доска заявок",
+		"open_first_job": "первая заявка", "job_details": "сведения о вызове",
+		"assign_employee": "состав бригады", "employee_scroll": "сотрудники",
+		"crew_choice": "выбор бригады", "dispatch": "отправка бригады",
+		"travel": "бригада в пути", "open_object": "прибытие на объект",
+		"employee_auto": "выбор сотрудника", "risk_notice": "последствия работы",
+		"select_faucet": "аварийный кран", "select_action": "выбор действия",
+		"consequences": "последствия решения", "resolve_job": "самостоятельная работа",
+		"wait_resolution": "устранение аварии",
+		"complete_job": "завершение работы", "report": "итоговый отчёт",
+		"claim": "претензия жильца", "return_board": "возвращение в офис",
+		"finish_day": "завершение дня", "personnel_overview": "раздел сотрудников",
+		"supply_overview": "лавка снабжения", "storage_overview": "склад снаряжения",
+		"final": "новый рабочий день",
+	}
+	return "Обучение: %s" % str(labels.get(str(saved_tutorial.get("step", "")), "продолжается"))
 
 
 func _existing_save_slot_path(slot: int) -> String:
@@ -1215,6 +1283,7 @@ func start_new_game() -> void:
 	demo_completion_seen = false
 	financial_ledger = [_financial_event(&"opening_balance", money, "Начальные средства службы")]
 	job_repair_states = {}
+	tutorial_state = {"version": 1, "status": "active", "step": "office_welcome"}
 	clock_paused = true
 	clock_speed = 1
 	_clock_accumulator = 0.0
@@ -1237,6 +1306,34 @@ func start_new_game() -> void:
 
 	_update_employee_statuses()
 	state_changed.emit()
+	save_autosave()
+
+
+func set_tutorial_step(step: StringName, autosave: bool = true) -> void:
+	if str(tutorial_state.get("status", "inactive")) != "active":
+		return
+	if str(tutorial_state.get("step", "")) == String(step):
+		return
+	tutorial_state["step"] = String(step)
+	state_changed.emit()
+	if autosave:
+		save_autosave()
+
+
+func skip_tutorial() -> void:
+	tutorial_state = {"version": 1, "status": "skipped", "step": ""}
+	state_changed.emit()
+	save_autosave()
+
+
+func complete_tutorial() -> void:
+	tutorial_state = {"version": 1, "status": "completed", "step": ""}
+	state_changed.emit()
+	save_autosave()
+
+
+func is_tutorial_active() -> bool:
+	return str(tutorial_state.get("status", "inactive")) == "active"
 
 
 func _reset_employee(employee_id: StringName, available: bool, abilities: PackedStringArray, status: String) -> void:
@@ -1255,6 +1352,14 @@ func _reset_employee(employee_id: StringName, available: bool, abilities: Packed
 func save_game(slot: int = 1) -> Error:
 	if slot < 1 or slot > SAVE_SLOT_COUNT:
 		return ERR_INVALID_PARAMETER
+	return _save_to_path(save_slot_path(slot))
+
+
+func save_autosave() -> Error:
+	return _save_to_path(AUTOSAVE_PATH)
+
+
+func _save_to_path(path: String) -> Error:
 	var job_assignments: Dictionary = {}
 	var job_progress: Dictionary = {}
 	for job_id: StringName in jobs:
@@ -1296,6 +1401,7 @@ func save_game(slot: int = 1) -> Error:
 		"demo_completion_seen": demo_completion_seen,
 		"financial_ledger": financial_ledger,
 		"job_repair_states": job_repair_states,
+		"tutorial_state": tutorial_state,
 		"job_assignments": job_assignments,
 		"job_progress": job_progress,
 		"employee_progress": employee_progress,
@@ -1303,7 +1409,7 @@ func save_game(slot: int = 1) -> Error:
 		"clock_speed": clock_speed,
 	}
 
-	var file := FileAccess.open(save_slot_path(slot), FileAccess.WRITE)
+	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		return FileAccess.get_open_error()
 	file.store_string(JSON.stringify(save_data, "\t"))
@@ -1317,7 +1423,36 @@ func load_game(slot: int = 0) -> Error:
 	if target_slot < 1 or not has_save(target_slot):
 		return ERR_FILE_NOT_FOUND
 
-	var file := FileAccess.open(_existing_save_slot_path(target_slot), FileAccess.READ)
+	return _load_from_path(_existing_save_slot_path(target_slot))
+
+
+func load_autosave() -> Error:
+	if not has_autosave():
+		return ERR_FILE_NOT_FOUND
+	return _load_from_path(AUTOSAVE_PATH)
+
+
+func load_latest_game() -> Error:
+	var latest_path := ""
+	var latest_time := 0
+	if has_autosave():
+		latest_path = AUTOSAVE_PATH
+		latest_time = int(FileAccess.get_modified_time(AUTOSAVE_PATH))
+	for slot_index in range(1, SAVE_SLOT_COUNT + 1):
+		var path := _existing_save_slot_path(slot_index)
+		if path.is_empty():
+			continue
+		var modified := int(FileAccess.get_modified_time(path))
+		if latest_path.is_empty() or modified >= latest_time:
+			latest_path = path
+			latest_time = modified
+	if latest_path.is_empty():
+		return ERR_FILE_NOT_FOUND
+	return _load_from_path(latest_path)
+
+
+func _load_from_path(path: String) -> Error:
+	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return FileAccess.get_open_error()
 
@@ -1440,6 +1575,12 @@ func load_game(slot: int = 0) -> Error:
 			if jobs.has(repair_job_id) and not completed_job_ids.has(String(repair_job_id)) and loaded_state is Dictionary:
 				var loaded_state_dictionary: Dictionary = loaded_state
 				job_repair_states[String(repair_job_id)] = loaded_state_dictionary.duplicate(true)
+
+	var loaded_tutorial: Variant = save_data.get("tutorial_state", {})
+	if loaded_tutorial is Dictionary and not (loaded_tutorial as Dictionary).is_empty():
+		tutorial_state = (loaded_tutorial as Dictionary).duplicate(true)
+	else:
+		tutorial_state = {"version": 1, "status": "completed", "step": ""}
 
 	var job_assignments: Dictionary = save_data.get("job_assignments", {})
 	for job_id: StringName in jobs:

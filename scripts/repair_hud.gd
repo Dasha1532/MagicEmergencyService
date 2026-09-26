@@ -491,15 +491,15 @@ func clear_all_dialogues() -> void:
 		employee_panel.visible = work_ui_visible
 
 
-func set_work_ui_visible(is_visible: bool) -> void:
-	work_ui_visible = is_visible
+func set_work_ui_visible(should_be_visible: bool) -> void:
+	work_ui_visible = should_be_visible
 	var has_dialogue: bool = employee_reaction_label != null and not employee_reaction_label.text.is_empty()
 	if employee_reaction_panel != null:
-		employee_reaction_panel.visible = is_visible and has_dialogue
+		employee_reaction_panel.visible = should_be_visible and has_dialogue
 	if employee_panel != null:
-		employee_panel.visible = is_visible and not has_dialogue
+		employee_panel.visible = should_be_visible and not has_dialogue
 	if complete_button != null:
-		complete_button.visible = is_visible
+		complete_button.visible = should_be_visible
 
 
 func set_completion_ready(is_ready: bool) -> void:

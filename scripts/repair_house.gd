@@ -2,6 +2,7 @@ extends Node2D
 
 const RepairSimulationScript := preload("res://scripts/repair_simulation.gd")
 const EmployeeReactionResolverScript := preload("res://scripts/employee_reaction_resolver.gd")
+const TUTORIAL_OVERLAY_SCRIPT := preload("res://scripts/tutorial_overlay.gd")
 
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
 const COLOR_GOLD := Color(0.96, 0.78, 0.46)
@@ -30,6 +31,7 @@ var simulation: RepairSimulation
 var selected_tool_id: StringName = &"freeze"
 var selected_employee_id: StringName = &""
 var action_in_progress: bool = false
+var tutorial_overlay: CanvasLayer
 
 
 func _ready() -> void:
@@ -54,6 +56,9 @@ func _ready() -> void:
 	_configure_employee_actor()
 	_restore_repair_state()
 	_resume_pending_action()
+	tutorial_overlay = TUTORIAL_OVERLAY_SCRIPT.new()
+	tutorial_overlay.configure(&"repair", self)
+	add_child(tutorial_overlay)
 	call_deferred("_open_bathroom")
 	_set_lava_audio(_is_lava_flowing())
 
@@ -262,6 +267,7 @@ func _resolve_action(action_id: StringName) -> void:
 		repair_hud.queue_resident_dialogue(resident_message)
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+	game_state.save_autosave()
 
 
 func _set_lava_audio(enabled: bool) -> void:
@@ -317,7 +323,7 @@ func _restore_repair_state() -> void:
 			_show_feedback("Кран перегрет и деформируется, но остановленная лава не возобновилась.", true)
 	elif visual_state == &"melted":
 		lava_faucet.show_melted_state(_is_lava_flowing())
-		_show_feedback("Кран расплавлен и полностью сломан. Это конечный исход заявки.", true)
+		_show_feedback("Кран расплавлен и полностью сломан. Спёкшийся металл перекрыл поток лавы; это конечный исход заявки.", true)
 	else:
 		lava_faucet.show_emergency_state(_is_lava_flowing())
 		_show_feedback("Выберите действие сотрудника и примените его к аварийному крану.")

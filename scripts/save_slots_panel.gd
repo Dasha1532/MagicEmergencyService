@@ -17,6 +17,7 @@ const COLOR_MUTED := Color(0.69, 0.62, 0.52)
 var mode: StringName = &"load"
 var heading: Label
 var slot_buttons: Array[Button] = []
+var autosave_button: Button
 var pending_overwrite_slot: int = 0
 
 
@@ -38,6 +39,17 @@ func refresh() -> void:
 	if heading == null:
 		return
 	heading.text = "ВЫБЕРИТЕ СЛОТ СОХРАНЕНИЯ" if mode == &"save" else "ВЫБЕРИТЕ СОХРАНЕНИЕ"
+	var autosave_summary: Dictionary = game_state.get_autosave_summary()
+	if bool(autosave_summary.get("exists", false)):
+		var tutorial_line := str(autosave_summary.get("tutorial_label", ""))
+		autosave_button.text = "АВТОСОХРАНЕНИЕ\nДень %d, %s  •  %d монет  •  репутация %d%s" % [
+			int(autosave_summary["day"]), str(autosave_summary["time"]), int(autosave_summary["money"]),
+			int(autosave_summary["reputation"]), "\n%s" % tutorial_line if not tutorial_line.is_empty() else "",
+		]
+		autosave_button.disabled = mode == &"save"
+	else:
+		autosave_button.text = "АВТОСОХРАНЕНИЕ\nПУСТО"
+		autosave_button.disabled = true
 	for index in slot_buttons.size():
 		var slot := index + 1
 		var summary: Dictionary = game_state.get_save_slot_summary(slot)
@@ -64,8 +76,8 @@ func _build() -> void:
 	add_child(dimmer)
 
 	var panel := Panel.new()
-	panel.position = Vector2(500, 75)
-	panel.size = Vector2(600, 750)
+	panel.position = Vector2(500, 32)
+	panel.size = Vector2(600, 836)
 	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 3, 14))
 	add_child(panel)
 
@@ -75,25 +87,20 @@ func _build() -> void:
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	panel.add_child(heading)
 
+	autosave_button = _slot_button(Vector2(55, 82), Vector2(490, 82))
+	autosave_button.pressed.connect(_select_slot.bind(0))
+	panel.add_child(autosave_button)
+
 	for index: int in range(game_state.SAVE_SLOT_COUNT):
 		var slot: int = index + 1
-		var button := Button.new()
-		button.position = Vector2(55, 88 + index * 112)
-		button.size = Vector2(490, 94)
-		button.add_theme_font_size_override("font_size", 16)
-		button.add_theme_color_override("font_color", COLOR_TEXT)
-		button.add_theme_color_override("font_disabled_color", COLOR_MUTED)
-		button.add_theme_stylebox_override("normal", _style(COLOR_BUTTON, COLOR_BRASS, 2, 9))
-		button.add_theme_stylebox_override("hover", _style(COLOR_HOVER, COLOR_GOLD, 2, 9))
-		button.add_theme_stylebox_override("pressed", _style(Color(0.09, 0.15, 0.17), COLOR_GOLD, 3, 9))
-		button.add_theme_stylebox_override("disabled", _style(Color(0.07, 0.055, 0.045), Color(0.3, 0.25, 0.19), 1, 9))
+		var button := _slot_button(Vector2(55, 174 + index * 101), Vector2(490, 86))
 		button.pressed.connect(_select_slot.bind(slot))
 		panel.add_child(button)
 		slot_buttons.append(button)
 
 	var back := Button.new()
 	back.text = "НАЗАД"
-	back.position = Vector2(150, 664)
+	back.position = Vector2(150, 758)
 	back.size = Vector2(300, 56)
 	back.add_theme_font_size_override("font_size", 18)
 	back.add_theme_color_override("font_color", COLOR_TEXT)
@@ -104,12 +111,30 @@ func _build() -> void:
 
 
 func _select_slot(slot: int) -> void:
+	if slot == 0:
+		if mode == &"load" and game_state.has_autosave():
+			slot_selected.emit(0)
+		return
 	if mode == &"save" and game_state.has_save(slot) and pending_overwrite_slot != slot:
 		pending_overwrite_slot = slot
 		refresh()
 		return
 	pending_overwrite_slot = 0
 	slot_selected.emit(slot)
+
+
+func _slot_button(button_position: Vector2, button_size: Vector2) -> Button:
+	var button := Button.new()
+	button.position = button_position
+	button.size = button_size
+	button.add_theme_font_size_override("font_size", 15)
+	button.add_theme_color_override("font_color", COLOR_TEXT)
+	button.add_theme_color_override("font_disabled_color", COLOR_MUTED)
+	button.add_theme_stylebox_override("normal", _style(COLOR_BUTTON, COLOR_BRASS, 2, 9))
+	button.add_theme_stylebox_override("hover", _style(COLOR_HOVER, COLOR_GOLD, 2, 9))
+	button.add_theme_stylebox_override("pressed", _style(Color(0.09, 0.15, 0.17), COLOR_GOLD, 3, 9))
+	button.add_theme_stylebox_override("disabled", _style(Color(0.07, 0.055, 0.045), Color(0.3, 0.25, 0.19), 1, 9))
+	return button
 
 
 func _label(text_value: String, font_size: int, color: Color) -> Label:

@@ -287,7 +287,14 @@ func _set_loop_playing(player: AudioStreamPlayer, enabled: bool) -> void:
 
 func _on_node_added(node: Node) -> void:
 	if node is Button:
-		_connect_button.call_deferred(node as Button)
+		# Кнопка может быть удалена до отложенного вызова при перестроении списка.
+		_connect_button_by_id.call_deferred(node.get_instance_id())
+
+
+func _connect_button_by_id(instance_id: int) -> void:
+	var node := instance_from_id(instance_id)
+	if node is Button:
+		_connect_button(node as Button)
 
 
 func _connect_buttons_in(node: Node) -> void:

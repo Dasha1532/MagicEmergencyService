@@ -54,6 +54,12 @@ func load_state(saved_state: Dictionary) -> void:
 			world_object["scorched"] = _tags().has("overheated") or _tags().has("melted") or int(world_object["damage"]) > 0
 		if world_object["visual_state"] == &"overheated":
 			world_object["temperature"] = maxi(OVERHEAT_THRESHOLD, int(world_object["temperature"]))
+		elif world_object["visual_state"] == &"melted" or _tags().has("melted"):
+			# Старые сохранения могли оставить поток активным после расплавления крана.
+			_remove_tag("lava_flowing")
+			_remove_tag("pressurized")
+			_add_tag("sealed_by_melt")
+			world_object["pressure"] = 0
 
 	action_log.clear()
 	var saved_actions: Variant = saved_state.get("action_log", [])
@@ -180,9 +186,9 @@ func get_completion_result() -> Dictionary:
 			"reward_adjustment": -500,
 			"compensation_cost": int(world_object["replacement_value"]),
 			"reputation_change": -6,
-			"summary": "Кран расплавлен и полностью выведен из строя. Оплаты не будет, служба компенсирует жильцу стоимость замены оборудования.",
+			"summary": "Расплавленный металл перекрыл трубу и остановил поток лавы, но кран полностью уничтожен. Оплаты не будет; стоимость замены оборудования предъявлена службе как претензия.",
 			"review": "Я просил починить кран, а не превратить его в современную скульптуру. Впрочем, скульптура хотя бы больше не плюётся лавой.",
-			"consequences": ["Кран полностью уничтожен и требует замены.", "Служба компенсирует стоимость оборудования."],
+			"consequences": ["Кран полностью уничтожен и требует замены.", "Жилец предъявил службе претензию на стоимость оборудования."],
 			"actions": action_log.duplicate(true),
 		}
 	var damage: int = int(world_object.get("damage", 0))
@@ -239,12 +245,15 @@ func _apply_heat() -> String:
 		_remove_tag("repaired")
 		_remove_tag("stabilized")
 		_remove_tag("overheated")
+		_remove_tag("lava_flowing")
+		_remove_tag("pressurized")
 		_add_tag("melted")
+		_add_tag("sealed_by_melt")
 		world_object["pressure"] = 0
 		world_object["damage"] = maxi(6, int(world_object["damage"]))
 		world_object["scorched"] = true
 		world_object["visual_state"] = &"melted"
-		return "Раскалённый металл не выдержал повторного нагрева: кран расплавился и полностью сломан."
+		return "Раскалённый металл не выдержал повторного нагрева: кран расплавился и полностью сломан, а спёкшийся металл перекрыл поток лавы."
 	if int(world_object["temperature"]) >= OVERHEAT_THRESHOLD:
 		_remove_tag("repaired")
 		_remove_tag("stabilized")

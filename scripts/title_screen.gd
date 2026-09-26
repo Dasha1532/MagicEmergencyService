@@ -255,14 +255,22 @@ func _new_game() -> void:
 
 
 func _continue_game() -> void:
-	_load_slot(game_state.get_latest_save_slot())
-
-
-func _load_slot(slot: int) -> void:
-	var error: Error = game_state.load_game(slot)
+	var error: Error = game_state.load_latest_game()
 	if error != OK:
 		status_label.text = "Не удалось загрузить сохранение. Код ошибки: %d" % error
 		return
+	_open_loaded_game()
+
+
+func _load_slot(slot: int) -> void:
+	var error: Error = game_state.load_autosave() if slot == 0 else game_state.load_game(slot)
+	if error != OK:
+		status_label.text = "Не удалось загрузить сохранение. Код ошибки: %d" % error
+		return
+	_open_loaded_game()
+
+
+func _open_loaded_game() -> void:
 	var target_scene := "res://scenes/main.tscn"
 	var repair_scene: String = game_state.get_active_job_repair_scene()
 	if not repair_scene.is_empty():

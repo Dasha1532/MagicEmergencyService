@@ -219,7 +219,7 @@ func _save_to_slot(slot: int) -> void:
 
 
 func _load_from_slot(slot: int) -> void:
-	var error: Error = game_state.load_game(slot)
+	var error: Error = game_state.load_autosave() if slot == 0 else game_state.load_game(slot)
 	if error != OK:
 		status_label.text = "Не удалось загрузить сохранение. Код ошибки: %d" % error
 		return
@@ -276,6 +276,7 @@ func _show_main_panel() -> void:
 
 
 func _return_to_title() -> void:
+	game_state.save_autosave()
 	overlay.visible = false
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/TitleScreen.tscn")
@@ -304,6 +305,7 @@ func _is_fullscreen() -> bool:
 
 
 func _exit_game() -> void:
+	game_state.save_autosave()
 	get_tree().paused = false
 	get_tree().quit()
 
