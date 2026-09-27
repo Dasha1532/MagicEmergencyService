@@ -14,6 +14,7 @@ const CANDIDATE_CLASP_TEXTURE = preload("res://assets/ui/candidate_clasp.png")
 const CLOCK_CONTROLS_SCRIPT = preload("res://scripts/game_clock_controls.gd")
 const CITY_MAP_SCENE = preload("res://scenes/ui/CityMap.tscn")
 const OFFICE_BOOKS_SCENE = preload("res://scenes/ui/OfficeBooks.tscn")
+const DISMISSAL_DOCUMENT_SCENE = preload("res://scenes/ui/DismissalDocument.tscn")
 const TUTORIAL_OVERLAY_SCRIPT = preload("res://scripts/tutorial_overlay.gd")
 
 var selected_job_id: StringName
@@ -90,10 +91,12 @@ var dispatch_warning_body: Label
 var demo_completion_layer: Control
 var demo_completion_title: Label
 var demo_completion_summary: Label
+var dismissal_document_layer: Control
 var demo_video_layer: Control
 var demo_video_player: VideoStreamPlayer
 var demo_video_can_skip: bool = false
 var demo_video_transitioning: bool = false
+var final_video_mode: StringName = &""
 var cat_click_count: int = 0
 var cat_message_revision: int = 0
 var cat_phrase_panel: Panel
@@ -139,6 +142,7 @@ func _build_interface() -> void:
 	_build_arrival_dialog()
 	_build_dispatch_warning_dialog()
 	_build_demo_completion_dialog()
+	_build_dismissal_document()
 	_build_demo_video()
 	_build_personnel_screen()
 	_build_supply_shop()
@@ -1031,6 +1035,16 @@ func _build_demo_completion_dialog() -> void:
 	menu_button.pressed.connect(_start_demo_video)
 
 
+func _build_dismissal_document() -> void:
+	dismissal_document_layer = DISMISSAL_DOCUMENT_SCENE.instantiate()
+	dismissal_document_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dismissal_document_layer.z_index = 305
+	dismissal_document_layer.visible = false
+	_style_button(dismissal_document_layer.get_node("MenuButton") as Button)
+	dismissal_document_layer.connect(&"main_menu_requested", _leave_after_dismissal)
+	add_child(dismissal_document_layer)
+
+
 func _build_demo_video() -> void:
 	demo_video_layer = Control.new()
 	demo_video_layer.name = "DemoVideoLayer"
@@ -1046,12 +1060,12 @@ func _build_demo_video() -> void:
 	demo_video_layer.add_child(background)
 
 	demo_video_player = VideoStreamPlayer.new()
-	demo_video_player.name = "LiliyaFarewell"
+	demo_video_player.name = "FinalVideo"
 	demo_video_player.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	demo_video_player.expand = true
 	demo_video_player.modulate = Color(1, 1, 1, 0)
 	demo_video_player.stream = load("res://assets/video/lili_buy.ogv") as VideoStream
-	demo_video_player.finished.connect(_finish_demo_video)
+	demo_video_player.finished.connect(_finish_final_video)
 	demo_video_layer.add_child(demo_video_player)
 
 
@@ -1064,15 +1078,35 @@ func _input(event: InputEvent) -> void:
 		_start_demo_video()
 	elif demo_video_layer != null and demo_video_layer.visible and demo_video_can_skip:
 		get_viewport().set_input_as_handled()
-		_finish_demo_video()
+		_finish_final_video()
 
 
 func _start_demo_video() -> void:
+	_start_final_video(&"demo")
+
+
+func _start_dismissal_video() -> void:
+	_start_final_video(&"dismissal")
+
+
+func _start_final_video(mode: StringName) -> void:
 	if demo_video_transitioning or demo_video_layer == null or demo_video_player == null:
+		return
+	if demo_video_layer.visible:
 		return
 	demo_video_transitioning = true
 	demo_video_can_skip = false
-	demo_completion_layer.visible = false
+	final_video_mode = mode
+	demo_video_player.stream = load("res://assets/video/notice_of_dismissal.ogv" if mode == &"dismissal" else "res://assets/video/lili_buy.ogv") as VideoStream
+	if demo_video_player.stream == null:
+		demo_video_transitioning = false
+		if mode == &"dismissal":
+			game_state.mark_dismissal_video_seen()
+		return
+	if demo_completion_layer != null:
+		demo_completion_layer.visible = false
+	if dismissal_document_layer != null:
+		dismissal_document_layer.visible = false
 	var audio_manager := get_node_or_null("/root/AudioManager")
 	if audio_manager != null and audio_manager.has_method(&"stop_office_music"):
 		audio_manager.call(&"stop_office_music")
@@ -1080,6 +1114,17 @@ func _start_demo_video() -> void:
 	demo_video_layer.visible = true
 	demo_video_layer.move_to_front()
 	demo_video_player.modulate = Color(1, 1, 1, 0)
+	if mode == &"dismissal":
+		await get_tree().create_timer(1.0).timeout
+		if not demo_video_layer.visible or final_video_mode != mode:
+			demo_video_transitioning = false
+			return
+		demo_video_player.modulate.a = 1.0
+		demo_video_player.play()
+		await get_tree().create_timer(0.65).timeout
+		demo_video_can_skip = true
+		demo_video_transitioning = false
+		return
 	await get_tree().create_timer(0.4).timeout
 	demo_video_player.play()
 	var fade := create_tween()
@@ -1089,17 +1134,36 @@ func _start_demo_video() -> void:
 	demo_video_transitioning = false
 
 
-func _finish_demo_video() -> void:
+func _finish_final_video() -> void:
 	if demo_video_transitioning or demo_video_layer == null or not demo_video_layer.visible:
 		return
 	demo_video_transitioning = true
 	demo_video_can_skip = false
+	var completed_mode := final_video_mode
+	if completed_mode == &"dismissal":
+		demo_video_player.stop()
+		demo_video_player.modulate.a = 0.0
+		game_state.mark_dismissal_video_seen()
+		await get_tree().create_timer(1.0).timeout
+		demo_video_layer.visible = false
+		demo_video_transitioning = false
+		final_video_mode = &""
+		_refresh_dismissal()
+		return
 	game_state.mark_demo_completion_seen()
 	var fade := create_tween()
 	fade.tween_property(demo_video_player, "modulate:a", 0.0, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	await fade.finished
 	demo_video_player.stop()
+	demo_video_layer.visible = false
+	demo_video_transitioning = false
+	final_video_mode = &""
 	await get_tree().create_timer(0.35).timeout
+	get_tree().change_scene_to_file("res://scenes/TitleScreen.tscn")
+
+
+func _leave_after_dismissal() -> void:
+	game_state.save_autosave()
 	get_tree().change_scene_to_file("res://scenes/TitleScreen.tscn")
 
 
@@ -1376,6 +1440,7 @@ func _refresh() -> void:
 		_refresh_equipment_storage()
 	_refresh_job_report()
 	_refresh_demo_completion()
+	_refresh_dismissal()
 
 
 func _refresh_demo_completion() -> void:
@@ -1397,6 +1462,28 @@ func _refresh_demo_completion() -> void:
 		str(summary.get("financial_risk", "нет")), int(summary.get("compensation_paid", 0)),
 	]
 	demo_completion_layer.move_to_front()
+
+
+func _refresh_dismissal() -> void:
+	if dismissal_document_layer == null:
+		return
+	var show_document: bool = game_state.should_show_dismissal_document()
+	dismissal_document_layer.visible = show_document
+	if show_document:
+		if not game_state.clock_paused:
+			game_state.set_clock_paused(true)
+		dismissal_document_layer.call(&"set_document_content",
+			game_state.get_dismissal_reason_text(),
+			game_state.get_confirmed_claim_count(),
+			game_state.DISMISSAL_CLAIM_THRESHOLD,
+			game_state.money,
+		)
+		dismissal_document_layer.move_to_front()
+		return
+	if game_state.should_play_dismissal_video() and not demo_video_transitioning and (demo_video_layer == null or not demo_video_layer.visible):
+		if not game_state.clock_paused:
+			game_state.set_clock_paused(true)
+		call_deferred("_start_dismissal_video")
 
 
 func _refresh_job_report() -> void:

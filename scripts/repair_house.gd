@@ -31,6 +31,8 @@ var simulation: RepairSimulation
 var selected_tool_id: StringName = &"freeze"
 var selected_employee_id: StringName = &""
 var action_in_progress: bool = false
+var pending_dialogue_action: StringName = &""
+var action_had_intro: bool = false
 var tutorial_overlay: CanvasLayer
 
 
@@ -48,6 +50,7 @@ func _ready() -> void:
 	repair_hud.completion_requested.connect(_attempt_complete_job)
 	repair_hud.long_action_started.connect(_on_long_action_started)
 	repair_hud.long_action_finished.connect(_on_long_action_finished)
+	repair_hud.dialogue_finished.connect(_on_pre_action_dialogue_finished)
 	lava_faucet.selected.connect(_apply_selected_action)
 	employee_actor.action_impact.connect(_on_employee_action_impact)
 	employee_actor.action_finished.connect(_on_employee_action_finished)
@@ -174,7 +177,7 @@ func _on_tool_selected(tool_id: StringName) -> void:
 		return
 	selected_tool_id = tool_id
 	tool_bar.visible = false
-	_begin_selected_action()
+	_request_selected_action()
 
 
 func _on_employee_selected(employee_id: StringName) -> void:
@@ -192,6 +195,27 @@ func _apply_selected_action() -> void:
 		_show_feedback("Сначала выберите сотрудника из бригады.", true)
 		return
 	tool_bar.show_for_object("Кран", _faucet_target_global(), {}, [], PackedStringArray(["animate"]))
+
+
+func _request_selected_action() -> void:
+	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
+	var contextual: String = simulation.get_employee_reaction(selected_employee_id, selected_tool_id)
+	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, selected_tool_id, simulation.world_object, &"", contextual)
+	if not reaction.is_empty():
+		pending_dialogue_action = selected_tool_id
+		repair_hud.show_employee_reaction(selected_employee_id, reaction)
+		return
+	action_had_intro = false
+	_begin_selected_action()
+
+
+func _on_pre_action_dialogue_finished() -> void:
+	if pending_dialogue_action.is_empty():
+		return
+	selected_tool_id = pending_dialogue_action
+	pending_dialogue_action = &""
+	action_had_intro = true
+	_begin_selected_action()
 
 
 func _begin_selected_action() -> void:
@@ -233,9 +257,7 @@ func _on_employee_action_finished() -> void:
 
 
 func _resolve_action(action_id: StringName) -> void:
-	var previous_resident_message: String = simulation.get_resident_reaction()
-	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
-	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object)
+	var previous_damage: int = int(simulation.world_object.get("damage", 0))
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
 	if bool(result.get("applied", false)) and action_id == &"physical_move":
 		_play_audio_cue(&"play_heavy_impact")
@@ -253,21 +275,29 @@ func _resolve_action(action_id: StringName) -> void:
 	_set_lava_audio(_is_lava_flowing())
 	_update_resident_reaction()
 	var resident_message: String = simulation.get_resident_reaction()
+	var caused_damage: bool = int(simulation.world_object.get("damage", 0)) > previous_damage
 	if action_id == &"diagnose":
 		repair_hud.show_dialogue("РЕЗУЛЬТАТ ОСМОТРА", str(result["message"]))
-	elif bool(result["applied"]):
-		_show_feedback(str(result["message"]), false)
-		if resident_message == previous_resident_message and not reaction.is_empty():
-			repair_hud.queue_employee_reaction(selected_employee_id, reaction)
-	elif not reaction.is_empty():
-		repair_hud.show_employee_reaction(selected_employee_id, reaction)
+	elif caused_damage and not resident_message.is_empty():
+		repair_hud.show_resident_dialogue(resident_message)
+	elif not bool(result["applied"]):
+		_show_failed_action(result)
+	elif not action_had_intro:
+		_show_feedback(str(result["message"]), bool(result.get("warning", false)))
 	else:
-		_show_feedback(str(result["message"]), true)
-	if resident_message != previous_resident_message:
-		repair_hud.queue_resident_dialogue(resident_message)
+		repair_hud.clear_all_dialogues()
+	action_had_intro = false
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	game_state.save_autosave()
+
+
+func _show_failed_action(result: Dictionary) -> void:
+	var message := str(result.get("message", ""))
+	if message.begins_with("Действие не изменило") or message.begins_with("Это действие не меняет"):
+		repair_hud.show_employee_reaction(selected_employee_id, EmployeeReactionResolverScript.no_effect_for(selected_employee_id))
+	else:
+		_show_feedback(message, true)
 
 
 func _set_lava_audio(enabled: bool) -> void:

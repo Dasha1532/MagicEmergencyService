@@ -1,0 +1,129 @@
+[gd_scene format=3 uid="uid://dpc4n4ih4j72p"]
+
+[ext_resource type="Texture2D" uid="uid://bb83cmcejdd7p" path="res://assets/ui/notice_of_dismissal.png" id="1_document"]
+[ext_resource type="Script" uid="uid://c3xqj7wmlh8yt" path="res://scripts/dismissal_document.gd" id="2_script"]
+
+[node name="DismissalDocument" type="Control" unique_id=248794919]
+editor_description = "Постановление об увольнении. Заголовок, вводный текст, причина и показатели — отдельные узлы: их можно выбирать и перемещать мышью в 2D-редакторе."
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_script")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1939161698]
+editor_description = "Переданный пользователем полноэкранный ассет постановления."
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("1_document")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Authority" type="Label" parent="." unique_id=1928887314]
+editor_description = "Название органа. Можно перемещать и менять размер рамки мышью."
+layout_mode = 0
+offset_left = 510.0
+offset_top = 184.0
+offset_right = 1090.0
+offset_bottom = 216.0
+theme_override_colors/font_color = Color(0.168627, 0.0941176, 0.0509804, 1)
+theme_override_colors/font_shadow_color = Color(1, 0.901961, 0.733333, 0.35)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 17
+text = "ГОРОДСКАЯ ИНСПЕКЦИЯ МАГИЧЕСКИХ СЛУЖБ"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+
+[node name="Title" type="Label" parent="." unique_id=113456220]
+editor_description = "Главный заголовок постановления."
+layout_mode = 0
+offset_left = 506.0
+offset_top = 230.0
+offset_right = 1096.0
+offset_bottom = 278.0
+theme_override_colors/font_color = Color(0.137255, 0.0627451, 0.0313725, 1)
+theme_override_colors/font_shadow_color = Color(1, 0.901961, 0.733333, 0.3)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 30
+text = "ПОСТАНОВЛЕНИЕ ОБ УВОЛЬНЕНИИ"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+
+[node name="Intro" type="Label" parent="." unique_id=850809211]
+editor_description = "Вводная часть постановления."
+layout_mode = 0
+offset_left = 531.0
+offset_top = 273.0
+offset_right = 1061.0
+offset_bottom = 411.0
+theme_override_colors/font_color = Color(0.2, 0.117647, 0.0705882, 1)
+theme_override_colors/font_shadow_color = Color(1, 0.901961, 0.733333, 0.25)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 19
+text = "По результатам внеочередной проверки действующий руководитель освобождён от должности. Управление Магической аварийной службой передано другому специалисту."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+clip_text = true
+
+[node name="Reason" type="Label" parent="." unique_id=942502174]
+editor_description = "Причина увольнения подставляется во время игры. Этот узел можно передвинуть после проверки."
+layout_mode = 0
+offset_left = 535.0
+offset_top = 458.0
+offset_right = 1065.0
+offset_bottom = 570.0
+theme_override_colors/font_color = Color(0.321569, 0.0666667, 0.0392157, 1)
+theme_override_colors/font_shadow_color = Color(1, 0.901961, 0.733333, 0.25)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 22
+text = "ОСНОВАНИЕ ДЛЯ УВОЛЬНЕНИЯ
+Пять подтверждённых претензий жителей к работе службы."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+clip_text = true
+
+[node name="Stats" type="Label" parent="." unique_id=541366365]
+editor_description = "Итоговые показатели подставляются во время игры."
+layout_mode = 0
+offset_left = 555.0
+offset_top = 588.0
+offset_right = 1045.0
+offset_bottom = 660.0
+theme_override_colors/font_color = Color(0.2, 0.117647, 0.0705882, 1)
+theme_override_colors/font_shadow_color = Color(1, 0.901961, 0.733333, 0.25)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 18
+text = "Подтверждённых претензий: 5 из 5
+Состояние казны: −800 монет"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+clip_text = true
+
+[node name="MenuButton" type="Button" parent="." unique_id=1464987114]
+editor_description = "Кнопка выхода расположена на столе и не закрывает подписи документа."
+layout_mode = 0
+offset_left = 1250.0
+offset_top = 802.0
+offset_right = 1545.0
+offset_bottom = 866.0
+theme_override_colors/font_color = Color(0.941176, 0.827451, 0.623529, 1)
+theme_override_colors/font_hover_color = Color(1, 0.921569, 0.741176, 1)
+theme_override_font_sizes/font_size = 17
+text = "В ГЛАВНОЕ МЕНЮ"

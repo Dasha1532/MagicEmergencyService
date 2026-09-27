@@ -43,6 +43,16 @@ static func reaction_for(employee: Dictionary, action_id: StringName, world_obje
 	return ""
 
 
+static func no_effect_for(employee_id: StringName) -> String:
+	return {
+		&"liliya": "Похоже, без изменений. Значит, одного температурного воздействия здесь недостаточно.",
+		&"grog": "Не поддалось. Давить сильнее без причины не буду.",
+		&"boris": "Без изменений. Значит, причина не в механике — или сначала требуется другое действие.",
+		&"nika": "Не сдвинулось ни на палец. Либо закреплено, либо очень упрямо.",
+		&"felix": "Воздействие результата не дало. Магический фон не изменился.",
+	}.get(employee_id, "Действие не изменило состояние объекта.")
+
+
 static func _matches_ids(configured_ids: Variant, actual_id: StringName) -> bool:
 	if configured_ids is PackedStringArray:
 		return (configured_ids as PackedStringArray).has(String(actual_id))

@@ -41,6 +41,9 @@ var selected_tool_id: StringName = &""
 var selected_employee_id: StringName = &""
 var pending_intent: StringName = &""
 var action_in_progress: bool = false
+var pending_dialogue_action: StringName = &""
+var pending_dialogue_intent: StringName = &""
+var action_had_intro: bool = false
 var entrance_position: Vector2
 var fire_progression_revision: int = 0
 
@@ -74,6 +77,7 @@ func _ready() -> void:
 	repair_hud.completion_requested.connect(_attempt_complete_job)
 	repair_hud.long_action_started.connect(_on_long_action_started)
 	repair_hud.long_action_finished.connect(_on_long_action_finished)
+	repair_hud.dialogue_finished.connect(_on_pre_action_dialogue_finished)
 	employee_actor.action_impact.connect(_on_employee_action_impact)
 	employee_actor.action_finished.connect(_on_employee_action_finished)
 	selected_tool_id = tool_bar.get_selected_tool_id()
@@ -222,7 +226,7 @@ func _on_tool_selected(tool_id: StringName) -> void:
 		return
 	tool_bar.visible = false
 	pending_intent = &""
-	_start_action()
+	_request_action()
 
 
 func _on_employee_selected(employee_id: StringName) -> void:
@@ -257,6 +261,30 @@ func _on_wardrobe_selected() -> void:
 
 func _on_context_intent_selected(intent: StringName) -> void:
 	pending_intent = &"release" if selected_tool_id == &"physical_move" and intent == &"hold" and bool(simulation.world_object.get("held", false)) else intent
+	_request_action()
+
+
+func _request_action() -> void:
+	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
+	var contextual: String = simulation.get_employee_reaction(selected_employee_id, selected_tool_id, pending_intent)
+	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, selected_tool_id, simulation.world_object, pending_intent, contextual)
+	if not reaction.is_empty():
+		pending_dialogue_action = selected_tool_id
+		pending_dialogue_intent = pending_intent
+		repair_hud.show_employee_reaction(selected_employee_id, reaction)
+		return
+	action_had_intro = false
+	_start_action()
+
+
+func _on_pre_action_dialogue_finished() -> void:
+	if pending_dialogue_action.is_empty():
+		return
+	selected_tool_id = pending_dialogue_action
+	pending_intent = pending_dialogue_intent
+	pending_dialogue_action = &""
+	pending_dialogue_intent = &""
+	action_had_intro = true
 	_start_action()
 
 
@@ -315,9 +343,7 @@ func _on_employee_action_finished() -> void:
 
 func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 	var was_burning: bool = bool(simulation.world_object["burning"])
-	var previous_resident_message: String = simulation.get_resident_reaction()
-	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
-	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, intent)
+	var previous_damage: int = int(simulation.world_object.get("damage", 0)) + int(simulation.world_object.get("contents_damage", 0))
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, intent)
 	if bool(result.get("applied", false)) and action_id == &"physical_move":
 		if intent in [&"move_left", &"move_kitchen"]:
@@ -327,18 +353,18 @@ func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 			_play_audio_cue(&"play_breaking_wood")
 	_apply_visual_state()
 	var resident_message: String = simulation.get_resident_reaction()
+	var damage_now: int = int(simulation.world_object.get("damage", 0)) + int(simulation.world_object.get("contents_damage", 0))
 	if action_id == &"diagnose":
 		repair_hud.show_dialogue("РЕЗУЛЬТАТ ОСМОТРА", str(result["message"]))
-	elif bool(result["applied"]):
-		_show_feedback(str(result["message"]), false)
-		if resident_message == previous_resident_message and not reaction.is_empty():
-			repair_hud.queue_employee_reaction(selected_employee_id, reaction)
-	elif not reaction.is_empty():
-		repair_hud.show_employee_reaction(selected_employee_id, reaction)
+	elif damage_now > previous_damage and not resident_message.is_empty():
+		repair_hud.show_resident_dialogue(resident_message)
+	elif not bool(result["applied"]):
+		_show_failed_action(result)
+	elif not action_had_intro:
+		_show_feedback(str(result["message"]), bool(result.get("warning", false)))
 	else:
-		_show_feedback(str(result["message"]), true)
-	if resident_message != previous_resident_message:
-		repair_hud.queue_resident_dialogue(resident_message)
+		repair_hud.clear_all_dialogues()
+	action_had_intro = false
 	repair_hud.set_completion_ready(bool(result["resolved"]))
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	var is_burning: bool = bool(simulation.world_object["burning"])
@@ -346,6 +372,14 @@ func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 		_start_fire_progression()
 	elif not is_burning and was_burning:
 		fire_progression_revision += 1
+
+
+func _show_failed_action(result: Dictionary) -> void:
+	var message := str(result.get("message", ""))
+	if message.begins_with("Это действие не изменило"):
+		repair_hud.show_employee_reaction(selected_employee_id, EmployeeReactionResolverScript.no_effect_for(selected_employee_id))
+	else:
+		_show_feedback(message, true)
 
 
 func _play_audio_cue(method: StringName) -> void:

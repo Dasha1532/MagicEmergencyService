@@ -113,6 +113,27 @@ func get_status_title() -> String:
 	return ResidentReactionResolverScript.title_for(world_object, "Шкаф ходит по квартире", "Шкаф")
 
 
+func get_employee_reaction(employee_id: StringName, action_id: StringName, intent: StringName = &"") -> String:
+	if employee_id == &"grog" and action_id == &"physical_move":
+		return {
+			&"hold": "Шкаф сильный. Но я сегодня завтракал.",
+			&"move_left": "К левой стене так к левой. Если снова уйдёт — принесу цепь.",
+			&"move_kitchen": "В проход так в проход. Только потом не спрашивайте, почему на кухню приходится ходить через шкаф.",
+		}.get(intent, "")
+	return {
+		&"boris": {
+			&"diagnose": "Следы магии, мебельный характер и ни одного гарантийного талона.",
+			&"anchor": "Прикручу к стене. После этого гулять сможет только вместе с домом.",
+		},
+		&"liliya": {
+			&"freeze": "Остановлю его ненадолго. Очень надеюсь, что шкаф не умеет дрожать от холода.",
+			&"heat": "Мебель обычно не прогревают до послушания. Но приказ я услышала.",
+		},
+		&"nika": {&"telekinesis": "Переставить шкаф без царапин — прекрасно. Осталось договориться со шкафом."},
+		&"felix": {&"antimagic": "Чары сниму. Дурной характер, если останется, оформим отдельно."},
+	}.get(employee_id, {}).get(action_id, "")
+
+
 func apply_action(employee_id: StringName, action_id: StringName, intent: StringName = &"") -> Dictionary:
 	var action_summary: String = "Это действие не изменило состояние шкафа."
 	var applied: bool = false

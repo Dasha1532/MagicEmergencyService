@@ -97,6 +97,27 @@ func get_status_title() -> String:
 	return ResidentReactionResolverScript.title_for(world_object, "Из крана течёт лава", "Кран")
 
 
+func get_employee_reaction(employee_id: StringName, action_id: StringName) -> String:
+	if employee_id == &"boris" and action_id == &"repair":
+		if _tags().has("lava_flowing"):
+			return "Я мастер-сантехник, не кузнец. Сначала уберите лаву — потом полезу с ключом."
+		if int(world_object.get("temperature", 0)) >= OVERHEAT_THRESHOLD:
+			return "Ключи у меня прочные, руки тоже. Но в раскалённый металл я ими не полезу."
+		return "Теперь можно работать по-сантехнически: уплотнения, соединения и никаких новых стихий."
+	return {
+		&"liliya": {
+			&"freeze": "Лаву остужу. Главное — не получить вместо аварийного крана памятник аварийному крану.",
+			&"heat": "Нагреть кран, из которого течёт лава? Уточняю: приказ точно записан без опечатки?",
+		},
+		&"boris": {
+			&"diagnose": "Сантехника обычная. Лава — дополнительная комплектация, которой в смете не было.",
+		},
+		&"nika": {
+			&"telekinesis": "Попробую сдвинуть кран. Если вместе со стеной — в отчёте это будет одна строка или две?",
+		},
+	}.get(employee_id, {}).get(action_id, "")
+
+
 func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
 	var applied: bool = false
 	var message: String = "Это действие не меняет состояние крана."

@@ -5,7 +5,7 @@ signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 13
+const SAVE_VERSION: int = 14
 const LEGACY_SAVE_PATH: String = "user://savegame.json"
 const AUTOSAVE_PATH: String = "user://autosave.json"
 const SAVE_SLOT_COUNT: int = 5
@@ -15,6 +15,8 @@ const REPUTATION_RELIABLE_THRESHOLD: int = 35
 const REPUTATION_LICENSE_RISK_THRESHOLD: int = 25
 const ELEVATED_CLAIM_RISK_THRESHOLD: int = 300
 const HIGH_CLAIM_RISK_THRESHOLD: int = 600
+const DISMISSAL_CLAIM_THRESHOLD: int = 5
+const DISMISSAL_DEBT_THRESHOLD: int = -800
 const REAL_SECONDS_PER_GAME_MINUTE: float = 3.0
 const DEMO_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle", "escaped_ghost", "frozen_bath"]
 const DEMO_CORE_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle"]
@@ -109,6 +111,9 @@ var completed_job_ids: PackedStringArray = PackedStringArray()
 var job_reports: Array = []
 var pending_job_report: Dictionary = {}
 var demo_completion_seen: bool = false
+var dismissal_triggered: bool = false
+var dismissal_reason: StringName = &""
+var dismissal_video_seen: bool = false
 var financial_ledger: Array = []
 var job_repair_states: Dictionary = {}
 var tutorial_state: Dictionary = {}
@@ -981,7 +986,62 @@ func get_demo_required_job_ids() -> PackedStringArray:
 
 
 func should_show_demo_completion() -> bool:
-	return is_demo_complete() and pending_job_report.is_empty() and not demo_completion_seen
+	return not dismissal_triggered and is_demo_complete() and pending_job_report.is_empty() and not demo_completion_seen
+
+
+func should_play_dismissal_video() -> bool:
+	return dismissal_triggered and not dismissal_video_seen and pending_job_report.is_empty()
+
+
+func should_show_dismissal_document() -> bool:
+	return dismissal_triggered and dismissal_video_seen and pending_job_report.is_empty()
+
+
+func mark_dismissal_video_seen() -> void:
+	if dismissal_video_seen:
+		return
+	dismissal_video_seen = true
+	state_changed.emit()
+	save_autosave()
+
+
+func get_confirmed_claim_count() -> int:
+	var count := 0
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		if int(report.get("claim_amount", 0)) > 0 and str(report.get("claim_status", "none")) in ["paid", "denied", "paid_after_denial"]:
+			count += 1
+	return count
+
+
+func get_dismissal_reason_text() -> String:
+	match dismissal_reason:
+		&"claims_and_debt":
+			return "Систематический ущерб имуществу жителей и критическая задолженность службы."
+		&"claims":
+			return "Пять подтверждённых претензий жителей к работе службы."
+		&"debt":
+			return "Критическая задолженность службы: %d монет." % absi(money)
+	return "Городская инспекция признала дальнейшее руководство службой невозможным."
+
+
+func _evaluate_dismissal() -> void:
+	if dismissal_triggered:
+		return
+	var too_many_claims := get_confirmed_claim_count() >= DISMISSAL_CLAIM_THRESHOLD
+	var critical_debt := money <= DISMISSAL_DEBT_THRESHOLD
+	if not too_many_claims and not critical_debt:
+		return
+	dismissal_triggered = true
+	dismissal_video_seen = false
+	if too_many_claims and critical_debt:
+		dismissal_reason = &"claims_and_debt"
+	elif too_many_claims:
+		dismissal_reason = &"claims"
+	else:
+		dismissal_reason = &"debt"
 
 
 func mark_demo_completion_seen() -> void:
@@ -1098,6 +1158,7 @@ func resolve_pending_claim(pay_compensation: bool) -> bool:
 		claim_amount
 	)
 	_sync_pending_report_to_history()
+	_evaluate_dismissal()
 	state_changed.emit()
 	save_autosave()
 	return true
@@ -1138,6 +1199,7 @@ func pay_denied_claim(job_id: String, completed_day: int, completed_time: int) -
 			claim_amount
 		)
 		job_reports[index] = report
+		_evaluate_dismissal()
 		_record_financial_event(&"compensation", -claim_amount, str(report.get("title", "Компенсация жильцу")), {
 			"job_id": job_id, "resident": str(report.get("resident", "")), "late_payment": true,
 		})
@@ -1334,6 +1396,9 @@ func start_new_game() -> void:
 	job_reports = []
 	pending_job_report = {}
 	demo_completion_seen = false
+	dismissal_triggered = false
+	dismissal_reason = &""
+	dismissal_video_seen = false
 	financial_ledger = [_financial_event(&"opening_balance", money, "Начальные средства службы")]
 	job_repair_states = {}
 	tutorial_state = {"version": 1, "status": "active", "step": "office_welcome"}
@@ -1452,6 +1517,9 @@ func _save_to_path(path: String) -> Error:
 		"job_reports": job_reports,
 		"pending_job_report": pending_job_report,
 		"demo_completion_seen": demo_completion_seen,
+		"dismissal_triggered": dismissal_triggered,
+		"dismissal_reason": String(dismissal_reason),
+		"dismissal_video_seen": dismissal_video_seen,
 		"financial_ledger": financial_ledger,
 		"job_repair_states": job_repair_states,
 		"tutorial_state": tutorial_state,
@@ -1524,6 +1592,9 @@ func _load_from_path(path: String) -> Error:
 	money = int(save_data.get("money", money))
 	reputation = int(save_data.get("reputation", reputation))
 	demo_completion_seen = bool(save_data.get("demo_completion_seen", false))
+	dismissal_triggered = bool(save_data.get("dismissal_triggered", false))
+	dismissal_reason = StringName(str(save_data.get("dismissal_reason", "")))
+	dismissal_video_seen = bool(save_data.get("dismissal_video_seen", false))
 	clock_paused = bool(save_data.get("clock_paused", true))
 	clock_speed = int(save_data.get("clock_speed", 1))
 	_clock_accumulator = 0.0
@@ -1700,6 +1771,7 @@ func _load_from_path(path: String) -> Error:
 
 	_complete_finished_training()
 	_update_employee_statuses()
+	_evaluate_dismissal()
 	state_changed.emit()
 	return OK
 

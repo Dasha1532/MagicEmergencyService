@@ -1,6 +1,7 @@
 extends Node2D
 
 const PortalMirrorSimulationScript := preload("res://scripts/portal_mirror_simulation.gd")
+const EmployeeReactionResolverScript := preload("res://scripts/employee_reaction_resolver.gd")
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
 const COLOR_GOLD := Color(0.96, 0.68, 0.28)
 
@@ -20,6 +21,8 @@ const COLOR_GOLD := Color(0.96, 0.68, 0.28)
 var simulation: PortalMirrorSimulation
 var selected_employee_id: StringName = &""
 var action_in_progress: bool = false
+var pending_dialogue_action: StringName = &""
+var action_had_intro: bool = false
 
 
 func _ready() -> void:
@@ -38,6 +41,7 @@ func _ready() -> void:
 	repair_hud.completion_requested.connect(_attempt_complete_job)
 	repair_hud.long_action_started.connect(_on_long_action_started)
 	repair_hud.long_action_finished.connect(_on_long_action_finished)
+	repair_hud.dialogue_finished.connect(_on_pre_action_dialogue_finished)
 	portal_mirror.selected.connect(_on_mirror_selected)
 	tool_bar.tool_selected.connect(_on_tool_selected)
 	employee_actor.action_impact.connect(_on_action_impact)
@@ -148,6 +152,27 @@ func _on_tool_selected(action_id: StringName) -> void:
 	if not game_state.can_employee_work_on_job(selected_employee_id, game_state.active_job_id):
 		repair_hud.show_system_message("Сотрудник ещё едет на объект. %s." % game_state.employees[selected_employee_id]["status"], true)
 		return
+	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
+	var contextual: String = simulation.get_employee_reaction(selected_employee_id, action_id)
+	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, &"", contextual)
+	if not reaction.is_empty():
+		pending_dialogue_action = action_id
+		repair_hud.show_employee_reaction(selected_employee_id, reaction)
+		return
+	action_had_intro = false
+	_begin_action(action_id)
+
+
+func _on_pre_action_dialogue_finished() -> void:
+	if pending_dialogue_action.is_empty():
+		return
+	var action_id := pending_dialogue_action
+	pending_dialogue_action = &""
+	action_had_intro = true
+	_begin_action(action_id)
+
+
+func _begin_action(action_id: StringName) -> void:
 	action_in_progress = true
 	portal_mirror.set_interaction_enabled(false)
 	tool_bar.visible = false
@@ -165,6 +190,7 @@ func _on_action_impact(action_id: StringName) -> void:
 
 func _resolve_timed_action(action_id: StringName) -> void:
 	var portal_was_open := bool(simulation.world_object.get("portal_open", true))
+	var previous_damage := int(simulation.world_object.get("damage", 0))
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
 	if bool(result.get("applied", false)):
 		if action_id == &"physical_move":
@@ -174,10 +200,26 @@ func _resolve_timed_action(action_id: StringName) -> void:
 			_play_audio_cue(&"play_portal_close")
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	_apply_visual_state()
-	repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
 	var resident_reaction: String = simulation.get_resident_reaction(action_id)
-	if not resident_reaction.is_empty():
-		repair_hud.queue_resident_dialogue(resident_reaction)
+	if action_id == &"diagnose":
+		repair_hud.show_dialogue("РЕЗУЛЬТАТ ОСМОТРА", str(result["message"]))
+	elif int(simulation.world_object.get("damage", 0)) > previous_damage and not resident_reaction.is_empty():
+		repair_hud.show_resident_dialogue(resident_reaction)
+	elif not bool(result.get("applied", false)):
+		_show_failed_action(result)
+	elif not action_had_intro or action_id == &"freeze":
+		repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
+	else:
+		repair_hud.clear_all_dialogues()
+	action_had_intro = false
+
+
+func _show_failed_action(result: Dictionary) -> void:
+	var message := str(result.get("message", ""))
+	if message.begins_with("Действие не изменило"):
+		repair_hud.show_employee_reaction(selected_employee_id, EmployeeReactionResolverScript.no_effect_for(selected_employee_id))
+	else:
+		repair_hud.show_system_message(message, true)
 
 
 func _play_audio_cue(method: StringName) -> void:

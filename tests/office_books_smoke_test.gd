@@ -12,7 +12,7 @@ func _initialize() -> void:
 func _run() -> void:
 	var game_state := root.get_node("GameState")
 	game_state.start_new_game()
-	_check(game_state.SAVE_VERSION == 12, "Используется формат сохранения 12")
+	_check(game_state.SAVE_VERSION == 14, "Используется формат сохранения 14")
 	_check(game_state.financial_ledger.size() == 1, "Новая игра начинает единый денежный журнал")
 
 	var books_scene := load("res://scenes/ui/OfficeBooks.tscn") as PackedScene
