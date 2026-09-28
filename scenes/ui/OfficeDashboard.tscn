@@ -6,8 +6,12 @@
 [ext_resource type="Texture2D" uid="uid://d3w6xggshn2k6" path="res://assets/ui/personnel_department_background_neutral.png" id="4_personnel"]
 [ext_resource type="Script" uid="uid://bqh1uyugttds0" path="res://scripts/editor_layout_switch.gd" id="5_layout_switch"]
 [ext_resource type="Texture2D" uid="uid://mpvnyk5n57xb" path="res://assets/ui/demo_completion_book.png" id="6_demo_book"]
+[ext_resource type="Texture2D" uid="uid://dipieulv2dfax" path="res://assets/characters/office_cat/sleeping.png" id="7_cat_sleeping"]
 [ext_resource type="Texture2D" uid="uid://cuqp2660o5mdi" path="res://assets/ui/demo_completion_felix.png" id="7_demo_felix"]
 [ext_resource type="Script" uid="uid://ckwkqs4um01xl" path="res://scripts/steam_effect.gd" id="8_steam"]
+[ext_resource type="Texture2D" uid="uid://bdy6wm8q6iwt4" path="res://assets/characters/office_cat/alert.png" id="9_cat_alert"]
+[ext_resource type="Texture2D" uid="uid://bcwp50esd7l7s" path="res://assets/characters/office_cat/warning.png" id="10_cat_warning"]
+[ext_resource type="Texture2D" uid="uid://21vuv8twb6ey" path="res://assets/characters/office_cat/offended.png" id="11_cat_offended"]
 
 [node name="OfficeDashboard" type="Control" unique_id=1064504089]
 layout_mode = 3
@@ -155,6 +159,75 @@ mouse_filter = 2
 texture = ExtResource("2_background")
 expand_mode = 1
 stretch_mode = 6
+
+[node name="OfficeCat" type="Control" parent="." unique_id=1299036019]
+editor_description = "Контейнер офисного кота. Внутри находятся четыре независимо настраиваемых состояния и общая область клика."
+z_index = 7
+anchors_preset = 0
+offset_left = 472.0
+offset_top = 616.0
+offset_right = 677.0
+offset_bottom = 745.0
+mouse_filter = 2
+
+[node name="Sleeping" type="TextureRect" parent="OfficeCat" unique_id=5217069]
+editor_description = "Состояние 1: кот спит. Положение и размер можно менять независимо от остальных состояний."
+layout_mode = 0
+offset_right = 205.0
+offset_bottom = 129.0
+mouse_filter = 2
+texture = ExtResource("7_cat_sleeping")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Alert" type="TextureRect" parent="OfficeCat" unique_id=1254892725]
+editor_description = "Состояние 2: кот насторожился. Временно включите глазик, чтобы настроить его относительно других поз."
+visible = false
+layout_mode = 0
+offset_left = 3.0
+offset_top = 2.0
+offset_right = 202.0
+offset_bottom = 126.0
+mouse_filter = 2
+texture = ExtResource("9_cat_alert")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Warning" type="TextureRect" parent="OfficeCat" unique_id=50679351]
+editor_description = "Состояние 3: кот поднял лапу. Положение и размер настраиваются отдельно."
+visible = false
+layout_mode = 0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 201.0
+offset_bottom = 121.0
+mouse_filter = 2
+texture = ExtResource("10_cat_warning")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Offended" type="TextureRect" parent="OfficeCat" unique_id=421777729]
+editor_description = "Состояние 4: кот отвернулся. Положение и размер настраиваются отдельно."
+layout_mode = 0
+offset_left = 19.0
+offset_top = 4.0
+offset_right = 188.0
+offset_bottom = 121.0
+mouse_filter = 2
+texture = ExtResource("11_cat_offended")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="InteractionButton" type="Button" parent="OfficeCat" unique_id=878377445]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+flat = true
 
 [node name="PersonnelEditorPreview" type="Control" parent="." unique_id=482139442]
 visible = false

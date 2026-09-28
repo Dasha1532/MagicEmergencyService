@@ -10,7 +10,6 @@ extends Node
 		if Engine.is_editor_hint() and is_inside_tree():
 			call_deferred("_apply_editor_mode")
 
-
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		call_deferred("_apply_editor_mode")
@@ -29,6 +28,7 @@ func _apply_editor_mode() -> void:
 	_set_visible(scene_root, "ObjectHotspots", office_mode)
 	_set_visible(scene_root, "BookHotspots", office_mode)
 	_set_visible(scene_root, "CupSteam", office_mode)
+	_set_visible(scene_root, "OfficeCat", office_mode)
 	_set_visible(scene_root, "PersonnelEditorPreview", personnel_mode)
 	_set_visible(scene_root, "DemoCompletionLayer", demo_mode)
 

@@ -3,6 +3,8 @@ extends Node
 const MAIN_MENU_CLICK := preload("res://assets/audio/703884__lilmati__diamond-click-luxury-ui-click.wav")
 const BUTTON_CLICK := preload("res://assets/audio/677861__el_boss__ui-button-click.wav")
 const CAT_PURR := preload("res://assets/audio/cat-purr.wav")
+const CAT_MEOW_PATH := "res://assets/audio/cat-meow.wav"
+const CAT_ANGRY_MEOW_PATH := "res://assets/audio/cat-angry-meow.wav"
 const SPELL_SHOOT := preload("res://assets/audio/500909__bertsz__spell-shoot-2.wav")
 const BORIS_REPAIR := preload("res://assets/audio/724416__paulprit__cleat-knotting-on-boat.wav")
 const TASK_COMPLETE := preload("res://assets/audio/task_complete.wav")
@@ -36,6 +38,8 @@ const MUSIC_VOLUME_DB := -6.0206 # 50% линейной громкости.
 var main_menu_player: AudioStreamPlayer
 var button_player: AudioStreamPlayer
 var cat_player: AudioStreamPlayer
+var cat_meow_player: AudioStreamPlayer
+var cat_angry_meow_player: AudioStreamPlayer
 var spell_player: AudioStreamPlayer
 var boris_repair_player: AudioStreamPlayer
 var task_complete_player: AudioStreamPlayer
@@ -69,6 +73,8 @@ func _ready() -> void:
 	main_menu_player = _create_player(MAIN_MENU_CLICK)
 	button_player = _create_player(BUTTON_CLICK)
 	cat_player = _create_player(CAT_PURR, linear_to_db(0.3))
+	cat_meow_player = _create_player(load(CAT_MEOW_PATH) as AudioStream)
+	cat_angry_meow_player = _create_player(load(CAT_ANGRY_MEOW_PATH) as AudioStream)
 	spell_player = _create_player(SPELL_SHOOT)
 	boris_repair_player = _create_player(BORIS_REPAIR)
 	task_complete_player = _create_player(TASK_COMPLETE, linear_to_db(0.7))
@@ -116,6 +122,18 @@ func play_boris_repair() -> void:
 
 func play_task_complete() -> void:
 	task_complete_player.play()
+
+
+func play_cat_purr() -> void:
+	cat_player.play()
+
+
+func play_cat_meow() -> void:
+	cat_meow_player.play()
+
+
+func play_cat_angry_meow() -> void:
+	cat_angry_meow_player.play()
 
 
 func play_main_menu_music() -> void:
@@ -317,7 +335,7 @@ func _connect_button(button: Button) -> void:
 
 func _play_button_sound(button: Button, is_main_menu: bool) -> void:
 	if button.has_meta(CAT_SOUND_META):
-		cat_player.play()
+		# Кот сам выбирает мурчание или мяуканье после смены состояния.
 		return
 	if is_main_menu:
 		main_menu_player.play()

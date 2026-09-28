@@ -14,6 +14,8 @@ func _run() -> void:
 	var game_state := root.get_node("GameState")
 	var audio_manager := root.get_node("AudioManager")
 	_check(audio_manager.coin_player.stream != null, "Звук монет подключён")
+	_check(audio_manager.cat_meow_player.stream != null, "Обычное мяуканье кота подключено")
+	_check(audio_manager.cat_angry_meow_player.stream != null, "Сердитое мяуканье кота подключено")
 	audio_manager.set_wardrobe_steps_playing(true)
 	_check(audio_manager.wardrobe_steps_player.playing, "Шаги ходячего шкафа запускаются зацикленно")
 	audio_manager.set_wardrobe_steps_playing(false)
@@ -52,11 +54,24 @@ func _run() -> void:
 	_check(steam.position.x < 700.0 and steam.position.y < 500.0, "Пар привязан к области кружки, а не книги")
 	var office_menu := office.find_child("OfficeMenuButton", true, false) as TextureButton
 	_check(office_menu != null and office_menu.self_modulate.r < 0.75, "Главный рубильник приглушён относительно исходного ассета")
+	_check(office.cat_sprite.texture.resource_path.ends_with("sleeping.png"), "Поверх фонового кота показан новый спящий ассет")
 	office._on_cat_pressed()
 	_check(office.cat_phrase_panel.visible and not office.cat_phrase_label.text.is_empty(), "Невидимая зона кота показывает шуточную реплику")
-	for click_index in range(9):
+	for click_index in range(3):
+		office._on_cat_pressed()
+	_check(office.cat_sprite.texture.resource_path.ends_with("alert.png"), "На четвёртом нажатии кот поднимает мордочку")
+	for click_index in range(4):
+		office._on_cat_pressed()
+	_check(office.cat_sprite.texture.resource_path.ends_with("warning.png"), "На восьмом нажатии кот поднимает лапу")
+	for click_index in range(2):
 		office._on_cat_pressed()
 	_check("Инспектором кошачьего отдела" in office.cat_phrase_label.text, "Десятое нажатие выдаёт скрытое кошачье прозвище")
+	office._on_cat_pressed()
+	_check(office.cat_sprite.texture.resource_path.ends_with("offended.png"), "После последнего предупреждения кот отворачивается")
+	_check(office.cat_button.disabled, "После отворачивания дальнейшие клики по коту заблокированы")
+	var offended_click_count: int = office.cat_click_count
+	office._on_cat_pressed()
+	_check(office.cat_click_count == offended_click_count, "Заблокированный кот больше не меняет состояние")
 	office._open_equipment_storage()
 	await process_frame
 	_check(office.equipment_cards.get_child_count() == 1, "На складе изначально есть служебный ремонтный набор Бориса")

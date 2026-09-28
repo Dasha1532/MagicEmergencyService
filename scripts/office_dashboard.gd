@@ -99,6 +99,9 @@ var demo_video_transitioning: bool = false
 var final_video_mode: StringName = &""
 var cat_click_count: int = 0
 var cat_message_revision: int = 0
+var cat_button: Button
+var cat_sprite: TextureRect
+var cat_poses: Dictionary = {}
 var cat_phrase_panel: Panel
 var cat_phrase_label: Label
 var risk_dispatch_confirmed: bool = false
@@ -113,6 +116,7 @@ func _ready() -> void:
 	$CupSteam.visible = true
 	$HotspotEditorPreview.visible = false
 	$PersonnelEditorPreview.visible = false
+	$OfficeCat.visible = true
 	$ObjectHotspots.visible = true
 	$BookHotspots.visible = true
 	selected_job_id = game_state.selected_job_id
@@ -341,15 +345,20 @@ func _build_office_hub() -> void:
 
 
 func _build_cat_easter_egg() -> void:
-	var cat_button := Button.new()
-	cat_button.position = Vector2(480, 620)
-	cat_button.size = Vector2(185, 105)
-	cat_button.flat = true
-	cat_button.focus_mode = Control.FOCUS_NONE
-	cat_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var cat_container := $OfficeCat as Control
+	cat_button = $OfficeCat/InteractionButton
+	cat_poses = {
+		&"sleeping": $OfficeCat/Sleeping,
+		&"alert": $OfficeCat/Alert,
+		&"warning": $OfficeCat/Warning,
+		&"offended": $OfficeCat/Offended,
+	}
+	cat_container.reparent(hub_layer, false)
+	_set_cat_pose(&"sleeping")
+	# Звуки кота выбираются его текущим состоянием, поэтому общий звук кнопки
+	# должен пропустить этот клик.
 	cat_button.set_meta(&"cat_purr_sound", true)
 	cat_button.pressed.connect(_on_cat_pressed)
-	hub_layer.add_child(cat_button)
 
 	cat_phrase_panel = _panel(Vector2(340, 500), Vector2(560, 108), 12)
 	cat_phrase_panel.visible = false
@@ -368,7 +377,10 @@ func _build_cat_easter_egg() -> void:
 
 
 func _on_cat_pressed() -> void:
+	if cat_button != null and cat_button.disabled:
+		return
 	cat_click_count += 1
+	_update_cat_state()
 	cat_phrase_label.text = _cat_phrase_for_click(cat_click_count)
 	cat_phrase_panel.visible = true
 	cat_phrase_panel.move_to_front()
@@ -376,7 +388,41 @@ func _on_cat_pressed() -> void:
 	_hide_cat_phrase_later(cat_message_revision)
 
 
+func _update_cat_state() -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if cat_click_count <= 3:
+		_set_cat_pose(&"sleeping")
+		_play_cat_sound(audio_manager, &"play_cat_purr")
+	elif cat_click_count < 8:
+		_set_cat_pose(&"alert")
+		if cat_click_count == 4:
+			_play_cat_sound(audio_manager, &"play_cat_meow")
+	elif cat_click_count < 11:
+		_set_cat_pose(&"warning")
+		if cat_click_count == 8:
+			_play_cat_sound(audio_manager, &"play_cat_angry_meow")
+	else:
+		_set_cat_pose(&"offended")
+		cat_button.disabled = true
+		cat_button.mouse_default_cursor_shape = Control.CURSOR_ARROW
+		cat_button.tooltip_text = "Кот демонстративно вас игнорирует."
+
+
+func _set_cat_pose(state: StringName) -> void:
+	for pose_state: StringName in cat_poses:
+		var pose := cat_poses[pose_state] as TextureRect
+		pose.visible = pose_state == state
+	cat_sprite = cat_poses[state] as TextureRect
+
+
+func _play_cat_sound(audio_manager: Node, method: StringName) -> void:
+	if audio_manager != null and audio_manager.has_method(method):
+		audio_manager.call(method)
+
+
 func _cat_phrase_for_click(click_number: int) -> String:
+	if click_number >= 11:
+		return "Кот отвернулся и демонстративно вас игнорирует."
 	if click_number == 10:
 		return "Поздравляю. Вы назначены Инспектором кошачьего отдела. Должность неоплачиваемая."
 	var contextual := _cat_contextual_phrases()
