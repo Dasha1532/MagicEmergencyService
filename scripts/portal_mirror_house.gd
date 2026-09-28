@@ -23,6 +23,10 @@ var selected_employee_id: StringName = &""
 var action_in_progress: bool = false
 var pending_dialogue_action: StringName = &""
 var action_had_intro: bool = false
+var freeze_resident_reaction_shown: bool = false
+var pending_physical_action: StringName = &""
+var physical_timer_finished: bool = false
+var physical_impact_reached: bool = false
 
 
 func _ready() -> void:
@@ -131,7 +135,10 @@ func _on_mirror_selected() -> void:
 	var employee: Dictionary = game_state.employees[selected_employee_id]
 	var contextual_actions: Array[Dictionary] = []
 	if selected_employee_id == &"boris":
-		contextual_actions.append({"id": &"cover", "label": "Закрыть защитным полотном"})
+		if bool(simulation.world_object.get("covered", false)):
+			contextual_actions.append({"id": &"uncover", "label": "Снять защитное полотно"})
+		else:
+			contextual_actions.append({"id": &"cover", "label": "Закрыть защитным полотном"})
 	tool_bar.configure_for_employee(str(employee["name"]), employee["abilities"], str(employee["core_actions"]))
 	tool_bar.show_for_object("Зеркало", portal_mirror.target_global_position(), {
 		&"diagnose": "Осмотреть",
@@ -154,10 +161,26 @@ func _on_tool_selected(action_id: StringName) -> void:
 		return
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var contextual: String = simulation.get_employee_reaction(selected_employee_id, action_id)
+	if selected_employee_id == &"boris" and action_id == &"cover" and not game_state.has_supply_item(&"protective_cloth"):
+		pending_dialogue_action = &""
+		tool_bar.visible = false
+		repair_hud.show_employee_reaction(selected_employee_id, "Могу закрыть зеркало защитным полотном, но у нас его нет. Полотно можно купить в лавке снабжения.")
+		return
+	if selected_employee_id == &"felix" and action_id == &"antimagic" and not bool(simulation.world_object["portal_open"]):
+		pending_dialogue_action = &""
+		tool_bar.visible = false
+		if not repair_hud.show_employee_reaction(selected_employee_id, contextual):
+			repair_hud.show_system_message(contextual, true)
+			return
+	if selected_employee_id == &"felix" and action_id == &"antimagic" and bool(simulation.world_object.get("covered", false)):
+		pending_dialogue_action = &""
+		tool_bar.visible = false
+		if not repair_hud.show_employee_reaction(selected_employee_id, contextual):
+			repair_hud.show_system_message(contextual, true)
+		return
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, &"", contextual)
-	if not reaction.is_empty():
+	if not reaction.is_empty() and repair_hud.show_employee_reaction(selected_employee_id, reaction):
 		pending_dialogue_action = action_id
-		repair_hud.show_employee_reaction(selected_employee_id, reaction)
 		return
 	action_had_intro = false
 	_begin_action(action_id)
@@ -173,25 +196,62 @@ func _on_pre_action_dialogue_finished() -> void:
 
 
 func _begin_action(action_id: StringName) -> void:
+	# Повторно проверяем состояние после реплики: сохранённый или запоздавший
+	# сигнал диалога не должен запускать уже недопустимое заклинание.
+	if action_id == &"antimagic" and (not bool(simulation.world_object.get("portal_open", true)) or bool(simulation.world_object.get("covered", false))):
+		pending_dialogue_action = &""
+		action_had_intro = false
+		return
 	action_in_progress = true
 	portal_mirror.set_interaction_enabled(false)
 	tool_bar.visible = false
 	var is_physical: bool = game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical"
 	var approach := physical_approach.position if is_physical else Vector2.INF
 	if is_physical:
-		repair_hud.start_timed_action(selected_employee_id, action_id, _resolve_timed_action.bind(action_id))
+		pending_physical_action = action_id
+		# Один удар по зеркалу выполняется сразу в момент попадания анимации
+		# и не расходует две игровые минуты на условную долгую работу.
+		physical_timer_finished = _is_instant_physical_action(action_id)
+		physical_impact_reached = false
+		if not physical_timer_finished:
+			repair_hud.start_timed_action(selected_employee_id, action_id, _on_physical_timer_finished.bind(action_id))
 	employee_actor.play_action(action_id, portal_mirror.target_global_position(), approach)
+
+
+func _is_instant_physical_action(action_id: StringName) -> bool:
+	return action_id == &"physical_move"
 
 
 func _on_action_impact(action_id: StringName) -> void:
 	if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"magic":
 		_resolve_timed_action(action_id)
+	else:
+		physical_impact_reached = true
+		_try_resolve_physical_action(action_id)
+
+
+func _on_physical_timer_finished(action_id: StringName) -> void:
+	physical_timer_finished = true
+	_try_resolve_physical_action(action_id)
+
+
+func _try_resolve_physical_action(action_id: StringName) -> void:
+	if action_id != pending_physical_action or not physical_timer_finished or not physical_impact_reached:
+		return
+	pending_physical_action = &""
+	physical_timer_finished = false
+	physical_impact_reached = false
+	_resolve_timed_action(action_id)
 
 
 func _resolve_timed_action(action_id: StringName) -> void:
 	var portal_was_open := bool(simulation.world_object.get("portal_open", true))
 	var previous_damage := int(simulation.world_object.get("damage", 0))
-	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
+	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, game_state.has_supply_item(&"protective_cloth"))
+	if bool(result.get("applied", false)) and action_id == &"cover":
+		game_state.consume_supply_item(&"protective_cloth")
+	elif bool(result.get("applied", false)) and action_id == &"uncover":
+		game_state.return_supply_item(&"protective_cloth")
 	if bool(result.get("applied", false)):
 		if action_id == &"physical_move":
 			_play_audio_cue(&"play_heavy_impact")
@@ -199,19 +259,48 @@ func _resolve_timed_action(action_id: StringName) -> void:
 		elif action_id == &"antimagic" and portal_was_open and not bool(simulation.world_object.get("portal_open", true)):
 			_play_audio_cue(&"play_portal_close")
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+	if action_id in [&"cover", &"uncover"] and bool(result.get("applied", false)):
+		game_state.save_autosave()
 	_apply_visual_state()
 	var resident_reaction: String = simulation.get_resident_reaction(action_id)
+	var current_damage := int(simulation.world_object.get("damage", 0))
 	if action_id == &"diagnose":
 		repair_hud.show_dialogue("РЕЗУЛЬТАТ ОСМОТРА", str(result["message"]))
-	elif int(simulation.world_object.get("damage", 0)) > previous_damage and not resident_reaction.is_empty():
+	elif _should_show_resident_damage_reaction(action_id, result, previous_damage, current_damage, resident_reaction):
 		repair_hud.show_resident_dialogue(resident_reaction)
+	elif action_id == &"heat":
+		# Хозяйка реагирует на два реальных перехода: исчезновение холода и
+		# первое повреждение рамы. Повторный огонь состояние уже не меняет.
+		if bool(result.get("applied", false)) and previous_damage == 0 and current_damage <= 1 and not resident_reaction.is_empty():
+			repair_hud.show_resident_dialogue(resident_reaction)
+		else:
+			repair_hud.clear_all_dialogues()
 	elif not bool(result.get("applied", false)):
 		_show_failed_action(result)
-	elif not action_had_intro or action_id == &"freeze":
+	elif action_id == &"freeze":
+		if not freeze_resident_reaction_shown and not resident_reaction.is_empty():
+			freeze_resident_reaction_shown = true
+			repair_hud.show_resident_dialogue(resident_reaction)
+		else:
+			repair_hud.clear_all_dialogues()
+	elif action_id == &"cover" and bool(result.get("applied", false)) and not resident_reaction.is_empty():
+		repair_hud.show_resident_dialogue(resident_reaction)
+	elif action_id == &"antimagic" and bool(result.get("applied", false)) and not resident_reaction.is_empty():
+		repair_hud.show_resident_dialogue(resident_reaction)
+	elif not action_had_intro:
 		repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
 	else:
 		repair_hud.clear_all_dialogues()
 	action_had_intro = false
+
+
+func _should_show_resident_damage_reaction(action_id: StringName, result: Dictionary, previous_damage: int, current_damage: int, resident_reaction: String) -> bool:
+	return (
+		action_id == &"physical_move"
+		and bool(result.get("applied", false))
+		and current_damage > previous_damage
+		and not resident_reaction.is_empty()
+	)
 
 
 func _show_failed_action(result: Dictionary) -> void:
@@ -234,7 +323,12 @@ func _resume_pending_action() -> void:
 		return
 	selected_employee_id = StringName(str(pending.get("employee_id", "")))
 	_configure_employee_actor()
-	repair_hud.resume_timed_action(_resolve_timed_action.bind(StringName(str(pending.get("action_id", "")))))
+	var action_id := StringName(str(pending.get("action_id", "")))
+	pending_physical_action = action_id
+	physical_timer_finished = false
+	# После загрузки уже начатого действия не повторяем путь сотрудника с начала.
+	physical_impact_reached = true
+	repair_hud.resume_timed_action(_on_physical_timer_finished.bind(action_id))
 
 
 func _on_action_finished() -> void:

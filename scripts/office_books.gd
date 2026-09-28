@@ -23,6 +23,8 @@ const COLOR_MUTED := Color(0.70, 0.63, 0.52)
 
 var current_section: StringName = &"accounting"
 var selected_claim_key: Dictionary = {}
+var selected_detail_kind: StringName = &""
+var selected_detail_data: Dictionary = {}
 
 
 func _ready() -> void:
@@ -39,6 +41,8 @@ func _ready() -> void:
 
 func open_section(section: StringName) -> void:
 	current_section = section if section in [&"accounting", &"reviews", &"archive"] else &"accounting"
+	selected_detail_kind = &""
+	selected_detail_data = {}
 	refresh()
 
 
@@ -56,6 +60,34 @@ func refresh() -> void:
 			_build_archive()
 		_:
 			_build_accounting()
+	_restore_selected_detail()
+
+
+func _restore_selected_detail() -> void:
+	if selected_detail_kind == current_section and not selected_detail_data.is_empty():
+		match selected_detail_kind:
+			&"accounting":
+				_render_financial_event(selected_detail_data)
+			&"reviews", &"archive":
+				var report := _find_current_report(selected_detail_data)
+				if not report.is_empty():
+					if selected_detail_kind == &"reviews":
+						_render_review(report)
+					else:
+						_render_archive_report(report)
+
+
+func _report_key(report: Dictionary) -> Dictionary:
+	return {"job_id": str(report.get("job_id", "")), "completed_day": int(report.get("completed_day", 0)), "completed_time": int(report.get("completed_time", -1))}
+
+
+func _find_current_report(key: Dictionary) -> Dictionary:
+	for report_value: Variant in game_state.job_reports:
+		if report_value is Dictionary:
+			var report: Dictionary = report_value
+			if _report_key(report) == key:
+				return report
+	return {}
 
 
 func _build_accounting() -> void:
@@ -117,6 +149,12 @@ func _build_archive() -> void:
 
 
 func _show_financial_event(event: Dictionary) -> void:
+	selected_detail_kind = &"accounting"
+	selected_detail_data = event.duplicate(true)
+	_render_financial_event(event)
+
+
+func _render_financial_event(event: Dictionary) -> void:
 	var kind := str(event.get("kind", ""))
 	var kind_text: String = {
 		"opening_balance": "Начальный баланс", "job": "Завершённая заявка",
@@ -128,11 +166,31 @@ func _show_financial_event(event: Dictionary) -> void:
 	detail_body.text = "%s\n%s\n\nИзменение средств: %s%d монет" % [kind_text, _event_date(event), "+" if amount >= 0 else "", amount]
 	if kind == "job":
 		detail_body.text += "\nПолучено: %d монет" % int(event.get("income", 0))
+		var claim_status := str(event.get("claim_status", "none"))
+		for report_value: Variant in game_state.job_reports:
+			if report_value is Dictionary:
+				var report: Dictionary = report_value
+				if str(report.get("job_id", "")) == str(event.get("job_id", "")) and int(report.get("completed_day", -1)) == int(event.get("completed_day", -2)) and int(report.get("completed_time", -1)) == int(event.get("completed_time", -2)):
+					claim_status = str(report.get("claim_status", claim_status))
+					break
+		var claim_amount := int(event.get("claim_amount", 0))
+		if claim_status == "pending" and claim_amount > 0:
+			detail_body.text += "\nПредъявлена претензия: %d монет (решение не принято)" % claim_amount
+		elif claim_status == "denied" and claim_amount > 0:
+			detail_body.text += "\nПретензия на %d монет отклонена; списания не было" % claim_amount
+		elif claim_status in ["paid", "paid_after_denial"] and claim_amount > 0:
+			detail_body.text += "\nКомпенсация проведена отдельной операцией: %d монет" % claim_amount
 	if bool(event.get("legacy", false)):
 		detail_body.text += "\n\nЗапись восстановлена из сохранения предыдущей версии."
 
 
 func _show_review(report: Dictionary) -> void:
+	selected_detail_kind = &"reviews"
+	selected_detail_data = _report_key(report)
+	_render_review(report)
+
+
+func _render_review(report: Dictionary) -> void:
 	var reputation_change := int(report.get("reputation_change", 0))
 	detail_title.text = "%s — %s" % [report.get("resident", "Жилец"), _stars(_report_rating(report))]
 	detail_body.text = "%s\n%s\n\n%s\n\nИзменение репутации: %s%d" % [
@@ -159,14 +217,23 @@ func _review_text(report: Dictionary) -> String:
 
 
 func _show_archive_report(report: Dictionary) -> void:
+	selected_detail_kind = &"archive"
+	selected_detail_data = _report_key(report)
+	_render_archive_report(report)
+
+
+func _render_archive_report(report: Dictionary) -> void:
 	detail_title.text = str(report.get("title", "Завершённая заявка"))
 	var crew: Array = report.get("crew", [])
-	var text := "%s\nЖилец: %s\nБригада: %s\n\nИтог: %s\n\nОплата: %d монет\nКомпенсация: %d монет" % [
+	var text := "%s\nЖилец: %s\nБригада: %s\n\nИтог: %s\n\nОплата: %d монет" % [
 		_report_date(report), report.get("resident", "не указан"), ", ".join(PackedStringArray(crew)) if not crew.is_empty() else "не указана",
-		report.get("summary", "Работы завершены."), int(report.get("reward", 0)), int(report.get("compensation", 0)),
+		report.get("summary", "Работы завершены."), int(report.get("reward", 0)),
 	]
 	var claim_status := str(report.get("claim_status", "none"))
-	if claim_status == "denied":
+	if claim_status == "pending":
+		text += "\nПретензия: %d монет\nКомпенсация: решение не принято" % int(report.get("claim_amount", 0))
+	elif claim_status == "denied":
+		text += "\nПретензия: %d монет\nКомпенсация: отказано" % int(report.get("claim_amount", 0))
 		text += "\nРешение по претензии: отказано"
 		selected_claim_key = {
 			"job_id": str(report.get("job_id", "")),
@@ -176,9 +243,13 @@ func _show_archive_report(report: Dictionary) -> void:
 		pay_claim_button.text = "ВЫПЛАТИТЬ %d МОНЕТ" % int(report.get("claim_amount", 0))
 		pay_claim_button.visible = int(report.get("claim_amount", 0)) > 0
 	elif claim_status == "paid":
+		text += "\nКомпенсация: %d монет" % int(report.get("compensation", 0))
 		text += "\nРешение по претензии: выплачено"
 	elif claim_status == "paid_after_denial":
+		text += "\nКомпенсация: %d монет" % int(report.get("compensation", 0))
 		text += "\nРешение по претензии: выплачено после первоначального отказа"
+	else:
+		text += "\nКомпенсация: не требуется"
 	text += "\n\nПОСЛЕДСТВИЯ"
 	for consequence: String in _report_consequences(report):
 		text += "\n— %s" % consequence

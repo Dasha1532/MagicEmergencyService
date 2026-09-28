@@ -15,6 +15,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="13_pause"]
 [ext_resource type="Texture2D" uid="uid://bc1sfhuolryuh" path="res://assets/objects/portal_mirror/covered.png" id="14_mirror_covered"]
 [ext_resource type="Texture2D" uid="uid://chrmgeu0c11dy" path="res://assets/effects/status/frost.png" id="15_frost"]
+[ext_resource type="Texture2D" uid="uid://dlqhfn28mtd6n" path="res://assets/objects/portal_mirror/closed_heat_damaged.png" id="16_mirror_closed_heat"]
+[ext_resource type="Texture2D" uid="uid://c1v5emvj8tt5k" path="res://assets/objects/portal_mirror/covered_heat_damaged.png" id="17_mirror_covered_heat"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_marker"]
 bg_color = Color(0.2, 0.08, 0.28, 0.12)
@@ -31,6 +33,10 @@ corner_radius_bottom_left = 8
 [sub_resource type="AtlasTexture" id="AtlasTexture_mirror_open"]
 atlas = ExtResource("8_mirror_open")
 region = Rect2(650, 0, 700, 941)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mirror_closed_heat"]
+atlas = ExtResource("16_mirror_closed_heat")
+region = Rect2(440, 14, 581, 1182)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mirror_heat"]
 atlas = ExtResource("11_mirror_heat")
@@ -184,16 +190,32 @@ texture = ExtResource("9_mirror_closed")
 expand_mode = 1
 stretch_mode = 5
 
+[node name="ClosedHeatDamaged" type="TextureRect" parent="PortalMirror" unique_id=907420381]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -69.0
+offset_top = 17.0
+offset_right = -127.0
+offset_bottom = -93.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_mirror_closed_heat")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="HeatDamaged" type="TextureRect" parent="PortalMirror" unique_id=2037210020]
 visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -70.0
-offset_top = -15.0
+offset_left = -83.0
+offset_top = 7.0
 offset_right = -79.0
-offset_bottom = -15.0
+offset_bottom = -37.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -219,6 +241,7 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Covered" type="TextureRect" parent="PortalMirror" unique_id=305469414]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -231,6 +254,23 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("14_mirror_covered")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CoveredHeatDamaged" type="TextureRect" parent="PortalMirror" unique_id=52653932]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -97.0
+offset_top = -8.0
+offset_right = -120.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("17_mirror_covered_heat")
 expand_mode = 1
 stretch_mode = 5
 

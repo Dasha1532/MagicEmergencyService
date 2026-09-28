@@ -42,6 +42,7 @@ var task_ends_at: int = 0
 var task_callback: Callable
 var employee_buttons: Dictionary = {}
 var employee_detail_labels: Dictionary = {}
+var shown_employee_reactions: Dictionary = {}
 @onready var game_state: Node = get_node("/root/GameState")
 
 
@@ -351,10 +352,25 @@ func _build_employee_reaction_panel() -> void:
 	close_button.pressed.connect(clear_employee_reaction)
 
 
-func show_employee_reaction(employee_id: StringName, message: String) -> void:
+func show_employee_reaction(employee_id: StringName, message: String) -> bool:
+	var normalized_message := message.strip_edges()
+	if not should_show_employee_reaction(employee_id, normalized_message):
+		return false
 	var employee: Dictionary = game_state.employees.get(employee_id, {})
 	queued_dialogues.clear()
-	_display_dialogue(str(employee.get("name", "Сотрудник")), message, false, _cropped_portrait(employee))
+	_display_dialogue(str(employee.get("name", "Сотрудник")), normalized_message, false, _cropped_portrait(employee))
+	return true
+
+
+func should_show_employee_reaction(employee_id: StringName, message: String) -> bool:
+	var normalized_message := message.strip_edges()
+	if normalized_message.is_empty():
+		return false
+	var reaction_key := "%s\n%s" % [String(employee_id), normalized_message]
+	if shown_employee_reactions.has(reaction_key):
+		return false
+	shown_employee_reactions[reaction_key] = true
+	return true
 
 
 func show_dialogue(speaker: String, message: String) -> void:

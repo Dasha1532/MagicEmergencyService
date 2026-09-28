@@ -34,6 +34,7 @@ var world_object: Dictionary = {
 	"max_fire_spots": 3,
 	"fire_spots": 0,
 	"burn_stage": 0,
+	"next_fire_spread_at": -1,
 	"visual_state": &"walking",
 	"damage": 0,
 	"contents_type": &"dishes",
@@ -85,6 +86,29 @@ func get_state() -> Dictionary:
 	}
 
 
+func start_burning_clock(current_minutes: int, spread_minutes: int) -> void:
+	if bool(world_object["burning"]) and int(world_object.get("next_fire_spread_at", -1)) < 0:
+		world_object["next_fire_spread_at"] = current_minutes + maxi(1, spread_minutes)
+
+
+func advance_burning_until(current_minutes: int, spread_minutes: int) -> Array[Dictionary]:
+	var results: Array[Dictionary] = []
+	if not bool(world_object["burning"]):
+		world_object["next_fire_spread_at"] = -1
+		return results
+	start_burning_clock(current_minutes, spread_minutes)
+	while bool(world_object["burning"]) and current_minutes >= int(world_object["next_fire_spread_at"]):
+		var result: Dictionary = advance_burning()
+		if not bool(result.get("changed", false)):
+			break
+		results.append(result)
+		if bool(world_object["burning"]):
+			world_object["next_fire_spread_at"] = int(world_object["next_fire_spread_at"]) + maxi(1, spread_minutes)
+		else:
+			world_object["next_fire_spread_at"] = -1
+	return results
+
+
 func get_resident_request() -> String:
 	return "Этот проклятый шкаф снова разгуливает по комнате! Остановите его и поставьте у левой стены. Сделайте аккуратно, там хрупкая посуда."
 
@@ -114,12 +138,18 @@ func get_status_title() -> String:
 
 
 func get_employee_reaction(employee_id: StringName, action_id: StringName, intent: StringName = &"") -> String:
+	if employee_id == &"liliya" and action_id in [&"freeze", &"heat"] and bool(world_object["destroyed"]):
+		return "От шкафа остался только пепел. Здесь больше не на что воздействовать магией."
 	if employee_id == &"grog" and action_id == &"physical_move":
 		return {
 			&"hold": "Шкаф сильный. Но я сегодня завтракал.",
 			&"move_left": "К левой стене так к левой. Если снова уйдёт — принесу цепь.",
 			&"move_kitchen": "В проход так в проход. Только потом не спрашивайте, почему на кухню приходится ходить через шкаф.",
 		}.get(intent, "")
+	if employee_id == &"boris" and action_id == &"anchor" and world_object["position_zone"] != world_object["requested_zone"]:
+		return "Шкаф стоит не у стены. К воздуху его не прикрутишь — сначала поставьте к левой стене."
+	if employee_id == &"boris" and action_id == &"repair" and int(world_object["mobility"]) > 0 and not bool(world_object["destroyed"]):
+		return "Ремонтировать здесь нечего: ножки целы, корпус исправен. Шкаф ходит из-за чар, а не из-за поломки."
 	return {
 		&"boris": {
 			&"diagnose": "Следы магии, мебельный характер и ни одного гарантийного талона.",
@@ -254,6 +284,7 @@ func advance_burning() -> Dictionary:
 		"changed": true,
 		"message": "Шкаф полностью сгорел. От мебели и хрупкой посуды осталась куча пепла.",
 		"resolved": true,
+		"audio_cues": PackedStringArray(["play_heavy_impact", "play_breaking_wood"]),
 	}
 	_record_environment_result(destroyed_result)
 	return destroyed_result
@@ -291,8 +322,9 @@ func is_resolved() -> bool:
 	if bool(world_object["held"]):
 		return false
 	var cannot_walk: bool = int(world_object["mobility"]) <= 0
+	var magic_removed: bool = int(world_object["magic_level"]) <= 0
 	var entrance_is_clear: bool = world_object["position_zone"] != &"entrance"
-	return not bool(world_object["moving"]) and not bool(world_object["burning"]) and (entrance_is_clear or cannot_walk or bool(world_object["anchored"]))
+	return not bool(world_object["moving"]) and not bool(world_object["burning"]) and (magic_removed or entrance_is_clear or cannot_walk or bool(world_object["anchored"]))
 
 
 func get_completion_result() -> Dictionary:
@@ -300,11 +332,12 @@ func get_completion_result() -> Dictionary:
 		var compensation: int = int(world_object["replacement_value"]) + int(world_object["contents_value"])
 		return {
 			"reward_adjustment": -420,
+			"forfeit_payment": true,
 			"compensation_cost": compensation,
 			"reputation_change": -8,
 			"summary": "Шкаф и его содержимое уничтожены огнём. Оплата отменена, назначена компенсация %d монет." % compensation,
-			"review": "Вы должны были остановить шкаф, а вместо этого сожгли его вместе с посудой! Теперь по квартире хотя бы ходит только запах гари.",
-			"consequences": ["Шкаф уничтожен огнём.", "Хрупкая посуда внутри уничтожена.", "Служба выплачивает компенсацию за мебель и содержимое."],
+			"review": "Я просила усмирить зачарованный шкаф, а не устроить погребальный костёр для всей моей посуды! В следующий раз я лучше вызову экзорциста.",
+			"consequences": ["Шкаф уничтожен огнём.", "Хрупкая посуда внутри уничтожена.", "Хозяйка предъявила претензию на стоимость мебели и содержимого."],
 			"actions": action_log.duplicate(true),
 		}
 	var damage := int(world_object["damage"])

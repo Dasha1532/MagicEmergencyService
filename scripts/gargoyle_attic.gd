@@ -117,9 +117,8 @@ func _on_tool_selected(action_id: StringName) -> void:
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var contextual: String = simulation.get_employee_reaction(selected_employee_id, action_id)
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, &"", contextual)
-	if not reaction.is_empty():
+	if not reaction.is_empty() and repair_hud.show_employee_reaction(selected_employee_id, reaction):
 		pending_dialogue_action = action_id
-		repair_hud.show_employee_reaction(selected_employee_id, reaction)
 		return
 	action_had_intro = false
 	_begin_action(action_id)
@@ -168,6 +167,8 @@ func _resolve_action(action_id: StringName) -> void:
 		repair_hud.show_resident_dialogue(resident_reaction)
 	elif not bool(result.get("applied", false)):
 		_show_failed_action(result)
+	elif action_id == &"repair" and not resident_reaction.is_empty():
+		repair_hud.show_resident_dialogue(resident_reaction)
 	elif not action_had_intro or action_id in [&"heat", &"antimagic"]:
 		repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
 	else:
@@ -202,7 +203,9 @@ func _apply_visual_state() -> void:
 	var water_state: StringName = simulation.flooding_state()
 	flooding.visible = water_state == &"water"
 	frozen_flooding.visible = water_state == &"frozen"
-	_set_audio_loop(&"set_running_water_playing", water_state == &"water" and bool(simulation.world_object.get("clogged", false)))
+	# Звук следует за видимыми протечками, а не за листьями в пасти:
+	# после телекинетической очистки вода всё ещё течёт до ремонта или оживления.
+	_set_audio_loop(&"set_running_water_playing", water_state == &"water")
 	gargoyle.set_interaction_enabled(not simulation.is_terminal() and not action_in_progress)
 	if repair_hud.has_method("set_completion_ready"):
 		repair_hud.call("set_completion_ready", simulation.is_resolved())

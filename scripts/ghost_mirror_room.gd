@@ -29,6 +29,8 @@ func _ready() -> void:
 	var saved_state: Dictionary = game_state.get_job_repair_state(game_state.active_job_id)
 	if not saved_state.is_empty():
 		simulation.load_state(saved_state)
+	else:
+		simulation.apply_source_follow_up(game_state.get_follow_up_data(&"escaped_ghost"))
 	ghost.selected.connect(_on_ghost_selected)
 	mirror.selected.connect(_on_mirror_selected)
 	tool_bar.tool_selected.connect(_on_tool_selected)
@@ -49,7 +51,7 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
-	_set_audio_loop(&"set_ghost_flight_playing", false)
+	_set_ghost_flight_audio(false, false)
 
 
 func _on_employee_selected(employee_id: StringName) -> void:
@@ -129,6 +131,15 @@ func _on_tool_selected(action_id: StringName) -> void:
 		tool_bar.visible = false
 		_resolve_action(action_id)
 		return
+	# Недопустимая антимагия должна закончиться сообщением, а не ложным кастом.
+	# Состояние повторно проверяется самой симуляцией в _resolve_action().
+	if action_id == &"antimagic" and (
+		(selected_target == &"ghost" and not simulation.can_return_ghost_to_portal())
+		or (selected_target == &"mirror" and not simulation.can_close_portal())
+	):
+		tool_bar.visible = false
+		_resolve_action(action_id)
+		return
 	action_in_progress = true
 	pending_action_id = action_id
 	ghost.set_interaction_enabled(false)
@@ -163,6 +174,8 @@ func _resolve_action(action_id: StringName) -> void:
 			result = simulation.close_portal(selected_employee_id, _selected_employee_has(&"antimagic"))
 	else:
 		result = simulation.install_trap(selected_employee_id, game_state.has_supply_item(&"ghost_trap")) if action_id == &"install_trap" else simulation.apply_ghost_action(selected_employee_id, action_id)
+	if bool(result.get("applied", false)) and action_id == &"uncover":
+		game_state.return_supply_item(&"protective_cloth")
 	if bool(result.get("applied", false)):
 		if action_id == &"install_trap":
 			_play_audio_cue(&"play_trap_install")
@@ -176,6 +189,8 @@ func _resolve_action(action_id: StringName) -> void:
 		if previous_ghost_state != &"angry" and StringName(simulation.world_object.get("ghost_state", &"")) == &"angry":
 			_play_audio_cue(&"play_ghost_scream")
 	_save_state()
+	if bool(result.get("applied", false)) and action_id == &"uncover":
+		game_state.save_autosave()
 	_apply_visual_state()
 	repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
 	if action_id == &"install_trap":
@@ -221,12 +236,12 @@ func _save_state() -> void:
 func _apply_visual_state() -> void:
 	var ghost_state := StringName(simulation.world_object["ghost_state"])
 	ghost.show_state(ghost_state)
-	mirror.show_state(StringName(simulation.world_object["mirror_state"]))
+	mirror.show_state(simulation.mirror_visual_state())
 	var trap_state := StringName(simulation.world_object.get("trap_state", &"packed"))
 	empty_trap.visible = trap_state == &"installed"
 	occupied_trap.visible = trap_state == &"occupied"
 	_update_angry_motion(ghost_state == &"angry")
-	_set_audio_loop(&"set_ghost_flight_playing", ghost_state in [&"calm", &"angry"])
+	_set_ghost_flight_audio(ghost_state in [&"calm", &"angry"], ghost_state == &"angry")
 	repair_hud.set_completion_ready(simulation.is_resolved())
 
 
@@ -236,10 +251,10 @@ func _play_audio_cue(method: StringName) -> void:
 		audio_manager.call(method)
 
 
-func _set_audio_loop(method: StringName, enabled: bool) -> void:
+func _set_ghost_flight_audio(enabled: bool, is_angry: bool) -> void:
 	var audio_manager := get_node_or_null("/root/AudioManager")
-	if audio_manager != null and audio_manager.has_method(method):
-		audio_manager.call(method, enabled)
+	if audio_manager != null and audio_manager.has_method(&"set_ghost_flight_playing"):
+		audio_manager.call(&"set_ghost_flight_playing", enabled, is_angry)
 
 
 func _update_angry_motion(is_angry: bool) -> void:

@@ -3,8 +3,11 @@ extends Control
 signal selected
 
 @onready var covered_pose: TextureRect = $Covered
+@onready var covered_heat_damaged_pose: TextureRect = $CoveredHeatDamaged
 @onready var open_pose: TextureRect = $Open
+@onready var heat_damaged_pose: TextureRect = $HeatDamaged
 @onready var closed_pose: TextureRect = $Closed
+@onready var closed_heat_damaged_pose: TextureRect = $ClosedHeatDamaged
 @onready var destroyed_pose: TextureRect = $Destroyed
 @onready var interaction_button: Button = $InteractionButton
 @onready var target_marker: Marker2D = $Target
@@ -19,8 +22,11 @@ func _ready() -> void:
 
 func show_state(state: StringName) -> void:
 	covered_pose.visible = state == &"covered"
+	covered_heat_damaged_pose.visible = state == &"covered_heat_damaged"
 	open_pose.visible = state == &"open"
+	heat_damaged_pose.visible = state == &"heat_damaged"
 	closed_pose.visible = state == &"closed"
+	closed_heat_damaged_pose.visible = state == &"closed_heat_damaged"
 	destroyed_pose.visible = state == &"destroyed"
 
 

@@ -14,7 +14,6 @@ func _run() -> void:
 		_claim("old_1", "paid"),
 		_claim("old_2", "denied"),
 		_claim("old_3", "paid"),
-		_claim("old_4", "paid_after_denial"),
 	]
 	game_state.jobs[&"portal_mirror"]["unlocked"] = true
 	game_state.assign_employee(&"grog", &"portal_mirror")
@@ -22,11 +21,12 @@ func _run() -> void:
 	game_state.advance_time(game_state.TRAVEL_TIME_MINUTES)
 	_check(game_state.complete_active_job({
 		"summary": "Зеркало уничтожено.", "review": "Жалоба.",
-		"reward_adjustment": -200, "compensation_cost": 300, "reputation_change": -2,
-	}), "Пятая претензия создаётся обычным завершением заявки")
-	_check(game_state.resolve_pending_claim(false), "Решение по пятой претензии принято")
+		"reward_adjustment": -200, "forfeit_payment": true, "compensation_cost": 300, "reputation_change": -2,
+	}), "Четвёртая претензия создаётся обычным завершением заявки")
+	_check(int(game_state.pending_job_report["reward"]) == 0, "За уничтоженное зеркало оплата не начисляется")
+	_check(game_state.resolve_pending_claim(false), "Решение по четвёртой претензии принято")
 	game_state.dismiss_pending_job_report()
-	_check(game_state.dismissal_triggered and game_state.dismissal_reason == &"claims", "Пять подтверждённых претензий приводят к увольнению")
+	_check(game_state.dismissal_triggered and game_state.dismissal_reason == &"claims", "Четыре подтверждённые претензии приводят к увольнению")
 	_check(not game_state.should_show_demo_completion(), "Увольнение имеет приоритет над обычным финалом")
 	_check(game_state.should_play_dismissal_video(), "До просмотра документа должен проиграться ролик")
 
@@ -44,7 +44,7 @@ func _run() -> void:
 	await create_timer(0.65).timeout
 	_check(game_state.dismissal_video_seen, "Завершение ролика сохраняется")
 	_check(office.dismissal_document_layer.visible, "После ролика появляется постановление")
-	_check("Пять подтверждённых" in office.dismissal_document_layer.get_node("Reason").text, "В постановлении указана причина увольнения")
+	_check("Четыре подтверждённые" in office.dismissal_document_layer.get_node("Reason").text, "В постановлении указана причина увольнения")
 	office.queue_free()
 	await process_frame
 

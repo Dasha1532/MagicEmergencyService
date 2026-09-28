@@ -201,9 +201,8 @@ func _request_selected_action() -> void:
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var contextual: String = simulation.get_employee_reaction(selected_employee_id, selected_tool_id)
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, selected_tool_id, simulation.world_object, &"", contextual)
-	if not reaction.is_empty():
+	if not reaction.is_empty() and repair_hud.show_employee_reaction(selected_employee_id, reaction):
 		pending_dialogue_action = selected_tool_id
-		repair_hud.show_employee_reaction(selected_employee_id, reaction)
 		return
 	action_had_intro = false
 	_begin_selected_action()
@@ -280,6 +279,8 @@ func _resolve_action(action_id: StringName) -> void:
 		repair_hud.show_dialogue("РЕЗУЛЬТАТ ОСМОТРА", str(result["message"]))
 	elif caused_damage and not resident_message.is_empty():
 		repair_hud.show_resident_dialogue(resident_message)
+	elif not bool(result["applied"]) and action_had_intro:
+		repair_hud.clear_all_dialogues()
 	elif not bool(result["applied"]):
 		_show_failed_action(result)
 	elif not action_had_intro:

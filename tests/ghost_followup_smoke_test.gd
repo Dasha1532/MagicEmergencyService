@@ -18,7 +18,7 @@ func _run() -> void:
 	game_state.job_reports = [{
 		"job_id": "portal_mirror",
 		"completed_day": 2,
-		"follow_up": {"type": "escaped_ghost", "source_job_id": "portal_mirror"},
+		"follow_up": {"type": "escaped_ghost", "source_job_id": "portal_mirror", "frame_damage": 1},
 	}]
 	game_state.advance_day()
 	_check(game_state.is_job_available(&"escaped_ghost"), "На следующее утро открывается заявка о привидении")
@@ -38,9 +38,22 @@ func _run() -> void:
 	var room := room_scene.instantiate()
 	root.add_child(room)
 	await process_frame
+	var audio_manager := root.get_node("AudioManager")
+	_check(is_equal_approx(audio_manager.ghost_flight_player.volume_db, linear_to_db(audio_manager.GHOST_FLIGHT_CALM_VOLUME)), "Спокойный призрак звучит на 30 процентов громче исходного уровня")
 	_check(room.get_node_or_null("GhostPlacement") != null and room.get_node_or_null("MirrorPlacement") != null, "Интерактивные объекты создаются без ошибок")
 	_check(not room.get_node("TrapPlacement/Empty").visible and not room.get_node("TrapPlacement/Occupied").visible, "При входе в комнату ловушка не установлена")
 	_check(room.get_node("MirrorPlacement/Open").texture is AtlasTexture, "Открытое зеркало использует тот же кадр и размер, что в исходной заявке")
+	_check(room.simulation.mirror_visual_state() == &"covered_heat_damaged", "Оплавленная рама передаётся в заявку с вырвавшимся призраком")
+	_check(room.get_node("MirrorPlacement/CoveredHeatDamaged").visible, "В начале продолжения показано полотно на оплавленной раме")
+	_check(not game_state.has_supply_item(&"protective_cloth"), "Оставленное в первой заявке полотно не лежит на складе")
+	room.selected_target = &"mirror"
+	room.selected_employee_id = &"felix"
+	room._resolve_action(&"uncover")
+	_check(game_state.has_supply_item(&"protective_cloth"), "Снятое в заявке с призраком полотно возвращается на склад")
+	_check("возвращено на склад" in str(room.simulation.action_log[-1]["result"]["message"]), "Сообщение поясняет возврат полотна")
+	room.simulation.world_object["ghost_state"] = &"angry"
+	room._apply_visual_state()
+	_check(is_equal_approx(audio_manager.ghost_flight_player.volume_db, linear_to_db(audio_manager.GHOST_FLIGHT_ANGRY_VOLUME)), "Злой призрак сохраняет прежнюю громкость фонового звука")
 	var original_mirror_scene := (load("res://scenes/PortalMirrorHouse.tscn") as PackedScene).instantiate()
 	root.add_child(original_mirror_scene)
 	var followup_destroyed := room.get_node("MirrorPlacement/Destroyed") as TextureRect
@@ -57,16 +70,30 @@ func _run() -> void:
 
 	var felix_route: RefCounted = GhostSimulationScript.new()
 	_check(not felix_route.get_resident_request().contains("не снимайте ткань"), "Во вступительной просьбе Селесты убрано лишнее указание")
+	_check(not felix_route.can_return_ghost_to_portal(), "Феликс не начинает изгнание, пока зеркало закрыто полотном")
+	_check(not felix_route.can_close_portal(), "Феликс не начинает закрытие, пока привидение находится в комнате")
 	var refused: Dictionary = felix_route.uncover_mirror(&"boris", false)
 	_check(not bool(refused["applied"]), "Без Феликса сотрудники не снимают полотно")
 	_check(StringName(felix_route.world_object["mirror_state"]) == &"covered", "После отказа зеркало остаётся накрытым")
 	var uncover_result: Dictionary = felix_route.uncover_mirror(&"nika", true)
 	_check(bool(uncover_result["applied"]) and not str(uncover_result["message"]).contains("Феликс"), "При наличии антимагии можно снять полотно без упоминания конкретного сотрудника")
+	_check(felix_route.can_return_ghost_to_portal(), "После снятия полотна Феликс может начать изгнание")
 	_check(bool(felix_route.apply_ghost_action(&"felix", &"antimagic")["applied"]), "Феликс возвращает призрака в открытый портал")
 	_check(not felix_route.is_resolved(), "После изгнания портал ещё требуется закрыть")
+	_check(felix_route.can_close_portal(), "После изгнания Феликс может начать закрытие портала")
 	_check(bool(felix_route.close_portal(&"felix", true)["applied"]), "Феликс закрывает портал вторым действием")
 	_check(felix_route.is_resolved(), "Возврат призрака и закрытие портала завершают работу")
 	_check(int(felix_route.get_completion_result()["reputation_change"]) == 1, "Идеальное решение повышает репутацию")
+
+	var damaged_felix_route: RefCounted = GhostSimulationScript.new()
+	damaged_felix_route.apply_source_follow_up({"frame_damage": 1})
+	_check(damaged_felix_route.mirror_visual_state() == &"covered_heat_damaged", "Повреждённое накрытое зеркало использует новый ассет")
+	damaged_felix_route.uncover_mirror(&"boris", true)
+	_check(damaged_felix_route.mirror_visual_state() == &"heat_damaged", "После снятия полотна оплавленная рама сохраняется")
+	damaged_felix_route.apply_ghost_action(&"felix", &"antimagic")
+	damaged_felix_route.close_portal(&"felix", true)
+	_check(damaged_felix_route.mirror_visual_state() == &"closed_heat_damaged", "После закрытия портала Феликсом оплавленная рама сохраняется")
+	_check(str(damaged_felix_route.get_completion_result()["summary"]).contains("Оплавленная рама"), "Акт продолжения сообщает об оплавленной раме и закрытом портале")
 
 	var trap_route: RefCounted = GhostSimulationScript.new()
 	_check(not bool(trap_route.apply_ghost_action(&"boris", &"trap")["applied"]), "До установки ловушка не может поймать привидение")

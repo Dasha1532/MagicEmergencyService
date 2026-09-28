@@ -19,7 +19,12 @@ func load_state(saved_state: Dictionary) -> void:
 	var saved_object: Variant = saved_state.get("world_object", {})
 	if saved_object is Dictionary:
 		world_object.merge((saved_object as Dictionary).duplicate(true), true)
-	action_log = (saved_state.get("action_log", []) as Array).duplicate(true)
+	action_log.clear()
+	var saved_actions: Variant = saved_state.get("action_log", [])
+	if saved_actions is Array:
+		for saved_action: Variant in saved_actions:
+			if saved_action is Dictionary:
+				action_log.append((saved_action as Dictionary).duplicate(true))
 
 
 func get_state() -> Dictionary:
@@ -54,6 +59,8 @@ func get_resident_reaction(action_id: StringName) -> String:
 		&"animate":
 			return "Проснулась! И смотрит так, будто это мы мешали ей работать. Главное — вода снова уходит."
 		&"repair":
+			if not bool(world_object["clogged"]):
+				return "Вот теперь вода уходит как положено: листья убраны, канал восстановлен. Отличная работа вдвоём."
 			return "Пусть спит, если хочет. Обходная труба работает тише неё и хотя бы не требует уговоров."
 		&"physical_move":
 			return "Вода ушла через трещину. Вместе с частью горгульи и моей верой в аккуратный ремонт."
@@ -81,17 +88,21 @@ func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
 			else:
 				message = "Крепления целы. Канал забит листьями, а поддерживающие чары спят. Горгулью можно оживить или открыть механический обход."
 		&"animate":
+			var had_clog := bool(world_object["clogged"])
 			applied = true
 			world_object["awake"] = true
 			world_object["clogged"] = false
 			world_object["frozen"] = false
 			world_object["magic_level"] = 8
-			message = "Оживление разбудило горгулью. Она выплюнула засор и снова направила дождевую воду в трубу."
+			message = "Оживление разбудило горгулью. Она выплюнула засор и снова направила дождевую воду в трубу." if had_clog else "Оживление разбудило уже очищенную горгулью. Она снова направила дождевую воду в трубу."
 		&"repair":
 			applied = true
 			world_object["bypass_open"] = true
 			world_object["frozen"] = false
-			message = "Борис прочистил боковой канал и открыл механический обход. Вода уходит, хотя горгулья продолжает спать."
+			if bool(world_object["clogged"]):
+				message = "Борис прочистил боковой канал и открыл механический обход. Вода уходит, хотя горгулья продолжает спать."
+			else:
+				message = "После телекинетической очистки Борис восстановил свободный проход в основном канале и подключил его к механическому водоотводу."
 		&"physical_move":
 			applied = true
 			warning = true
@@ -161,6 +172,7 @@ func get_completion_result() -> Dictionary:
 			"review": "Потоп остановили. Горгулью тоже — теперь она состоит из нескольких очень спокойных частей.",
 			"consequences": ["Каменная горгулья серьёзно повреждена.", "Требуется реставрация крепления и корпуса.", "Ущерб общедомовому имуществу предъявлен службе как претензия."],
 			"reward_adjustment": -120,
+			"forfeit_payment": true,
 			"compensation_cost": 220,
 			"reputation_change": -2,
 			"actions": action_log.duplicate(true),
@@ -176,6 +188,16 @@ func get_completion_result() -> Dictionary:
 			"actions": action_log.duplicate(true),
 		}
 	if bool(world_object["bypass_open"]):
+		if not bool(world_object["clogged"]):
+			return {
+				"summary": "Засор удалён, основной канал очищен и подключён к исправному механическому водоотводу.",
+				"review": "Ника убрала листья, Борис наладил канал — вода снова уходит как положено. Горгулья может спокойно досмотреть свой каменный сон.",
+				"consequences": ["Засор удалён без повреждений.", "Водоотвод полностью восстановлен совместной работой бригады.", "Дополнительного ущерба не зафиксировано."],
+				"reward_adjustment": 0,
+				"compensation_cost": 0,
+				"reputation_change": 1,
+				"actions": action_log.duplicate(true),
+			}
 		return {
 			"summary": "Открыт механический обходной водосток; чердак больше не затапливает.",
 			"review": "Горгулья всё ещё спит, зато новая труба трудится без жалоб и перерывов на мистический сон.",

@@ -5,8 +5,10 @@ signal selected
 @onready var open_pose: TextureRect = $Open
 @onready var heat_damaged_pose: TextureRect = $HeatDamaged
 @onready var closed_pose: TextureRect = $Closed
+@onready var closed_heat_damaged_pose: TextureRect = $ClosedHeatDamaged
 @onready var destroyed_pose: TextureRect = $Destroyed
 @onready var covered_pose: TextureRect = $Covered
+@onready var covered_heat_damaged_pose: TextureRect = $CoveredHeatDamaged
 @onready var frost_aura: TextureRect = $FrostAura
 @onready var interaction_button: Button = $InteractionButton
 @onready var target_marker: Marker2D = $Target
@@ -23,9 +25,11 @@ func show_state(state: StringName, cold_aura_visible: bool = true) -> void:
 	open_pose.visible = state == &"open"
 	heat_damaged_pose.visible = state == &"heat_damaged"
 	closed_pose.visible = state == &"closed"
+	closed_heat_damaged_pose.visible = state == &"closed_heat_damaged"
 	destroyed_pose.visible = state == &"destroyed"
 	covered_pose.visible = state == &"covered"
-	frost_aura.visible = cold_aura_visible and state not in [&"closed", &"destroyed"]
+	covered_heat_damaged_pose.visible = state == &"covered_heat_damaged"
+	frost_aura.visible = cold_aura_visible and state not in [&"closed", &"closed_heat_damaged", &"destroyed"]
 	interaction_button.visible = true
 
 

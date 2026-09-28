@@ -5,6 +5,7 @@ var world_object: Dictionary = {
 	"definition_id": &"escaped_ghost",
 	"ghost_state": &"calm",
 	"mirror_state": &"covered",
+	"frame_damage": 0,
 	"trap_state": &"packed",
 	"resident_intro_seen": false,
 }
@@ -15,7 +16,12 @@ func load_state(saved_state: Dictionary) -> void:
 	var saved_object: Variant = saved_state.get("world_object", {})
 	if saved_object is Dictionary:
 		world_object.merge((saved_object as Dictionary).duplicate(true), true)
-	action_log = (saved_state.get("action_log", []) as Array).duplicate(true)
+	action_log.clear()
+	var saved_actions: Variant = saved_state.get("action_log", [])
+	if saved_actions is Array:
+		for saved_action: Variant in saved_actions:
+			if saved_action is Dictionary:
+				action_log.append((saved_action as Dictionary).duplicate(true))
 
 
 func get_state() -> Dictionary:
@@ -24,6 +30,24 @@ func get_state() -> Dictionary:
 
 func get_resident_request() -> String:
 	return "Оно прошло прямо сквозь полотно! Пожалуйста, верните привидение обратно или поймайте его."
+
+
+func apply_source_follow_up(follow_up: Dictionary) -> void:
+	world_object["frame_damage"] = maxi(0, int(follow_up.get("frame_damage", 0)))
+
+
+func mirror_visual_state() -> StringName:
+	var state := StringName(world_object["mirror_state"])
+	if int(world_object.get("frame_damage", 0)) <= 0 or state == &"destroyed":
+		return state
+	match state:
+		&"covered":
+			return &"covered_heat_damaged"
+		&"open":
+			return &"heat_damaged"
+		&"closed":
+			return &"closed_heat_damaged"
+	return state
 
 
 func install_trap(employee_id: StringName, has_trap: bool) -> Dictionary:
@@ -65,6 +89,14 @@ func apply_ghost_action(employee_id: StringName, action_id: StringName) -> Dicti
 	return _record(employee_id, action_id, false, true, "Это действие не поможет поймать привидение.")
 
 
+func can_return_ghost_to_portal() -> bool:
+	return StringName(world_object["ghost_state"]) not in [&"expelled", &"captured"] and StringName(world_object["mirror_state"]) == &"open"
+
+
+func can_close_portal() -> bool:
+	return StringName(world_object["mirror_state"]) == &"open" and StringName(world_object["ghost_state"]) in [&"expelled", &"captured"]
+
+
 func uncover_mirror(employee_id: StringName, antimagic_present: bool) -> Dictionary:
 	if StringName(world_object["mirror_state"]) != &"covered":
 		return _record(employee_id, &"uncover", false, false, "Полотно уже снято.")
@@ -72,8 +104,8 @@ func uncover_mirror(employee_id: StringName, antimagic_present: bool) -> Diction
 		return _record(employee_id, &"uncover", false, true, "Снимать полотно бесполезно: в бригаде нет специалиста по антимагии, способного закрыть портал.")
 	world_object["mirror_state"] = &"open"
 	if StringName(world_object["ghost_state"]) == &"captured":
-		return _record(employee_id, &"uncover", true, false, "Полотно снято. Портал снова открыт.")
-	return _record(employee_id, &"uncover", true, false, "Полотно снято. Портал снова открыт; теперь привидение можно вернуть внутрь.")
+		return _record(employee_id, &"uncover", true, false, "Полотно снято и возвращено на склад. Портал снова открыт.")
+	return _record(employee_id, &"uncover", true, false, "Полотно снято и возвращено на склад. Портал снова открыт; теперь привидение можно вернуть внутрь.")
 
 
 func close_portal(employee_id: StringName, has_antimagic: bool) -> Dictionary:
@@ -117,20 +149,27 @@ func get_completion_result() -> Dictionary:
 		}
 	if StringName(world_object["ghost_state"]) == &"captured":
 		var portal_closed := StringName(world_object["mirror_state"]) == &"closed"
+		var frame_damaged := int(world_object.get("frame_damage", 0)) > 0
+		var summary := "Привидение поймано в служебную ловушку, портал окончательно закрыт." if portal_closed else "Привидение поймано в служебную ловушку. Зеркало осталось временно изолировано полотном."
+		var consequences: Array[String] = ["Привидение изолировано в служебной ловушке.", "Портал окончательно закрыт." if portal_closed else "Портал остаётся временно закрыт полотном."]
+		if frame_damaged:
+			summary += " Оплавленная рама осталась деформированной."
+			consequences.append("Рама зеркала осталась деформированной после предыдущего нагрева.")
 		return {
-			"summary": "Привидение поймано в служебную ловушку, портал окончательно закрыт." if portal_closed else "Привидение поймано в служебную ловушку. Зеркало осталось временно изолировано полотном.",
+			"summary": summary,
 			"review": "Призрак в ловушке, портал закрыт. Наконец-то в этой комнате всё остаётся на своих местах." if portal_closed else "Призрак теперь сидит в банке, зеркало — под покрывалом. Не тот интерьер, который я заказывала, но хотя бы никто больше не летает сквозь мебель.",
-			"consequences": ["Привидение изолировано в служебной ловушке.", "Портал окончательно закрыт."] if portal_closed else ["Привидение изолировано в служебной ловушке.", "Портал остаётся временно закрыт полотном."],
+			"consequences": consequences,
 			"reward_adjustment": -50 if portal_closed else -100,
 			"expense_reimbursement": 250,
 			"compensation_cost": 0,
 			"reputation_change": 0,
 			"actions": action_log.duplicate(true),
 		}
+	var frame_damaged := int(world_object.get("frame_damage", 0)) > 0
 	return {
-		"summary": "Привидение возвращено в портал, портал закрыт без ущерба.",
+		"summary": "Привидение возвращено в портал, портал закрыт. Оплавленная рама осталась деформированной." if frame_damaged else "Привидение возвращено в портал, портал закрыт без ущерба.",
 		"review": "На этот раз из зеркала вышел только мой собственный вид — усталый, но исключительно довольный. Вот теперь это действительно закрытый портал.",
-		"consequences": ["Привидение возвращено в портал.", "Портал окончательно закрыт.", "Зеркало сохранено."],
+		"consequences": ["Привидение возвращено в портал.", "Портал окончательно закрыт.", "Рама зеркала осталась деформированной после предыдущего нагрева."] if frame_damaged else ["Привидение возвращено в портал.", "Портал окончательно закрыт.", "Зеркало сохранено."],
 		"reward_adjustment": 0,
 		"expense_reimbursement": 0,
 		"compensation_cost": 0,

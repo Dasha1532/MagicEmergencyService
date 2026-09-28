@@ -20,7 +20,12 @@ func load_state(saved_state: Dictionary) -> void:
 	var saved_object: Variant = saved_state.get("world_object", {})
 	if saved_object is Dictionary:
 		world_object.merge((saved_object as Dictionary).duplicate(true), true)
-	action_log = (saved_state.get("action_log", []) as Array).duplicate(true)
+	action_log.clear()
+	var saved_actions: Variant = saved_state.get("action_log", [])
+	if saved_actions is Array:
+		for saved_action: Variant in saved_actions:
+			if saved_action is Dictionary:
+				action_log.append((saved_action as Dictionary).duplicate(true))
 
 
 func get_state() -> Dictionary:
@@ -32,6 +37,10 @@ func get_resident_request() -> String:
 
 
 func get_employee_reaction(employee_id: StringName, action_id: StringName) -> String:
+	if employee_id == &"felix" and action_id == &"antimagic" and not bool(world_object["portal_open"]):
+		return "Портал уже закрыт. Второй раз закрывать его не стану — так недолго открыть обратно."
+	if employee_id == &"felix" and action_id == &"antimagic" and bool(world_object["covered"]):
+		return "Сначала снимите полотно. Я должен видеть границы портала, чтобы закрыть его, а не запечатать ткань вместе с ним."
 	return {
 		&"boris": {
 			&"diagnose": "Зеркало показывает потусторонний мир. Гарантия, полагаю, уже закончилась.",
@@ -58,15 +67,13 @@ func get_resident_reaction(action_id: StringName) -> String:
 		&"freeze":
 			return "Здесь и без того было холодно!"
 		&"cover":
-			if bool(world_object["cold_aura"]):
-				return "Портала не видно, но холод никуда не делся. Это точно поможет?"
-			return "Так гораздо лучше. Надеюсь, полотно действительно его удержит."
+			return "Завешенное зеркало — не то, чего я ожидала от ремонта. Но если другого выхода нет, пусть пока будет так."
 		&"physical_move":
 			return "Это было фамильное зеркало!"
 	return ""
 
 
-func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
+func apply_action(employee_id: StringName, action_id: StringName, has_protective_cloth: bool = true) -> Dictionary:
 	var applied := false
 	var warning := false
 	var message := "Действие не изменило состояние зеркала."
@@ -85,10 +92,15 @@ func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
 			else:
 				message = "Портал излучает холод. Связь можно закрыть антимагией, временно изолировать защитным полотном или оборвать, уничтожив зеркало."
 		&"antimagic":
-			applied = true
-			world_object["magic_level"] = 0
-			world_object["portal_open"] = false
-			message = "Антимагия погасила связь. Портал закрыт, зеркало не повреждено."
+			if bool(world_object["covered"]):
+				warning = true
+				message = "Закрыть портал через защитное полотно нельзя. Сначала снимите полотно."
+			else:
+				applied = true
+				world_object["magic_level"] = 0
+				world_object["portal_open"] = false
+				world_object["cold_aura"] = false
+				message = "Антимагия погасила связь. Портал закрыт, зеркало не повреждено."
 		&"freeze":
 			applied = true
 			world_object["temperature"] = int(world_object["temperature"]) - 5
@@ -103,8 +115,11 @@ func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
 			else:
 				warning = true
 				world_object["stable"] = false
-				world_object["damage"] = int(world_object["damage"]) + 1
-				message = "Повторный нагрев расшатал портал. Рама зеркала начала деформироваться."
+				if int(world_object["damage"]) == 0:
+					world_object["damage"] = 1
+					message = "Повторный нагрев расшатал портал. Рама зеркала начала деформироваться."
+				else:
+					message = "Огонь снова охватил уже оплавленную раму, но её состояние заметно не изменилось."
 		&"telekinesis":
 			warning = true
 			message = "Активный портал удерживает зеркало на месте. Телекинез не может безопасно его сдвинуть."
@@ -112,12 +127,22 @@ func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
 			warning = true
 			message = "Такую раму нельзя восстановить на выезде: потребуется мастерская или изготовление замены."
 		&"cover":
-			if bool(world_object["covered"]):
+			if not has_protective_cloth:
+				warning = true
+				message = "В бригаде нет защитного полотна. Его можно купить в лавке снабжения."
+			elif bool(world_object["covered"]):
 				message = "Защитное полотно уже закреплено на раме."
 			else:
 				applied = true
 				world_object["covered"] = true
 				message = "Портал закрыт плотным защитным полотном, закреплённым механическими зажимами. Это временная изоляция: портал остаётся открытым под тканью."
+		&"uncover":
+			if not bool(world_object["covered"]):
+				message = "Защитное полотно уже снято."
+			else:
+				applied = true
+				world_object["covered"] = false
+				message = "Борис снял защитное полотно. Портал снова открыт и доступен для работы."
 		&"physical_move":
 			applied = true
 			warning = true
@@ -138,10 +163,12 @@ func visual_state() -> StringName:
 	if bool(world_object["destroyed"]):
 		return &"destroyed"
 	if bool(world_object["covered"]):
-		return &"covered"
+		return &"covered_heat_damaged" if int(world_object["damage"]) > 0 else &"covered"
 	if bool(world_object["portal_open"]) and int(world_object["damage"]) > 0:
 		return &"heat_damaged"
-	return &"closed" if is_resolved() else &"open"
+	if not bool(world_object["portal_open"]):
+		return &"closed_heat_damaged" if int(world_object["damage"]) > 0 else &"closed"
+	return &"open"
 
 
 func get_completion_result() -> Dictionary:
@@ -149,27 +176,54 @@ func get_completion_result() -> Dictionary:
 	var covered := bool(world_object["covered"])
 	var cold_remains := bool(world_object["cold_aura"])
 	if covered:
+		var frame_damage := int(world_object["damage"])
+		var consequences: Array[String] = ["Портал только временно изолирован."]
+		if cold_remains:
+			consequences.append("В комнате сохранилась аномальная стужа.")
+		if frame_damage > 0:
+			consequences.append("Рама зеркала деформирована нагревом.")
+		consequences.append("Из портала успел выбраться призрак.")
+		var summary := "Портал закрыт полотном, но в комнате всё ещё холодно." if cold_remains else "Холод устранён, портал временно изолирован защитным полотном."
+		if frame_damage > 0:
+			summary += " Рама зеркала деформирована нагревом."
+		var review := "Полотно очень милое. Голоса из зеркала стали тише, а зубы всё ещё стучат в полный голос." if cold_remains else "Портал теперь под покрывалом. Не совсем ремонт, зато отражение наконец перестало спорить со мной."
+		if frame_damage > 0:
+			review = "Портал вы спрятали под полотном, но раму перед этим успели оплавить. Теперь зеркало выглядит так, будто его ремонтировали свечой."
 		return {
-			"summary": "Портал закрыт полотном, но в комнате всё ещё холодно." if cold_remains else "Холод устранён, портал временно изолирован защитным полотном.",
-			"review": "Полотно очень милое. Голоса из зеркала стали тише, а зубы всё ещё стучат в полный голос." if cold_remains else "Портал теперь под покрывалом. Не совсем ремонт, зато отражение наконец перестало спорить со мной.",
-			"consequences": ["Портал только временно изолирован.", "В комнате сохранилась аномальная стужа.", "Из портала успел выбраться призрак."] if cold_remains else ["Портал временно изолирован защитным полотном.", "Из портала успел выбраться призрак."],
-			"reward_adjustment": -150 if cold_remains else -80,
+			"summary": summary,
+			"review": review,
+			"consequences": consequences,
+			"reward_adjustment": (-150 if cold_remains else -80) - (350 if frame_damage > 0 else 0),
+			"expense_reimbursement": 50,
 			"compensation_cost": 0,
-			"reputation_change": -1 if cold_remains else 0,
+			"reputation_change": -2 if frame_damage > 0 else (-1 if cold_remains else 0),
 			"follow_up": {
 				"type": "escaped_ghost",
 				"source_job_id": "portal_mirror",
 				"cold_aura": cold_remains,
+				"frame_damage": frame_damage,
 			},
 			"actions": action_log.duplicate(true),
 		}
+	if destroyed:
+		return {
+			"summary": "Портал закрыт ценой уничтоженного зеркала.",
+			"review": "Портал закрыт. Зеркало тоже, причём навсегда. Придётся любоваться собой по памяти.",
+			"consequences": ["Старинное зеркало уничтожено.", "Служба выплачивает компенсацию за зеркало."],
+			"reward_adjustment": -200,
+			"forfeit_payment": true,
+			"compensation_cost": 300,
+			"reputation_change": -2,
+			"actions": action_log.duplicate(true),
+		}
+	var closed_frame_damage := int(world_object["damage"])
 	return {
-		"summary": "Портал закрыт, зеркало сохранено." if not destroyed else "Портал закрыт ценой уничтоженного зеркала.",
-		"review": "Наконец-то зеркало снова показывает только меня. Никогда не думала, что буду так рада обычному отражению." if not destroyed else "Портал закрыт. Зеркало тоже, причём навсегда. Придётся любоваться собой по памяти.",
-		"consequences": ["Дополнительного ущерба не зафиксировано."] if not destroyed else ["Старинное зеркало уничтожено.", "Служба выплачивает компенсацию за зеркало."],
-		"reward_adjustment": 0 if not destroyed else -200,
-		"compensation_cost": 0 if not destroyed else 300,
-		"reputation_change": 1 if not destroyed else -2,
+		"summary": "Портал закрыт, зеркало сохранено." if closed_frame_damage == 0 else "Портал закрыт, но рама зеркала осталась деформированной после нагрева.",
+		"review": "Наконец-то зеркало снова показывает только меня. Никогда не думала, что буду так рада обычному отражению." if closed_frame_damage == 0 else "Портал закрыт, но оплавленная рама никуда не делась. Хорошо хоть отражение снова моё.",
+		"consequences": ["Дополнительного ущерба не зафиксировано."] if closed_frame_damage == 0 else ["Рама зеркала деформирована нагревом."],
+		"reward_adjustment": -350 if closed_frame_damage > 0 else 0,
+		"compensation_cost": 0,
+		"reputation_change": -1 if closed_frame_damage > 0 else 1,
 		"actions": action_log.duplicate(true),
 	}
 

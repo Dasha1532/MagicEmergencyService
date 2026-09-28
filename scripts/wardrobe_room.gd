@@ -2,11 +2,11 @@ extends Node2D
 
 const WardrobeSimulationScript := preload("res://scripts/wardrobe_simulation.gd")
 const EmployeeReactionResolverScript := preload("res://scripts/employee_reaction_resolver.gd")
+const WARDROBE_STEPS := preload("res://assets/audio/skafhodit.wav")
 
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
 const COLOR_GOLD := Color(0.96, 0.78, 0.46)
 const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
-const FIRE_SPREAD_GAME_MINUTES: int = 12
 
 @export_group("Положение и размер шкафа")
 @export var entrance_scale: Vector2 = Vector2.ONE
@@ -46,6 +46,9 @@ var pending_dialogue_intent: StringName = &""
 var action_had_intro: bool = false
 var entrance_position: Vector2
 var fire_progression_revision: int = 0
+var wardrobe_steps_player: AudioStreamPlayer
+var wardrobe_steps_enabled: bool = false
+var long_action_pose: StringName = &""
 
 
 func _ready() -> void:
@@ -53,6 +56,11 @@ func _ready() -> void:
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 		return
 	simulation = WardrobeSimulationScript.new()
+	wardrobe_steps_player = AudioStreamPlayer.new()
+	wardrobe_steps_player.stream = WARDROBE_STEPS
+	wardrobe_steps_player.volume_db = linear_to_db(1.5)
+	wardrobe_steps_player.finished.connect(_on_wardrobe_steps_finished)
+	add_child(wardrobe_steps_player)
 	var saved_state: Dictionary = game_state.get_job_repair_state(game_state.active_job_id)
 	if saved_state.is_empty():
 		simulation.initialize_variant(hash("%s:%s" % [game_state.day, game_state.active_job_id]))
@@ -91,6 +99,8 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	# Отменяем отложенное распространение огня до удаления комнаты.
+	fire_progression_revision += 1
 	_set_wardrobe_steps_playing(false)
 
 
@@ -102,13 +112,25 @@ func _find_kitchen_passage_marker() -> Marker2D:
 
 
 func _on_long_action_started(employee_id: StringName) -> void:
-	if employee_id == selected_employee_id and employee_actor.visible:
-		employee_actor.call("set_persistent_work_pose", true)
+	long_action_pose = _persistent_pose_for_action(selected_tool_id, pending_intent)
+	if employee_id == selected_employee_id and employee_actor.visible and not long_action_pose.is_empty():
+		employee_actor.call("set_persistent_action_pose", long_action_pose)
 
 
 func _on_long_action_finished(employee_id: StringName) -> void:
-	if employee_id == selected_employee_id:
-		employee_actor.call("set_persistent_work_pose", false)
+	if employee_id == selected_employee_id and not long_action_pose.is_empty():
+		employee_actor.call("set_persistent_action_pose", &"")
+	long_action_pose = &""
+
+
+func _persistent_pose_for_action(action_id: StringName, intent: StringName) -> StringName:
+	if action_id != &"physical_move":
+		return &"work"
+	if intent == &"break_legs":
+		return &"work"
+	if intent in [&"hold", &"move_left", &"move_kitchen", &"release"]:
+		return &"hold"
+	return &""
 
 
 func _open_room() -> void:
@@ -267,11 +289,22 @@ func _on_context_intent_selected(intent: StringName) -> void:
 func _request_action() -> void:
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var contextual: String = simulation.get_employee_reaction(selected_employee_id, selected_tool_id, pending_intent)
+	if selected_employee_id == &"liliya" and selected_tool_id in [&"freeze", &"heat"] and bool(simulation.world_object["destroyed"]):
+		if not repair_hud.show_employee_reaction(selected_employee_id, contextual):
+			_show_feedback(contextual, true)
+		return
+	if selected_employee_id == &"boris" and selected_tool_id == &"anchor" and simulation.world_object["position_zone"] != simulation.world_object["requested_zone"]:
+		if not repair_hud.show_employee_reaction(selected_employee_id, contextual):
+			_show_feedback(contextual, true)
+		return
+	if selected_employee_id == &"boris" and selected_tool_id == &"repair" and int(simulation.world_object["mobility"]) > 0 and not bool(simulation.world_object["destroyed"]):
+		if not repair_hud.show_employee_reaction(selected_employee_id, contextual):
+			_show_feedback(contextual, true)
+		return
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, selected_tool_id, simulation.world_object, pending_intent, contextual)
-	if not reaction.is_empty():
+	if not reaction.is_empty() and repair_hud.show_employee_reaction(selected_employee_id, reaction):
 		pending_dialogue_action = selected_tool_id
 		pending_dialogue_intent = pending_intent
-		repair_hud.show_employee_reaction(selected_employee_id, reaction)
 		return
 	action_had_intro = false
 	_start_action()
@@ -328,10 +361,12 @@ func _resume_pending_action() -> void:
 	if pending.is_empty():
 		return
 	selected_employee_id = StringName(str(pending.get("employee_id", "")))
+	selected_tool_id = StringName(str(pending.get("action_id", "")))
+	pending_intent = StringName(str(pending.get("intent", "")))
 	_configure_employee_actor()
 	repair_hud.resume_timed_action(_resolve_action.bind(
-		StringName(str(pending.get("action_id", ""))),
-		StringName(str(pending.get("intent", "")))
+		selected_tool_id,
+		pending_intent
 	))
 
 
@@ -339,6 +374,11 @@ func _on_employee_action_finished() -> void:
 	action_in_progress = false
 	pending_intent = &""
 	wardrobe.set_interaction_enabled(true)
+
+
+func _restore_grog_hold_pose_if_needed() -> void:
+	if employee_actor.visible and selected_employee_id == &"grog" and bool(simulation.world_object.get("held", false)):
+		employee_actor.call("restore_hold_pose", _wardrobe_approach_position(&"hold"), 20)
 
 
 func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
@@ -352,6 +392,7 @@ func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 			_play_audio_cue(&"play_heavy_impact")
 			_play_audio_cue(&"play_breaking_wood")
 	_apply_visual_state()
+	_restore_grog_hold_pose_if_needed()
 	var resident_message: String = simulation.get_resident_reaction()
 	var damage_now: int = int(simulation.world_object.get("damage", 0)) + int(simulation.world_object.get("contents_damage", 0))
 	if action_id == &"diagnose":
@@ -372,6 +413,8 @@ func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 		_start_fire_progression()
 	elif not is_burning and was_burning:
 		fire_progression_revision += 1
+		simulation.world_object["next_fire_spread_at"] = -1
+		game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 
 
 func _show_failed_action(result: Dictionary) -> void:
@@ -390,29 +433,47 @@ func _play_audio_cue(method: StringName) -> void:
 
 func _start_fire_progression() -> void:
 	fire_progression_revision += 1
+	simulation.start_burning_clock(game_state.time_minutes, game_state.WARDROBE_FIRE_SPREAD_MINUTES)
+	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	_schedule_fire_step(fire_progression_revision)
 
 
 func _schedule_fire_step(revision: int) -> void:
-	var spread_at: int = game_state.time_minutes + FIRE_SPREAD_GAME_MINUTES
-	while game_state.time_minutes < spread_at:
-		await get_tree().process_frame
-	if revision != fire_progression_revision or not bool(simulation.world_object["burning"]):
+	if not _can_continue_fire_progression(revision):
 		return
-	var previous_resident_message: String = simulation.get_resident_reaction()
-	var result: Dictionary = simulation.advance_burning()
-	if not bool(result.get("changed", false)):
-		return
-	_apply_visual_state()
-	if bool(simulation.world_object["destroyed"]):
-		_show_feedback(str(result["message"]), true)
-		var resident_message: String = simulation.get_resident_reaction()
-		if resident_message != previous_resident_message:
-			repair_hud.queue_resident_dialogue(resident_message)
-	repair_hud.set_completion_ready(bool(result["resolved"]))
-	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
-	if bool(simulation.world_object["burning"]):
-		_schedule_fire_step(revision)
+	while _can_continue_fire_progression(revision):
+		var previous_resident_message: String = simulation.get_resident_reaction()
+		var results: Array[Dictionary] = simulation.advance_burning_until(game_state.time_minutes, game_state.WARDROBE_FIRE_SPREAD_MINUTES)
+		if not results.is_empty():
+			for result: Dictionary in results:
+				for audio_cue: String in result.get("audio_cues", PackedStringArray()):
+					_play_audio_cue(StringName(audio_cue))
+			_apply_visual_state()
+			var latest_result: Dictionary = results[-1]
+			if bool(simulation.world_object["destroyed"]):
+				_show_feedback(str(latest_result["message"]), true)
+				var resident_message: String = simulation.get_resident_reaction()
+				if resident_message != previous_resident_message:
+					repair_hud.queue_resident_dialogue(resident_message)
+			repair_hud.set_completion_ready(bool(latest_result["resolved"]))
+			game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+			if not _can_continue_fire_progression(revision):
+				return
+		if not _can_continue_fire_progression(revision):
+			return
+		var scene_tree := get_tree()
+		if scene_tree == null:
+			return
+		await scene_tree.process_frame
+
+
+func _can_continue_fire_progression(revision: int) -> bool:
+	return (
+		is_inside_tree()
+		and revision == fire_progression_revision
+		and simulation != null
+		and bool(simulation.world_object.get("burning", false))
+	)
 
 
 func _restore_visual_state() -> void:
@@ -448,9 +509,18 @@ func _sync_wardrobe_steps() -> void:
 
 
 func _set_wardrobe_steps_playing(enabled: bool) -> void:
-	var audio_manager := get_node_or_null("/root/AudioManager")
-	if audio_manager != null and audio_manager.has_method(&"set_wardrobe_steps_playing"):
-		audio_manager.call(&"set_wardrobe_steps_playing", enabled)
+	if wardrobe_steps_player == null:
+		return
+	wardrobe_steps_enabled = enabled
+	if enabled and not wardrobe_steps_player.playing:
+		wardrobe_steps_player.play()
+	elif not enabled and wardrobe_steps_player.playing:
+		wardrobe_steps_player.stop()
+
+
+func _on_wardrobe_steps_finished() -> void:
+	if wardrobe_steps_enabled and wardrobe_steps_player != null:
+		wardrobe_steps_player.play()
 
 
 func _wardrobe_target_global() -> Vector2:

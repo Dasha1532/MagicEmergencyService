@@ -41,7 +41,7 @@ func _ready() -> void:
 	for button in buttons:
 		button.pressed.connect(_on_button_pressed.bind(button))
 		button.toggle_mode = false
-		button.custom_minimum_size = Vector2(252, 46)
+		button.custom_minimum_size = Vector2(320 if button == %HeatButton else 252, 46)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.add_theme_font_size_override("font_size", 15)
 		button.add_theme_constant_override("h_separation", 9)
@@ -51,7 +51,7 @@ func _ready() -> void:
 			if child is TextureRect:
 				button.icon = child.texture
 				button.expand_icon = true
-				button.add_theme_constant_override("icon_max_width", 38)
+				button.add_theme_constant_override("icon_max_width", 52 if button == %HeatButton else 38)
 				child.visible = false
 	visible = false
 

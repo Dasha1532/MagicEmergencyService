@@ -1,30 +1,41 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene format=3 uid="uid://ca64eup6dkqvf"]
 
-[ext_resource type="Texture2D" path="res://assets/backgrounds/portal_mirror_room.png" id="1_bg"]
-[ext_resource type="Script" path="res://scripts/ghost_mirror_room.gd" id="2_controller"]
-[ext_resource type="Texture2D" path="res://assets/objects/escaped_ghost/calm.png" id="3_ghost_calm"]
-[ext_resource type="Texture2D" path="res://assets/objects/escaped_ghost/angry.png" id="4_ghost_angry"]
-[ext_resource type="Script" path="res://scripts/ghost_followup_object.gd" id="5_ghost_script"]
-[ext_resource type="Texture2D" path="res://assets/objects/portal_mirror/covered.png" id="6_covered"]
-[ext_resource type="Texture2D" path="res://assets/objects/portal_mirror/open.png" id="7_open"]
-[ext_resource type="Texture2D" path="res://assets/objects/portal_mirror/closed.png" id="8_closed"]
-[ext_resource type="Script" path="res://scripts/ghost_followup_mirror.gd" id="9_mirror_script"]
-[ext_resource type="Texture2D" path="res://assets/objects/ghost_trap/empty.png" id="10_trap_empty"]
-[ext_resource type="Texture2D" path="res://assets/objects/ghost_trap/occupied.png" id="11_trap_occupied"]
+[ext_resource type="Texture2D" uid="uid://c4d3gcubnplma" path="res://assets/backgrounds/portal_mirror_room.png" id="1_bg"]
+[ext_resource type="Script" uid="uid://bx4ebvfqn2tah" path="res://scripts/ghost_mirror_room.gd" id="2_controller"]
+[ext_resource type="Texture2D" uid="uid://d3x4v0gwln4vy" path="res://assets/objects/escaped_ghost/calm.png" id="3_ghost_calm"]
+[ext_resource type="Texture2D" uid="uid://cj7cjqnwsobx" path="res://assets/objects/escaped_ghost/angry.png" id="4_ghost_angry"]
+[ext_resource type="Script" uid="uid://c26lckpqkfpdp" path="res://scripts/ghost_followup_object.gd" id="5_ghost_script"]
+[ext_resource type="Texture2D" uid="uid://bc1sfhuolryuh" path="res://assets/objects/portal_mirror/covered.png" id="6_covered"]
+[ext_resource type="Texture2D" uid="uid://wjbnm5b0r354" path="res://assets/objects/portal_mirror/open.png" id="7_open"]
+[ext_resource type="Texture2D" uid="uid://cym7lcxso1xo0" path="res://assets/objects/portal_mirror/closed.png" id="8_closed"]
+[ext_resource type="Script" uid="uid://da1ggv1exiqlu" path="res://scripts/ghost_followup_mirror.gd" id="9_mirror_script"]
+[ext_resource type="Texture2D" uid="uid://3oq7er2kvo4v" path="res://assets/objects/ghost_trap/empty.png" id="10_trap_empty"]
+[ext_resource type="Texture2D" uid="uid://bc23eg3cwvc4u" path="res://assets/objects/ghost_trap/occupied.png" id="11_trap_occupied"]
 [ext_resource type="PackedScene" path="res://scenes/EmployeeActor.tscn" id="12_actor"]
 [ext_resource type="PackedScene" path="res://scenes/ui/ToolBar.tscn" id="13_toolbar"]
 [ext_resource type="PackedScene" path="res://scenes/ui/RepairHUD.tscn" id="14_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="15_pause"]
-[ext_resource type="Texture2D" path="res://assets/objects/portal_mirror/destroyed.png" id="16_destroyed"]
+[ext_resource type="Texture2D" uid="uid://dy5on7cshemd3" path="res://assets/objects/portal_mirror/destroyed.png" id="16_destroyed"]
+[ext_resource type="Texture2D" uid="uid://xgshsrdoylbc" path="res://assets/objects/portal_mirror/heat_damaged.png" id="17_heat_damaged"]
+[ext_resource type="Texture2D" uid="uid://dlqhfn28mtd6n" path="res://assets/objects/portal_mirror/closed_heat_damaged.png" id="18_closed_heat_damaged"]
+[ext_resource type="Texture2D" uid="uid://c1v5emvj8tt5k" path="res://assets/objects/portal_mirror/covered_heat_damaged.png" id="19_covered_heat_damaged"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mirror_open"]
 atlas = ExtResource("7_open")
 region = Rect2(650, 0, 700, 941)
 
-[node name="GhostMirrorRoom" type="Node2D"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_mirror_heat"]
+atlas = ExtResource("17_heat_damaged")
+region = Rect2(680, 0, 650, 1024)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mirror_closed_heat"]
+atlas = ExtResource("18_closed_heat_damaged")
+region = Rect2(440, 14, 581, 1182)
+
+[node name="GhostMirrorRoom" type="Node2D" unique_id=38523687]
 script = ExtResource("2_controller")
 
-[node name="Background" type="TextureRect" parent="."]
+[node name="Background" type="TextureRect" parent="." unique_id=1541924963]
 offset_right = 1600.0
 offset_bottom = 900.0
 mouse_filter = 2
@@ -32,8 +43,10 @@ texture = ExtResource("1_bg")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="MirrorPlacement" type="Control" parent="."]
+[node name="MirrorPlacement" type="Control" parent="." unique_id=62690124]
 z_index = 4
+layout_mode = 3
+anchors_preset = 0
 offset_left = 1164.0
 offset_top = 87.0
 offset_right = 1574.0
@@ -41,7 +54,7 @@ offset_bottom = 750.0
 mouse_filter = 1
 script = ExtResource("9_mirror_script")
 
-[node name="Covered" type="TextureRect" parent="MirrorPlacement"]
+[node name="Covered" type="TextureRect" parent="MirrorPlacement" unique_id=2087059175]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -57,7 +70,24 @@ texture = ExtResource("6_covered")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Open" type="TextureRect" parent="MirrorPlacement"]
+[node name="CoveredHeatDamaged" type="TextureRect" parent="MirrorPlacement" unique_id=1310008708]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -104.0
+offset_top = -13.0
+offset_right = -113.0
+offset_bottom = -13.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("19_covered_heat_damaged")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Open" type="TextureRect" parent="MirrorPlacement" unique_id=91754805]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -74,7 +104,23 @@ texture = SubResource("AtlasTexture_mirror_open")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Closed" type="TextureRect" parent="MirrorPlacement"]
+[node name="HeatDamaged" type="TextureRect" parent="MirrorPlacement" unique_id=2013441977]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -73.0
+offset_top = -20.0
+offset_right = -82.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_mirror_heat")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Closed" type="TextureRect" parent="MirrorPlacement" unique_id=1035556216]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -91,7 +137,23 @@ texture = ExtResource("8_closed")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Destroyed" type="TextureRect" parent="MirrorPlacement"]
+[node name="ClosedHeatDamaged" type="TextureRect" parent="MirrorPlacement" unique_id=1738008640]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -33.0
+offset_top = -9.0
+offset_right = -163.0
+offset_bottom = -70.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_mirror_closed_heat")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Destroyed" type="TextureRect" parent="MirrorPlacement" unique_id=1014481705]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -108,7 +170,7 @@ texture = ExtResource("16_destroyed")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="InteractionButton" type="Button" parent="MirrorPlacement"]
+[node name="InteractionButton" type="Button" parent="MirrorPlacement" unique_id=1043765783]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -117,11 +179,13 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
 
-[node name="Target" type="Marker2D" parent="MirrorPlacement"]
+[node name="Target" type="Marker2D" parent="MirrorPlacement" unique_id=868006288]
 position = Vector2(92, 320)
 
-[node name="GhostPlacement" type="Control" parent="."]
+[node name="GhostPlacement" type="Control" parent="." unique_id=1987170974]
 z_index = 5
+layout_mode = 3
+anchors_preset = 0
 offset_left = 625.0
 offset_top = 96.0
 offset_right = 1165.0
@@ -129,7 +193,7 @@ offset_bottom = 666.0
 mouse_filter = 1
 script = ExtResource("5_ghost_script")
 
-[node name="Calm" type="TextureRect" parent="GhostPlacement"]
+[node name="Calm" type="TextureRect" parent="GhostPlacement" unique_id=2123956923]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -141,7 +205,7 @@ texture = ExtResource("3_ghost_calm")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Angry" type="TextureRect" parent="GhostPlacement"]
+[node name="Angry" type="TextureRect" parent="GhostPlacement" unique_id=2054965421]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -154,7 +218,7 @@ texture = ExtResource("4_ghost_angry")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="InteractionButton" type="Button" parent="GhostPlacement"]
+[node name="InteractionButton" type="Button" parent="GhostPlacement" unique_id=1431613263]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -163,18 +227,20 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
 
-[node name="Target" type="Marker2D" parent="GhostPlacement"]
+[node name="Target" type="Marker2D" parent="GhostPlacement" unique_id=1904215176]
 position = Vector2(270, 270)
 
-[node name="TrapPlacement" type="Control" parent="."]
+[node name="TrapPlacement" type="Control" parent="." unique_id=593165209]
 z_index = 6
+layout_mode = 3
+anchors_preset = 0
 offset_left = 1050.0
 offset_top = 555.0
 offset_right = 1285.0
 offset_bottom = 810.0
 mouse_filter = 2
 
-[node name="Empty" type="TextureRect" parent="TrapPlacement"]
+[node name="Empty" type="TextureRect" parent="TrapPlacement" unique_id=581736775]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -186,7 +252,7 @@ texture = ExtResource("10_trap_empty")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Occupied" type="TextureRect" parent="TrapPlacement"]
+[node name="Occupied" type="TextureRect" parent="TrapPlacement" unique_id=700602329]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -199,25 +265,25 @@ texture = ExtResource("11_trap_occupied")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="EmployeeActor" parent="." instance=ExtResource("12_actor")]
+[node name="EmployeeActor" parent="." unique_id=1359194149 instance=ExtResource("12_actor")]
 offset_left = 95.0
 offset_top = 205.0
 offset_right = 601.0
 offset_bottom = 886.0
 
-[node name="PhysicalApproach" type="Marker2D" parent="."]
+[node name="PhysicalApproach" type="Marker2D" parent="." unique_id=519139089]
 position = Vector2(570, 270)
 
-[node name="MirrorPhysicalApproach" type="Marker2D" parent="."]
+[node name="MirrorPhysicalApproach" type="Marker2D" parent="." unique_id=1366514804]
 position = Vector2(1030, 245)
 
-[node name="Interface" type="CanvasLayer" parent="."]
+[node name="Interface" type="CanvasLayer" parent="." unique_id=2088634256]
 
-[node name="ToolBar" parent="Interface" instance=ExtResource("13_toolbar")]
+[node name="ToolBar" parent="Interface" unique_id=958659045 instance=ExtResource("13_toolbar")]
 
-[node name="RepairHUD" parent="Interface" instance=ExtResource("14_hud")]
+[node name="RepairHUD" parent="Interface" unique_id=1123226003 instance=ExtResource("14_hud")]
 offset_left = -5.0
 offset_right = -5.0
 
-[node name="PauseMenu" parent="." instance=ExtResource("15_pause")]
+[node name="PauseMenu" parent="." unique_id=17673649 instance=ExtResource("15_pause")]
 show_default_menu_button = false

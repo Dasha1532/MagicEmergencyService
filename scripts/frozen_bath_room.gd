@@ -2,6 +2,8 @@ extends Node2D
 
 const FrozenBathSimulationScript := preload("res://scripts/frozen_bath_simulation.gd")
 const EmployeeReactionResolverScript := preload("res://scripts/employee_reaction_resolver.gd")
+const FAUCET_ACTIONS := ["diagnose", "repair", "antimagic", "freeze", "heat"]
+const BATH_ACTIONS := ["diagnose", "physical_move", "heat", "freeze", "telekinesis", "animate"]
 
 @onready var frozen_bath: TextureRect = $FrozenBath
 @onready var broken_bath: TextureRect = $BrokenBath
@@ -10,8 +12,10 @@ const EmployeeReactionResolverScript := preload("res://scripts/employee_reaction
 @onready var faucet_frost: TextureRect = $Faucet/FrostOverlay
 @onready var normal_faucet: TextureRect = $Faucet/Normal
 @onready var regulated_faucet: TextureRect = $Faucet/Regulated
-@onready var interaction_button: Button = $InteractionButton
-@onready var target: Marker2D = $Target
+@onready var bath_interaction_button: Button = $BathInteractionButton
+@onready var faucet_interaction_button: Button = $FaucetInteractionButton
+@onready var bath_target: Marker2D = $BathTarget
+@onready var faucet_target: Marker2D = $FaucetTarget
 @onready var employee_actor: Control = $EmployeeActor
 @onready var physical_approach: Marker2D = $PhysicalApproach
 @onready var tool_bar: Control = $Interface/ToolBar
@@ -22,6 +26,7 @@ var simulation: RefCounted
 var selected_employee_id: StringName = &""
 var action_in_progress := false
 var pending_action_id: StringName = &""
+var selected_target: StringName = &"faucet"
 
 
 func _ready() -> void:
@@ -32,7 +37,8 @@ func _ready() -> void:
 	var saved_state: Dictionary = game_state.get_job_repair_state(game_state.active_job_id)
 	if not saved_state.is_empty():
 		simulation.load_state(saved_state)
-	interaction_button.pressed.connect(_on_problem_selected)
+	bath_interaction_button.pressed.connect(_on_bath_selected)
+	faucet_interaction_button.pressed.connect(_on_faucet_selected)
 	tool_bar.tool_selected.connect(_on_tool_selected)
 	repair_hud.employee_selected.connect(_on_employee_selected)
 	repair_hud.completion_requested.connect(_attempt_complete_job)
@@ -76,7 +82,17 @@ func _configure_employee_actor() -> void:
 		employee_actor.call("set_horizontal_flip", false)
 
 
-func _on_problem_selected() -> void:
+func _on_bath_selected() -> void:
+	selected_target = &"bath"
+	_open_target_actions()
+
+
+func _on_faucet_selected() -> void:
+	selected_target = &"faucet"
+	_open_target_actions()
+
+
+func _open_target_actions() -> void:
 	if action_in_progress:
 		return
 	if simulation.is_fully_resolved():
@@ -86,20 +102,71 @@ func _on_problem_selected() -> void:
 		repair_hud.show_system_message("Сначала выберите сотрудника из бригады.", true)
 		return
 	var employee: Dictionary = game_state.employees[selected_employee_id]
+	var instant_result := _instant_target_result(selected_employee_id, selected_target)
+	if not instant_result.is_empty():
+		tool_bar.visible = false
+		if not repair_hud.show_employee_reaction(selected_employee_id, instant_result):
+			repair_hud.show_system_message(instant_result, false)
+		return
 	tool_bar.configure_for_employee(str(employee["name"]), employee["abilities"], str(employee["core_actions"]))
-	var repair_label := "Осмотреть соединения крана"
-	if selected_employee_id == &"boris" and game_state.has_supply_item(&"thermal_regulator"):
-		repair_label = "Установить терморегулятор воды — 3 мин."
-	tool_bar.show_for_object("Замёрзшая ванна", target.global_position, {
-		&"diagnose": "Осмотреть кран и лёд",
-		&"repair": repair_label,
-		&"physical_move": "Расколоть лёд",
-		&"heat": "Растопить лёд",
-		&"antimagic": "Снять холодный след",
-		&"freeze": "Усилить заморозку",
-		&"telekinesis": "Убрать осколки",
-		&"animate": "Оживить ванну",
-	}, [])
+	if not _employee_has_action_for_target(employee["abilities"], selected_target):
+		tool_bar.visible = false
+		var refusal := _target_refusal_for_employee(selected_employee_id, selected_target)
+		if not repair_hud.show_employee_reaction(selected_employee_id, refusal):
+			repair_hud.show_system_message(refusal, false)
+		return
+	var hidden_actions := _hidden_actions_for_target(selected_target)
+	if selected_employee_id == &"boris" and not game_state.has_supply_item(&"thermal_regulator"):
+		hidden_actions.append("repair")
+	if selected_target == &"faucet":
+		tool_bar.show_for_object("Кран", faucet_target.global_position, {
+			&"diagnose": "Осмотреть кран",
+			&"repair": "Установить терморегулятор воды — 3 мин.",
+			&"antimagic": "Снять холодный след",
+			&"freeze": "Усилить заморозку",
+			&"heat": "Снять след огнём",
+		}, [], hidden_actions)
+	else:
+		tool_bar.show_for_object("Ванна со льдом", bath_target.global_position, {
+			&"diagnose": "Осмотреть ванну",
+			&"physical_move": "Расколоть лёд",
+			&"heat": "Растопить лёд",
+			&"freeze": "Усилить заморозку",
+			&"telekinesis": "Убрать лёд",
+			&"animate": "Оживить ванну",
+		}, [], hidden_actions)
+
+
+func _instant_target_result(employee_id: StringName, target_id: StringName) -> String:
+	if employee_id == &"boris" and target_id == &"bath":
+		return FrozenBathSimulationScript.BORIS_BATH_DIAGNOSIS
+	if employee_id == &"boris" and target_id == &"faucet" and simulation != null and bool(simulation.world_object.get("faucet_diagnosed", false)):
+		return simulation.get_employee_reaction(employee_id, &"diagnose", target_id)
+	return ""
+
+
+func _hidden_actions_for_target(target_id: StringName) -> PackedStringArray:
+	if target_id == &"faucet":
+		return PackedStringArray(["physical_move", "telekinesis", "animate"])
+	return PackedStringArray(["repair", "antimagic"])
+
+
+func _employee_has_action_for_target(ability_ids: PackedStringArray, target_id: StringName) -> bool:
+	var supported_actions := FAUCET_ACTIONS if target_id == &"faucet" else BATH_ACTIONS
+	for ability_id: String in ability_ids:
+		if supported_actions.has(ability_id):
+			return true
+	return false
+
+
+func _target_refusal_for_employee(employee_id: StringName, target_id: StringName) -> String:
+	if employee_id == &"grog" and target_id == &"faucet":
+		return "Лёд я расколю. Кран тоже могу расколоть, но заявка от этого короче не станет."
+	if employee_id == &"nika" and target_id == &"faucet":
+		return "Кран закреплён, телекинезом двигать его не стану. Лёд нужно убирать из ванны."
+	if employee_id == &"felix" and target_id == &"bath":
+		return "В самой ванне нет чар, которые нужно подавлять. Холодный след находится на кране."
+	return "У меня нет подходящего действия для этой части ванной."
 
 
 func _on_tool_selected(action_id: StringName) -> void:
@@ -113,13 +180,16 @@ func _on_tool_selected(action_id: StringName) -> void:
 		return
 	tool_bar.visible = false
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
-	var contextual_reaction: String = simulation.get_employee_reaction(selected_employee_id, action_id)
+	var contextual_reaction: String = simulation.get_employee_reaction(selected_employee_id, action_id, selected_target)
+	if _action_already_completed(action_id):
+		if action_id == &"heat":
+			contextual_reaction = "Здесь уже достаточно тепло. Повторный огонь ничего не исправит."
+		if not repair_hud.show_employee_reaction(selected_employee_id, contextual_reaction):
+			repair_hud.show_system_message(contextual_reaction, false)
+		return
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, &"", contextual_reaction, true)
-	if selected_employee_id == &"boris" and action_id == &"repair" and not game_state.has_supply_item(&"thermal_regulator"):
-		reaction = "Проверю соединения. Если трубы целы, придётся ставить терморегулятор — голыми руками температуру не прикрутишь."
-	if action_id != &"diagnose" and not reaction.is_empty():
+	if action_id != &"diagnose" and not reaction.is_empty() and repair_hud.show_employee_reaction(selected_employee_id, reaction):
 		pending_action_id = action_id
-		repair_hud.show_employee_reaction(selected_employee_id, reaction)
 		return
 	_begin_action(action_id)
 
@@ -133,13 +203,17 @@ func _on_pre_action_dialogue_finished() -> void:
 
 
 func _begin_action(action_id: StringName) -> void:
+	if _action_already_completed(action_id):
+		return
 	action_in_progress = true
-	interaction_button.disabled = true
+	bath_interaction_button.disabled = true
+	faucet_interaction_button.disabled = true
 	var is_physical: bool = game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical"
 	var is_equipment: bool = action_id == &"repair" and selected_employee_id == &"boris" and game_state.has_supply_item(&"thermal_regulator")
 	if is_physical or is_equipment:
 		repair_hud.start_timed_action(selected_employee_id, action_id, _resolve_action.bind(action_id), 3 if is_equipment else -1)
-	employee_actor.play_action(action_id, target.global_position, physical_approach.position if is_physical else Vector2.INF)
+	var action_target := faucet_target.global_position if selected_target == &"faucet" else bath_target.global_position
+	employee_actor.play_action(action_id, action_target, physical_approach.position if is_physical else Vector2.INF)
 
 
 func _on_action_impact(action_id: StringName) -> void:
@@ -148,24 +222,27 @@ func _on_action_impact(action_id: StringName) -> void:
 
 
 func _resolve_action(action_id: StringName) -> void:
-	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, game_state.has_supply_item(&"thermal_regulator"))
+	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, game_state.has_supply_item(&"thermal_regulator"), selected_target)
 	if bool(result.get("applied", false)) and action_id == &"physical_move":
 		_play_audio_cue(&"play_heavy_impact")
 		_play_audio_cue(&"play_glass_debris")
 	_save_state()
 	_apply_visual_state()
 	var message := str(result["message"])
-	if not message.is_empty():
-		repair_hud.show_system_message(message, bool(result["warning"]))
-	elif action_id == &"diagnose":
+	if action_id == &"diagnose":
 		var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
-		var contextual_reaction: String = simulation.get_employee_reaction(selected_employee_id, action_id)
+		var contextual_reaction: String = simulation.get_employee_reaction(selected_employee_id, action_id, selected_target)
 		var diagnosis_reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, &"", contextual_reaction, true)
+		var showed_reaction: bool = false
 		if not diagnosis_reaction.is_empty():
-			repair_hud.show_employee_reaction(selected_employee_id, diagnosis_reaction)
+			showed_reaction = bool(repair_hud.show_employee_reaction(selected_employee_id, diagnosis_reaction))
+		if not showed_reaction and not message.is_empty():
+			repair_hud.show_system_message(message, bool(result["warning"]))
+	elif not message.is_empty():
+		repair_hud.show_system_message(message, bool(result["warning"]))
 	if action_id == &"install_regulator" or action_id == &"repair":
 		action_in_progress = false
-		interaction_button.disabled = simulation.is_fully_resolved()
+		_set_interaction_enabled(not simulation.is_fully_resolved())
 
 
 func _play_audio_cue(method: StringName) -> void:
@@ -176,7 +253,7 @@ func _play_audio_cue(method: StringName) -> void:
 
 func _on_action_finished() -> void:
 	action_in_progress = false
-	interaction_button.disabled = simulation.is_fully_resolved()
+	_set_interaction_enabled(not simulation.is_fully_resolved())
 
 
 func _apply_visual_state() -> void:
@@ -191,8 +268,23 @@ func _apply_visual_state() -> void:
 	faucet_frost.visible = frozen_faucet.visible and bool(simulation.world_object.get("extra_frost", false))
 	regulated_faucet.visible = resolved and bool(simulation.world_object.get("regulator_installed", false))
 	normal_faucet.visible = resolved and not regulated_faucet.visible
-	interaction_button.disabled = simulation.is_fully_resolved() or action_in_progress
+	_set_interaction_enabled(not simulation.is_fully_resolved() and not action_in_progress)
 	repair_hud.set_completion_ready(resolved)
+
+
+func _set_interaction_enabled(enabled: bool) -> void:
+	bath_interaction_button.disabled = not enabled
+	faucet_interaction_button.disabled = not enabled
+
+
+func _action_already_completed(action_id: StringName) -> bool:
+	if action_id == &"antimagic":
+		return bool(simulation.world_object["cold_trace_removed"])
+	if action_id == &"telekinesis":
+		return bool(simulation.world_object["ice_removed"])
+	if action_id == &"heat":
+		return bool(simulation.world_object["cold_trace_removed"]) if selected_target == &"faucet" else bool(simulation.world_object["ice_removed"])
+	return false
 
 
 func _resume_pending_action() -> void:
@@ -200,8 +292,10 @@ func _resume_pending_action() -> void:
 	if pending.is_empty():
 		return
 	selected_employee_id = StringName(str(pending.get("employee_id", "")))
+	var action_id := StringName(str(pending.get("action_id", "")))
+	selected_target = &"bath" if action_id == &"physical_move" else &"faucet"
 	_configure_employee_actor()
-	repair_hud.resume_timed_action(_resolve_action.bind(StringName(str(pending.get("action_id", "")))))
+	repair_hud.resume_timed_action(_resolve_action.bind(action_id))
 
 
 func _save_state() -> void:

@@ -92,7 +92,11 @@ func _apply_fullscreen() -> void:
 func _apply_window_resolution() -> void:
 	DisplayServer.window_set_size(window_resolution)
 	var screen_size := DisplayServer.screen_get_size(DisplayServer.window_get_current_screen())
-	DisplayServer.window_set_position((screen_size - window_resolution) / 2)
+	var centered_position := Vector2i(
+		int((screen_size.x - window_resolution.x) / 2.0),
+		int((screen_size.y - window_resolution.y) / 2.0),
+	)
+	DisplayServer.window_set_position(centered_position)
 
 
 func _validated_resolution(resolution: Vector2i) -> Vector2i:

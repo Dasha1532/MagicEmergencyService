@@ -162,6 +162,7 @@ stretch_mode = 6
 
 [node name="OfficeCat" type="Control" parent="." unique_id=1299036019]
 editor_description = "Контейнер офисного кота. Внутри находятся четыре независимо настраиваемых состояния и общая область клика."
+modulate = Color(0.58, 0.54, 0.5, 1)
 z_index = 7
 anchors_preset = 0
 offset_left = 472.0

@@ -104,10 +104,15 @@ func get_employee_reaction(employee_id: StringName, action_id: StringName) -> St
 		if int(world_object.get("temperature", 0)) >= OVERHEAT_THRESHOLD:
 			return "Ключи у меня прочные, руки тоже. Но в раскалённый металл я ими не полезу."
 		return "Теперь можно работать по-сантехнически: уплотнения, соединения и никаких новых стихий."
+	if employee_id == &"liliya" and action_id == &"heat":
+		if _tags().has("lava_flowing"):
+			return "Нагреть кран, из которого течёт лава? Уточняю: приказ точно записан без опечатки?"
+		if bool(world_object.get("frozen", false)):
+			return "Иней растает, и застывшая лава снова пойдёт. Если это эксперимент — предупреждение я сделала."
 	return {
 		&"liliya": {
 			&"freeze": "Лаву остужу. Главное — не получить вместо аварийного крана памятник аварийному крану.",
-			&"heat": "Нагреть кран, из которого течёт лава? Уточняю: приказ точно записан без опечатки?",
+			&"heat": "Кран уже не течёт и не покрыт инеем. Нагрев здесь будет только новым испытанием для металла.",
 		},
 		&"boris": {
 			&"diagnose": "Сантехника обычная. Лава — дополнительная комплектация, которой в смете не было.",
@@ -170,13 +175,13 @@ func _diagnose_faucet() -> String:
 	if _tags().has("melted"):
 		return "Корпус крана расплавлен. Нужна полная замена, полевой ремонт невозможен."
 	if _tags().has("lava_flowing"):
-		return "Внутри идёт лава, давление %d, температура %d. Сначала необходимо остановить и охладить поток." % [int(world_object["pressure"]), int(world_object["temperature"])]
+		return "Внутри продолжает идти лава, а корпус крана сильно нагрет. Сначала необходимо остановить поток."
 	if int(world_object["temperature"]) >= OVERHEAT_THRESHOLD:
 		return "Поток остановлен, но металл всё ещё раскалён. Прикасаться к крану пока опасно."
 	if int(world_object["damage"]) > 0:
 		return "Кран безопасен, но перегрев повредил соединения. Можно выполнить обычный ремонт."
 	if _tags().has("repaired"):
-		return "Давление сброшено, соединения герметичны, кран исправен."
+		return "Поток остановлен, соединения герметичны, кран исправен."
 	return "Магическая опасность устранена. Кран можно привести в рабочее состояние обычным ремонтом."
 
 
@@ -205,15 +210,16 @@ func get_completion_result() -> Dictionary:
 	if _tags().has("melted"):
 		return {
 			"reward_adjustment": -500,
+			"forfeit_payment": true,
 			"compensation_cost": int(world_object["replacement_value"]),
 			"reputation_change": -6,
 			"summary": "Расплавленный металл перекрыл трубу и остановил поток лавы, но кран полностью уничтожен. Оплаты не будет; стоимость замены оборудования предъявлена службе как претензия.",
-			"review": "Я просил починить кран, а не превратить его в современную скульптуру. Впрочем, скульптура хотя бы больше не плюётся лавой.",
+			"review": "От крана остался оплавленный ком металла. В следующий раз сразу скажите, что вместо ремонта оказываете услуги по сносу.",
 			"consequences": ["Кран полностью уничтожен и требует замены.", "Жилец предъявил службе претензию на стоимость оборудования."],
 			"actions": action_log.duplicate(true),
 		}
 	var damage: int = int(world_object.get("damage", 0))
-	var summary := "Поток лавы остановлен, давление сброшено, кран принят в исправном состоянии."
+	var summary := "Поток лавы остановлен, кран принят в исправном состоянии."
 	var review := "Спасибо! Из крана снова не течёт лава. Для демона звучит как жалоба, но для владельца ванной — настоящее счастье."
 	if damage > 0:
 		summary += " За дополнительный перегрев удержана компенсация за повреждение отделки."
@@ -242,7 +248,7 @@ func _apply_freeze() -> String:
 		_add_tag("repaired")
 		world_object["pressure"] = 1
 		world_object["visual_state"] = &"repaired"
-		return "Лава застыла, давление сброшено. Кран покрылся инеем и снова безопасен."
+		return "Лава застыла. Кран покрылся инеем и снова безопасен."
 	if int(world_object["temperature"]) < OVERHEAT_THRESHOLD and _tags().has("overheated"):
 		_remove_tag("overheated")
 		if _tags().has("lava_flowing"):
@@ -285,7 +291,13 @@ func _apply_heat() -> String:
 		world_object["visual_state"] = &"overheated"
 		return "Кран раскалился докрасна и начал деформироваться. Ещё один нагрев расплавит металл."
 	if was_frozen:
-		return "Нагрев растопил иней на кране."
+		_remove_tag("repaired")
+		_remove_tag("stabilized")
+		_add_tag("lava_flowing")
+		_add_tag("pressurized")
+		world_object["pressure"] = 8
+		world_object["visual_state"] = &"emergency"
+		return "Нагрев растопил ледяную пробку. Лава снова течёт из крана."
 	return "Кран стал горячее, но металл пока сохраняет форму."
 
 

@@ -16,7 +16,6 @@ const CITY_MAP_SCENE = preload("res://scenes/ui/CityMap.tscn")
 const OFFICE_BOOKS_SCENE = preload("res://scenes/ui/OfficeBooks.tscn")
 const DISMISSAL_DOCUMENT_SCENE = preload("res://scenes/ui/DismissalDocument.tscn")
 const TUTORIAL_OVERLAY_SCRIPT = preload("res://scripts/tutorial_overlay.gd")
-
 var selected_job_id: StringName
 var job_list: VBoxContainer
 var employee_list: HBoxContainer
@@ -578,7 +577,7 @@ func _build_personnel_screen() -> void:
 	personnel_hire_button.add_theme_font_size_override("font_size", 13)
 	personnel_hire_button.pressed.connect(_hire_selected_personnel)
 	personnel_layer.add_child(personnel_hire_button)
-	personnel_training_button = _button("", hire_rect.position + Vector2(-10, -2), Vector2(hire_rect.size.x - 20, 35))
+	personnel_training_button = _button("", hire_rect.position + Vector2(10, -2), Vector2(hire_rect.size.x - 20, 35))
 	personnel_training_button.add_theme_font_size_override("font_size", 13)
 	personnel_training_button.clip_text = true
 	personnel_training_button.custom_minimum_size = Vector2.ZERO
@@ -721,10 +720,10 @@ func _build_supply_shop() -> void:
 	supply_catalog_list.custom_minimum_size = Vector2(350, 0)
 	supply_catalog_list.add_theme_constant_override("separation", 10)
 	catalog_scroll.add_child(supply_catalog_list)
-	_add_supply_catalog_section("СНАРЯЖЕНИЕ", [&"ghost_trap", &"thermal_regulator"])
+	_add_supply_catalog_section("СНАРЯЖЕНИЕ", [&"ghost_trap", &"thermal_regulator", &"protective_cloth"])
 	_add_supply_catalog_section("МАГИЧЕСКИЕ КУРСЫ", [&"animation_kit", &"freeze_grimoire", &"heat_grimoire", &"telekinesis_grimoire", &"antimagic_grimoire"])
 
-	var catalog_hint := _label("Книги открывают курсы. Снаряжение остаётся у службы.", 13, COLOR_MUTED)
+	var catalog_hint := _label("Книги открывают курсы. Расходные материалы списываются на объектах.", 13, COLOR_MUTED)
 	catalog_hint.position = Vector2(28, 622)
 	catalog_hint.size = Vector2(374, 38)
 	catalog_hint.clip_text = true
@@ -963,11 +962,11 @@ func _build_job_report_dialog() -> void:
 	panel.add_child(job_report_title)
 	job_report_body = _label("", 18, COLOR_PARCHMENT)
 	job_report_body.position = Vector2(66, 108)
-	job_report_body.size = Vector2(648, 328)
+	job_report_body.size = Vector2(648, 310)
 	job_report_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	job_report_body.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	job_report_body.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	panel.add_child(job_report_body)
-	var close_button := _button("ПРИНЯТЬ ОТЧЁТ", Vector2(210, 468), Vector2(360, 62))
+	var close_button := _button("ПРИНЯТЬ ОТЧЁТ", Vector2(210, 480), Vector2(360, 62))
 	close_button.pressed.connect(_dismiss_job_report)
 	panel.add_child(close_button)
 
@@ -1200,12 +1199,19 @@ func _finish_final_video() -> void:
 	var fade := create_tween()
 	fade.tween_property(demo_video_player, "modulate:a", 0.0, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	await fade.finished
+	_show_demo_exit_blackout()
+	await get_tree().create_timer(1.0).timeout
+	get_tree().change_scene_to_file("res://scenes/TitleScreen.tscn")
+
+
+func _show_demo_exit_blackout() -> void:
 	demo_video_player.stop()
-	demo_video_layer.visible = false
+	demo_video_player.modulate.a = 0.0
+	demo_video_layer.modulate = Color.WHITE
+	demo_video_layer.visible = true
+	demo_video_layer.move_to_front()
 	demo_video_transitioning = false
 	final_video_mode = &""
-	await get_tree().create_timer(0.35).timeout
-	get_tree().change_scene_to_file("res://scenes/TitleScreen.tscn")
 
 
 func _leave_after_dismissal() -> void:
@@ -1281,11 +1287,15 @@ func _build_equipment_storage() -> void:
 
 	var content_panel := _panel(Vector2(150, 198), Vector2(1300, 620), 14)
 	equipment_layer.add_child(content_panel)
+	var equipment_scroll := ScrollContainer.new()
+	equipment_scroll.position = Vector2(34, 40)
+	equipment_scroll.size = Vector2(1232, 510)
+	equipment_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	content_panel.add_child(equipment_scroll)
 	equipment_cards = HBoxContainer.new()
-	equipment_cards.position = Vector2(34, 40)
-	equipment_cards.size = Vector2(1232, 510)
+	equipment_cards.custom_minimum_size = Vector2(1232, 500)
 	equipment_cards.add_theme_constant_override("separation", 22)
-	content_panel.add_child(equipment_cards)
+	equipment_scroll.add_child(equipment_cards)
 	var hint := _label("Магические книги хранятся в учебном фонде и на склад не поступают.", 15, COLOR_MUTED)
 	hint.position = Vector2(40, 566)
 	hint.size = Vector2(1220, 28)
@@ -1330,6 +1340,16 @@ func _refresh_equipment_storage() -> void:
 			str(game_state.SUPPLY_ITEMS[&"thermal_regulator"]["icon"]),
 			"Стабилизирует магическую температуру воды после установки на объекте."
 		)
+	var portal_state: Dictionary = game_state.get_job_repair_state(&"portal_mirror")
+	var portal_object: Variant = portal_state.get("world_object", {})
+	var cloth_is_installed := portal_object is Dictionary and bool((portal_object as Dictionary).get("covered", false))
+	if game_state.has_supply_item(&"protective_cloth") or cloth_is_installed:
+		_add_equipment_card(
+			str(game_state.SUPPLY_ITEMS[&"protective_cloth"]["name"]),
+			_equipment_status(&"protective_cloth"),
+			str(game_state.SUPPLY_ITEMS[&"protective_cloth"]["icon"]),
+			"Расходное полотно для временной изоляции активных магических объектов."
+		)
 
 
 func _add_equipment_card(item_name: String, status_text: String, icon_path: String, description: String) -> void:
@@ -1371,7 +1391,11 @@ func _add_equipment_card(item_name: String, status_text: String, icon_path: Stri
 
 
 func _equipment_status(item_id: StringName) -> String:
-	var job_id: StringName = &"escaped_ghost" if item_id == &"ghost_trap" else &"frozen_bath"
+	var job_id: StringName = &"frozen_bath"
+	if item_id == &"ghost_trap":
+		job_id = &"escaped_ghost"
+	elif item_id == &"protective_cloth":
+		job_id = &"portal_mirror"
 	var active_state: Dictionary = game_state.get_job_repair_state(job_id)
 	var active_object: Variant = active_state.get("world_object", {})
 	if active_object is Dictionary:
@@ -1381,7 +1405,9 @@ func _equipment_status(item_id: StringName) -> String:
 				return "ЗАНЯТА: ПРИВИДЕНИЕ В ЛОВУШКЕ"
 			if trap_state == &"installed":
 				return "УСТАНОВЛЕНА НА ОБЪЕКТЕ"
-		elif bool((active_object as Dictionary).get("regulator_installed", false)):
+		elif item_id == &"protective_cloth" and bool((active_object as Dictionary).get("covered", false)):
+			return "УСТАНОВЛЕНО НА ЗЕРКАЛЕ"
+		elif item_id == &"thermal_regulator" and bool((active_object as Dictionary).get("regulator_installed", false)):
 			return "УСТАНОВЛЕН: СТАРЫЙ КВАРТАЛ, 5"
 	for report_value: Variant in game_state.job_reports:
 		if not report_value is Dictionary:
@@ -1539,10 +1565,13 @@ func _refresh_job_report() -> void:
 	job_report_layer.visible = not report.is_empty()
 	if report.is_empty():
 		return
+	job_report_title.text = "СРОЧНОЕ СООБЩЕНИЕ" if not str(report.get("incident_message", "")).is_empty() else "АКТ ВЫПОЛНЕННЫХ РАБОТ"
 	var crew: Array = report.get("crew", [])
 	var crew_text: String = ", ".join(PackedStringArray(crew)) if not crew.is_empty() else "бригада не указана"
 	var compensation: int = int(report.get("compensation", 0))
 	var finance_text: String = "Оплата: %d монет" % int(report.get("reward", 0))
+	var reputation_change := int(report.get("reputation_change", 0))
+	finance_text += "\nИзменение репутации: %s" % ("+%d" % reputation_change if reputation_change > 0 else str(reputation_change))
 	var expense_reimbursement := int(report.get("expense_reimbursement", 0))
 	if expense_reimbursement > 0:
 		finance_text += "\nВключено возмещение снаряжения: %d монет" % expense_reimbursement
@@ -1738,7 +1767,7 @@ func _refresh_supply_shop() -> void:
 	supply_detail_description.text = str(item["description"])
 	var training_id := StringName(str(item.get("training_id", "")))
 	if training_id.is_empty():
-		supply_delivery_note.text = "После покупки снаряжение поступит в собственность службы и станет доступно на подходящих заявках."
+		supply_delivery_note.text = "После использования стоимость полотна включается в оплату заявки. Если полотно удастся снять и вернуть на склад, его можно будет использовать снова." if bool(item.get("consumable", false)) else "После покупки снаряжение поступит в собственность службы и станет доступно на подходящих заявках."
 	else:
 		supply_delivery_note.text = "После покупки книга откроет курс «%s». Выберите её в каталоге, затем откройте личное дело совместимого сотрудника." % game_state.TRAINING_DEFINITIONS[training_id]["name"]
 	if owned:
@@ -1807,7 +1836,7 @@ func _refresh_personnel() -> void:
 			personnel_hire_button.text = "НАНЯТЬ: %d МОНЕТ" % hire_cost if not personnel_hire_button.disabled else "НУЖНО %d МОНЕТ" % hire_cost
 	else:
 		var action_rect := _personnel_guide_rect("StatusArea")
-		personnel_training_button.position = action_rect.position + Vector2(-10 if training_state == &"available" else 10, -2)
+		personnel_training_button.position = action_rect.position + Vector2(10, -2)
 		personnel_training_button.size = Vector2(action_rect.size.x - 20, 35)
 		personnel_training_button.disabled = training_state != &"available"
 		match training_state:

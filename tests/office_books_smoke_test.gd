@@ -63,6 +63,8 @@ func _run() -> void:
 	_check("★★★★★" in books.detail_title.text, "Отзыв показывает оценку")
 	_check("приготовления демона" in books.detail_body.text, "Отзыв показывает живую реплику жильца")
 	_check("Поток остановлен" not in books.detail_body.text, "Технический итог не подставляется вместо отзыва")
+	game_state.advance_time(1)
+	_check("приготовления демона" in books.detail_body.text, "Обновление игрового времени не сбрасывает открытый отзыв")
 
 	books.open_section(&"archive")
 	var archive_button := books.entry_list.get_child(0) as Button
@@ -70,6 +72,8 @@ func _run() -> void:
 	_check("ПОСЛЕДСТВИЯ" in books.detail_body.text, "Архив показывает раздел последствий")
 	_check("Дополнительного ущерба не зафиксировано" in books.detail_body.text, "Архив показывает отсутствие ущерба")
 	_check("Лилия Морозова — Заморозка" not in books.detail_body.text, "Архив не показывает пошаговый журнал действий")
+	game_state.advance_time(1)
+	_check("ПОСЛЕДСТВИЯ" in books.detail_body.text, "Обновление игрового времени не сбрасывает открытую запись архива")
 
 	var repair_simulation = REPAIR_SIMULATION_SCRIPT.new()
 	repair_simulation.world_object["tags"] = PackedStringArray(["faucet", "stabilized", "repaired"])
@@ -79,8 +83,13 @@ func _run() -> void:
 	_check((clean_repair_result.get("consequences", []) as Array).has("Дополнительного ущерба не зафиксировано."), "Чистый ремонт фиксирует отсутствие ущерба")
 
 	books.open_section(&"accounting")
-	_check("Сейчас: %d монет" % game_state.money in books.summary.text, "Книга учёта показывает текущий баланс")
+	_check("Казна: %d" % game_state.money in books.summary.text, "Книга учёта показывает текущий баланс")
 	_check(books.entry_list.get_child_count() == game_state.financial_ledger.size(), "Все денежные операции показаны")
+	var accounting_entry := books.entry_list.get_child(0) as Button
+	accounting_entry.pressed.emit()
+	var selected_accounting_title: String = books.detail_title.text
+	game_state.advance_time(1)
+	_check(books.detail_title.text == selected_accounting_title and "Выберите запись" not in books.detail_body.text, "Обновление игрового времени не сбрасывает открытую запись учёта")
 	var ledger_balance := 0
 	for event: Dictionary in game_state.financial_ledger:
 		ledger_balance += int(event.get("amount", 0))

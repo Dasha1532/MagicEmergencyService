@@ -20,7 +20,7 @@ var home_position: Vector2
 var walk_pose_base_position: Vector2
 var walk_pose_alt_base_position: Vector2
 var walk_pose_faces_right: bool = false
-var persistent_work_pose: bool = false
+var persistent_action_pose: StringName = &""
 var employee_positions: Dictionary = {}
 var walking_z_index: int
 var horizontal_flip: bool = false
@@ -165,8 +165,8 @@ func play_action(
 			action_finished.emit()
 			return
 
-	if persistent_work_pose:
-		_show_work_pose_now()
+	if not persistent_action_pose.is_empty():
+		_show_persistent_pose_now()
 		action_in_progress = false
 		action_finished.emit()
 		return
@@ -191,13 +191,24 @@ func _show_action_pose(pose: TextureRect) -> void:
 
 
 func set_persistent_work_pose(enabled: bool) -> void:
-	persistent_work_pose = enabled
-	if enabled:
-		_show_work_pose_now()
+	set_persistent_action_pose(&"work" if enabled else &"")
+
+
+func set_persistent_action_pose(pose_id: StringName) -> void:
+	persistent_action_pose = pose_id
+	if not persistent_action_pose.is_empty():
+		_show_persistent_pose_now()
 	elif not action_in_progress:
 		_reset_pose_visibility()
 		if idle_tween != null:
 			idle_tween.play()
+
+
+func _show_persistent_pose_now() -> void:
+	if persistent_action_pose == &"hold" and hold_pose.texture != null:
+		_show_hold_pose_now()
+	else:
+		_show_work_pose_now()
 
 
 func _show_work_pose_now() -> void:
@@ -207,6 +218,15 @@ func _show_work_pose_now() -> void:
 		item.visible = false
 	work_pose.visible = true
 	work_pose.modulate = Color.WHITE
+
+
+func _show_hold_pose_now() -> void:
+	if idle_tween != null:
+		idle_tween.pause()
+	for item: TextureRect in [neutral_pose, work_pose, walk_pose, walk_pose_alt]:
+		item.visible = false
+	hold_pose.visible = true
+	hold_pose.modulate = Color.WHITE
 
 
 func _walk_to(target_position: Vector2) -> void:

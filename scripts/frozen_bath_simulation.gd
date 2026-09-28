@@ -1,6 +1,8 @@
 class_name FrozenBathSimulation
 extends RefCounted
 
+const BORIS_BATH_DIAGNOSIS := "Ванна цела, слив не забит. Проблема в том, что воду теперь можно вынимать отсюда одним куском."
+
 var world_object: Dictionary = {
 	"resolved": false,
 	"bath_damaged": false,
@@ -10,6 +12,7 @@ var world_object: Dictionary = {
 	"extra_frost": false,
 	"regulator_installed": false,
 	"resident_intro_seen": false,
+	"faucet_diagnosed": false,
 }
 var action_log: Array[Dictionary] = []
 
@@ -18,7 +21,12 @@ func load_state(saved_state: Dictionary) -> void:
 	var saved_object: Variant = saved_state.get("world_object", {})
 	if saved_object is Dictionary:
 		world_object.merge((saved_object as Dictionary).duplicate(true), true)
-	action_log = (saved_state.get("action_log", []) as Array).duplicate(true)
+	action_log.clear()
+	var saved_actions: Variant = saved_state.get("action_log", [])
+	if saved_actions is Array:
+		for saved_action: Variant in saved_actions:
+			if saved_action is Dictionary:
+				action_log.append((saved_action as Dictionary).duplicate(true))
 
 
 func get_state() -> Dictionary:
@@ -29,22 +37,43 @@ func get_resident_request() -> String:
 	return "Я просил сделать ванную безопасной, а не перевести её из вулкана в ледник."
 
 
-func apply_action(employee_id: StringName, action_id: StringName, has_regulator: bool = false) -> Dictionary:
+func apply_action(employee_id: StringName, action_id: StringName, has_regulator: bool = false, target_id: StringName = &"all") -> Dictionary:
 	if is_fully_resolved():
 		return _record(employee_id, action_id, false, true, "Магическая температура уже стабилизирована. Дополнительные действия не требуются.")
+	if action_id == &"antimagic" and bool(world_object["cold_trace_removed"]):
+		return _record(employee_id, action_id, false, false, "Холодный след с крана уже снят. Повторная антимагия не требуется.")
+	if action_id == &"telekinesis" and bool(world_object["ice_removed"]):
+		return _record(employee_id, action_id, false, false, "Лёд из ванны уже убран. Телекинезу больше нечего перемещать.")
+	if action_id == &"heat" and target_id == &"faucet" and bool(world_object["cold_trace_removed"]):
+		return _record(employee_id, action_id, false, false, "Холодный след с крана уже снят. Повторный нагрев не требуется.")
+	if action_id == &"heat" and target_id == &"bath" and bool(world_object["ice_removed"]):
+		return _record(employee_id, action_id, false, false, "Лёд в ванне уже растоплен. Повторный нагрев не требуется.")
 	var applied := true
 	var warning := false
 	var message := ""
 	match action_id:
 		&"diagnose":
-			message = ""
+			if target_id != &"bath":
+				world_object["faucet_diagnosed"] = true
+			message = "Ванна цела, слив не забит. Внутри находится цельная масса льда." if target_id == &"bath" else "Соединения исправны. Для стабилизации температуры нужен рунический терморегулятор из лавки снабжения."
 		&"heat":
-			world_object["resolved"] = true
-			world_object["cold_trace_removed"] = true
-			world_object["extra_frost"] = false
-			world_object["bath_still_frozen"] = false
-			world_object["ice_removed"] = true
-			message = "Осторожный нагрев растопил лёд. Холодный след больше не действует, но прежние повреждения ванны остались." if bool(world_object["bath_damaged"]) else "Осторожный нагрев растопил лёд и завершил работу."
+			if target_id == &"faucet":
+				world_object["resolved"] = true
+				world_object["cold_trace_removed"] = true
+				world_object["extra_frost"] = false
+				world_object["bath_still_frozen"] = not bool(world_object["ice_removed"])
+				message = "Осторожный нагрев снял холодный след с крана. Новая вода больше не замёрзнет, но лёд в ванне нужно убрать отдельно." if not bool(world_object["ice_removed"]) else "Осторожный нагрев снял холодный след с крана и полностью завершил работу."
+			elif target_id == &"bath":
+				world_object["bath_still_frozen"] = false
+				world_object["ice_removed"] = true
+				message = "Осторожный нагрев растопил лёд в ванне, но холодный след на кране ещё нужно снять." if not bool(world_object["cold_trace_removed"]) else "Осторожный нагрев растопил оставшийся лёд и полностью завершил работу."
+			else:
+				world_object["resolved"] = true
+				world_object["cold_trace_removed"] = true
+				world_object["extra_frost"] = false
+				world_object["bath_still_frozen"] = false
+				world_object["ice_removed"] = true
+				message = "Осторожный нагрев растопил лёд. Холодный след больше не действует, но прежние повреждения ванны остались." if bool(world_object["bath_damaged"]) else "Осторожный нагрев растопил лёд и завершил работу."
 		&"antimagic":
 			world_object["resolved"] = true
 			world_object["cold_trace_removed"] = true
@@ -74,13 +103,23 @@ func apply_action(employee_id: StringName, action_id: StringName, has_regulator:
 			warning = true
 			message = "Лёд расколот, но холодный след остался в кране. Ванна получила трещину, а вода снова начинает замерзать."
 		&"freeze":
-			world_object["resolved"] = false
-			world_object["cold_trace_removed"] = false
-			world_object["extra_frost"] = true
-			world_object["bath_still_frozen"] = true
-			world_object["ice_removed"] = false
+			if target_id == &"faucet":
+				world_object["resolved"] = false
+				world_object["cold_trace_removed"] = false
+				world_object["extra_frost"] = true
+				message = "Заморозка усилила холодный след на кране. Состояние ванны не изменилось."
+			elif target_id == &"bath":
+				world_object["bath_still_frozen"] = true
+				world_object["ice_removed"] = false
+				message = "Заморозка снова сковала ванну льдом. Состояние крана не изменилось."
+			else:
+				world_object["resolved"] = false
+				world_object["cold_trace_removed"] = false
+				world_object["extra_frost"] = true
+				world_object["bath_still_frozen"] = true
+				world_object["ice_removed"] = false
+				message = "Кран снова покрылся инеем, а лёд в ванне стал толще. Ванная убедительно доказала, что способна замерзнуть ещё сильнее."
 			warning = true
-			message = "Кран снова покрылся инеем, а лёд в ванне стал толще. Ванная убедительно доказала, что способна замерзнуть ещё сильнее."
 		&"telekinesis":
 			world_object["bath_still_frozen"] = false
 			world_object["ice_removed"] = true
@@ -96,10 +135,16 @@ func apply_action(employee_id: StringName, action_id: StringName, has_regulator:
 	return _record(employee_id, action_id, applied, warning, message)
 
 
-func get_employee_reaction(employee_id: StringName, action_id: StringName) -> String:
+func get_employee_reaction(employee_id: StringName, action_id: StringName, target_id: StringName = &"all") -> String:
+	if employee_id == &"felix" and action_id == &"antimagic" and bool(world_object["cold_trace_removed"]):
+		return "Холодный след уже снят. Повторно гасить отсутствующие чары не стану."
+	if employee_id == &"nika" and action_id == &"telekinesis" and bool(world_object["ice_removed"]):
+		return "Лёд уже убран. Второй раз выносить из пустой ванны нечего."
 	if employee_id == &"grog" and action_id == &"physical_move":
 		return "Лёд уберу. Если появится снова — в следующий раз принесу молот побольше."
 	if employee_id == &"boris" and action_id == &"diagnose":
+		if target_id == &"bath":
+			return BORIS_BATH_DIAGNOSIS
 		return "Трубы целы, кран цел. Похоже, после прошлого ремонта у него осталось слишком холодное отношение к работе."
 	match action_id:
 		&"heat":
@@ -143,7 +188,7 @@ func get_completion_result() -> Dictionary:
 			"actions": action_log.duplicate(true),
 		}
 	return {
-		"summary": "Остаточный холодный след устранён; вода в ванной больше не замерзает.",
+		"summary": "Остаточный холодный след устранён; вода в ванной больше не замерзает. После силового удаления льда ванна треснула, повреждение не устранено." if damaged else "Остаточный холодный след устранён; вода в ванной больше не замерзает. Ванна не повреждена.",
 		"review": "Ванная снова безопасна. Теперь вода просто холодная, как и положено воде без личных амбиций." if not damaged else "Вода больше не замерзает. Трещину на ванне я назову памятью о вашем особенно убедительном методе.",
 		"consequences": ["Температура воды стабилизирована.", "Ванна не повреждена."] if not damaged else ["Температура воды стабилизирована.", "Край ванны треснул после силового удаления льда."],
 		"reward_adjustment": 0 if not damaged else -70,

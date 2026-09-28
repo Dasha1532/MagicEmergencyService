@@ -27,13 +27,14 @@ const RUNNING_WATER := preload("res://assets/audio/water.ogg")
 const RAIN := preload("res://assets/audio/rain.ogg")
 const GARGOYLE_WAKE := preload("res://assets/audio/rubble-trouble-wet-reverb.wav")
 const LAVA_FLOW := preload("res://assets/audio/lava.ogg")
-const WARDROBE_STEPS := preload("res://assets/audio/skafhodit.wav")
 const COIN_SOUND := preload("res://assets/audio/coin-sound.wav")
 
 const CAT_SOUND_META := &"cat_purr_sound"
 const MUSIC_FADE_SECONDS := 2.0
 const MUSIC_SILENCE_DB := -40.0
 const MUSIC_VOLUME_DB := -6.0206 # 50% линейной громкости.
+const GHOST_FLIGHT_ANGRY_VOLUME := 0.5
+const GHOST_FLIGHT_CALM_VOLUME := GHOST_FLIGHT_ANGRY_VOLUME * 1.3
 
 var main_menu_player: AudioStreamPlayer
 var button_player: AudioStreamPlayer
@@ -62,7 +63,6 @@ var running_water_player: AudioStreamPlayer
 var rain_player: AudioStreamPlayer
 var gargoyle_wake_player: AudioStreamPlayer
 var lava_flow_player: AudioStreamPlayer
-var wardrobe_steps_player: AudioStreamPlayer
 var coin_player: AudioStreamPlayer
 var music_fades: Dictionary = {}
 
@@ -92,7 +92,7 @@ func _ready() -> void:
 	heavy_impact_player = _create_player(HEAVY_IMPACT)
 	wardrobe_move_player = _create_player(WARDROBE_MOVE)
 	trap_install_player = _create_player(TRAP_INSTALL)
-	ghost_flight_player = _create_player(_looped_stream(GHOST_FLIGHT), linear_to_db(0.5))
+	ghost_flight_player = _create_player(_looped_stream(GHOST_FLIGHT), linear_to_db(GHOST_FLIGHT_ANGRY_VOLUME))
 	ghost_trap_player = _create_player(GHOST_TRAP)
 	glass_debris_player = _create_player(GLASS_DEBRIS)
 	mirror_shatter_player = _create_player(MIRROR_SHATTER)
@@ -103,7 +103,6 @@ func _ready() -> void:
 	rain_player = _create_player(_looped_stream(RAIN), linear_to_db(0.5))
 	gargoyle_wake_player = _create_player(GARGOYLE_WAKE)
 	lava_flow_player = _create_player(_looped_stream(LAVA_FLOW), linear_to_db(0.5))
-	wardrobe_steps_player = _create_player(_looped_stream(WARDROBE_STEPS), linear_to_db(0.6))
 	coin_player = _create_player(COIN_SOUND)
 	var game_state := get_node_or_null("/root/GameState")
 	if game_state != null and game_state.has_signal(&"coins_spent"):
@@ -208,7 +207,8 @@ func play_gargoyle_wake() -> void:
 	gargoyle_wake_player.play()
 
 
-func set_ghost_flight_playing(enabled: bool) -> void:
+func set_ghost_flight_playing(enabled: bool, is_angry: bool = false) -> void:
+	ghost_flight_player.volume_db = linear_to_db(GHOST_FLIGHT_ANGRY_VOLUME if is_angry else GHOST_FLIGHT_CALM_VOLUME)
 	_set_loop_playing(ghost_flight_player, enabled)
 
 
@@ -222,10 +222,6 @@ func set_rain_playing(enabled: bool) -> void:
 
 func set_lava_flow_playing(enabled: bool) -> void:
 	_set_loop_playing(lava_flow_player, enabled)
-
-
-func set_wardrobe_steps_playing(enabled: bool) -> void:
-	_set_loop_playing(wardrobe_steps_player, enabled)
 
 
 func play_coin_sound() -> void:

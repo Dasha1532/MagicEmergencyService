@@ -1,5 +1,7 @@
 extends Node
 
+const WardrobeSimulationScript := preload("res://scripts/wardrobe_simulation.gd")
+
 signal state_changed
 signal coins_spent(amount: int)
 
@@ -10,12 +12,14 @@ const LEGACY_SAVE_PATH: String = "user://savegame.json"
 const AUTOSAVE_PATH: String = "user://autosave.json"
 const SAVE_SLOT_COUNT: int = 5
 const TRAVEL_TIME_MINUTES: int = 15
+const WARDROBE_FIRE_DURATION_MINUTES: int = 15
+const WARDROBE_FIRE_SPREAD_MINUTES: int = 5
 const OVERDUE_PAYMENT_PENALTY: int = 100
 const REPUTATION_RELIABLE_THRESHOLD: int = 35
 const REPUTATION_LICENSE_RISK_THRESHOLD: int = 25
 const ELEVATED_CLAIM_RISK_THRESHOLD: int = 300
 const HIGH_CLAIM_RISK_THRESHOLD: int = 600
-const DISMISSAL_CLAIM_THRESHOLD: int = 5
+const DISMISSAL_CLAIM_THRESHOLD: int = 4
 const DISMISSAL_DEBT_THRESHOLD: int = -800
 const REAL_SECONDS_PER_GAME_MINUTE: float = 3.0
 const DEMO_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle", "escaped_ghost", "frozen_bath"]
@@ -42,6 +46,15 @@ const SUPPLY_ITEMS: Dictionary = {
 		"name": "Рунический терморегулятор", "catalog_name": "Рунический терморегулятор", "category": "Полевое снаряжение", "price": 280,
 		"icon": "res://assets/objects/frozen_bath/regulator.png",
 		"description": "Переносной регулятор с рунами тепла и холода. Стабилизирует магическую температуру крана после установки.",
+	},
+	&"protective_cloth": {
+		"name": "Защитное полотно",
+		"catalog_name": "Защитное полотно",
+		"category": "Расходное снаряжение",
+		"price": 50,
+		"icon": "res://assets/objects/protective_cloth/folded.png",
+		"description": "Плотная ткань с защитными рунами и латунными зажимами. Позволяет временно изолировать активный магический объект.",
+		"consumable": true,
 	},
 	&"freeze_grimoire": {
 		"name": "Основы практической заморозки", "catalog_name": "Практическая заморозка", "category": "Книга заклинания", "price": 350,
@@ -340,7 +353,7 @@ var jobs: Dictionary = {
 		"unlocked": true,
 		"overdue": false,
 		"dispatched": false,
-		"danger": "Огонь, давление",
+		"danger": "Лава, высокая температура",
 		"base_reward": 500,
 		"repair_scene": "res://scenes/RepairHouse.tscn",
 		"assigned": PackedStringArray(),
@@ -519,6 +532,22 @@ func has_supply_item(item_id: StringName) -> bool:
 	return owned_supply_items.has(String(item_id))
 
 
+func consume_supply_item(item_id: StringName) -> bool:
+	var item_index := owned_supply_items.find(String(item_id))
+	if item_index < 0:
+		return false
+	owned_supply_items.remove_at(item_index)
+	state_changed.emit()
+	return true
+
+
+func return_supply_item(item_id: StringName) -> void:
+	if not SUPPLY_ITEMS.has(item_id) or owned_supply_items.has(String(item_id)):
+		return
+	owned_supply_items.append(String(item_id))
+	state_changed.emit()
+
+
 func grant_debug_money(amount: int = 500) -> void:
 	if not OS.is_debug_build() or amount <= 0:
 		return
@@ -533,9 +562,8 @@ func advance_day(days: int = 1) -> void:
 	day += days
 	time_minutes = 9 * 60
 	if completed_job_ids.has("lava_leak"):
-		_unlock_parallel_jobs()
-	if completed_job_ids.has("walking_wardrobe") and completed_job_ids.has("portal_mirror"):
-		_unlock_gargoyle_job()
+		_update_parallel_job_unlocks()
+	_unlock_gargoyle_job_if_due()
 	_unlock_escaped_ghost_job_if_due()
 	_unlock_frozen_bath_job_if_due()
 	for employee_id: StringName in EMPLOYEE_ORDER:
@@ -790,6 +818,7 @@ func advance_time(minutes: int, excluded_job_id: StringName = &"") -> PackedStri
 		return newly_overdue
 	var previous_clock := time_minutes
 	time_minutes += minutes
+	_process_timed_job_consequences()
 	var employee_arrived := false
 	for employee_id: StringName in employees:
 		var arrival_until := int(employees[employee_id].get("arrival_until", 0))
@@ -811,6 +840,31 @@ func advance_time(minutes: int, excluded_job_id: StringName = &"") -> PackedStri
 	if employee_arrived or not newly_overdue.is_empty():
 		save_autosave()
 	return newly_overdue
+
+
+func _process_timed_job_consequences() -> void:
+	var job_id := &"walking_wardrobe"
+	# Пока игрок находится на объекте, стадии огня и реакция хозяйки
+	# обрабатываются комнатой. Глобальный расчёт нужен только вне объекта.
+	if active_job_id == job_id or completed_job_ids.has(String(job_id)) or not jobs.has(job_id):
+		return
+	var saved_state := get_job_repair_state(job_id)
+	if saved_state.is_empty():
+		return
+	var simulation: RefCounted = WardrobeSimulationScript.new()
+	simulation.load_state(saved_state)
+	if not bool(simulation.world_object.get("burning", false)):
+		return
+	var results: Array[Dictionary] = simulation.advance_burning_until(time_minutes, WARDROBE_FIRE_SPREAD_MINUTES)
+	if results.is_empty():
+		return
+	set_job_repair_state(job_id, simulation.get_state())
+	if simulation.is_resolved():
+		var completion: Dictionary = simulation.get_completion_result()
+		completion["summary"] = "Пока бригада отсутствовала, оставленный без присмотра пожар уничтожил шкаф и посуду. Оплаты не будет; хозяйка предъявила службе претензию."
+		completion["review"] = "Вы уехали и оставили мой шкаф гореть! Когда я дозвонилась до службы, от него и всей посуды уже остался один пепел."
+		completion["incident_message"] = "Срочное сообщение: оставленный без присмотра шкаф полностью сгорел. Хозяйка требует объяснений и компенсации."
+		complete_job(job_id, completion)
 
 
 func get_job_repair_state(job_id: StringName) -> Dictionary:
@@ -881,11 +935,15 @@ func recall_job(job_id: StringName) -> bool:
 
 
 func complete_active_job(result: Dictionary = {}) -> bool:
-	if active_job_id.is_empty() or not jobs.has(active_job_id):
+	return complete_job(active_job_id, result)
+
+
+func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
+	if job_id.is_empty() or not jobs.has(job_id):
 		return false
-	if not get_pending_job_action(active_job_id).is_empty():
+	if not get_pending_job_action(job_id).is_empty():
 		return false
-	var completed_id: StringName = active_job_id
+	var completed_id: StringName = job_id
 	if completed_job_ids.has(String(completed_id)):
 		return false
 	var job: Dictionary = jobs[completed_id]
@@ -893,7 +951,8 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 	var overdue: bool = bool(job.get("overdue", false))
 	var reward_adjustment: int = int(result.get("reward_adjustment", 0)) - (OVERDUE_PAYMENT_PENALTY if overdue else 0)
 	var expense_reimbursement: int = maxi(0, int(result.get("expense_reimbursement", 0)))
-	var reward: int = maxi(0, base_reward + reward_adjustment + expense_reimbursement)
+	var payment_forfeited: bool = bool(result.get("forfeit_payment", false))
+	var reward: int = 0 if payment_forfeited else maxi(0, base_reward + reward_adjustment + expense_reimbursement)
 	var compensation: int = maxi(0, int(result.get("compensation_cost", 0)))
 	var assigned: PackedStringArray = job["assigned"]
 	var crew_names: PackedStringArray = PackedStringArray()
@@ -916,7 +975,7 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 	var summary: String = str(result.get("summary", "Аварийные работы приняты."))
 	if overdue:
 		summary += " Заявка выполнена после истечения срока: из оплаты удержано %d монет." % OVERDUE_PAYMENT_PENALTY
-	pending_job_report = {
+	var completed_report: Dictionary = {
 		"job_id": String(completed_id),
 		"title": str(job["title"]),
 		"resident": str(job["resident"]),
@@ -924,6 +983,7 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		"base_reward": base_reward,
 		"reward_adjustment": reward_adjustment,
 		"expense_reimbursement": expense_reimbursement,
+		"payment_forfeited": payment_forfeited,
 		"maximum_payment": reward_adjustment == 0 and compensation == 0,
 		"compensation": 0,
 		"claim_amount": compensation,
@@ -941,13 +1001,20 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 		"overdue": overdue,
 		"follow_up": result.get("follow_up", {}),
 		"actions": result.get("actions", []),
+		"incident_message": str(result.get("incident_message", "")),
+		"report_acknowledged": false,
 	}
-	job_reports.append(pending_job_report.duplicate(true))
+	job_reports.append(completed_report.duplicate(true))
+	if pending_job_report.is_empty():
+		pending_job_report = completed_report.duplicate(true)
 	_record_financial_event(&"job", reward, str(job["title"]), {
 		"job_id": String(completed_id), "income": reward, "expense": 0,
+		"claim_amount": compensation, "claim_status": "pending" if compensation > 0 else "none",
+		"completed_day": day, "completed_time": time_minutes,
 	})
 	job_repair_states.erase(String(completed_id))
-	active_job_id = &""
+	if active_job_id == completed_id:
+		active_job_id = &""
 	_update_employee_statuses()
 	var audio_manager := get_node_or_null("/root/AudioManager")
 	if audio_manager != null and audio_manager.has_method(&"play_task_complete"):
@@ -960,8 +1027,20 @@ func complete_active_job(result: Dictionary = {}) -> bool:
 func dismiss_pending_job_report() -> void:
 	if str(pending_job_report.get("claim_status", "none")) == "pending":
 		return
+	pending_job_report["report_acknowledged"] = true
+	_sync_pending_report_to_history()
 	pending_job_report = {}
+	_show_next_pending_job_report()
 	state_changed.emit()
+
+
+func _show_next_pending_job_report() -> void:
+	if not pending_job_report.is_empty():
+		return
+	for report_value: Variant in job_reports:
+		if report_value is Dictionary and not bool((report_value as Dictionary).get("report_acknowledged", true)):
+			pending_job_report = (report_value as Dictionary).duplicate(true)
+			return
 
 
 func is_demo_complete() -> bool:
@@ -1021,7 +1100,7 @@ func get_dismissal_reason_text() -> String:
 		&"claims_and_debt":
 			return "Систематический ущерб имуществу жителей и критическая задолженность службы."
 		&"claims":
-			return "Пять подтверждённых претензий жителей к работе службы."
+			return "Четыре подтверждённые претензии жителей к работе службы."
 		&"debt":
 			return "Критическая задолженность службы: %d монет." % absi(money)
 	return "Городская инспекция признала дальнейшее руководство службой невозможным."
@@ -1665,13 +1744,8 @@ func _load_from_path(path: String) -> Error:
 	if migrated_reputation_bonus > 0:
 		reputation += migrated_reputation_bonus
 	if completed_job_ids.has("lava_leak"):
-		_set_parallel_jobs_unlocked(day > _job_completed_day(&"lava_leak"))
-	if completed_job_ids.has("walking_wardrobe") and completed_job_ids.has("portal_mirror"):
-		var last_second_day_completion := maxi(
-			_job_completed_day(&"walking_wardrobe"),
-			_job_completed_day(&"portal_mirror")
-		)
-		_set_gargoyle_job_unlocked(day > last_second_day_completion)
+		_update_parallel_job_unlocks()
+	_unlock_gargoyle_job_if_due()
 	_unlock_escaped_ghost_job_if_due()
 	_unlock_frozen_bath_job_if_due()
 	if not is_job_available(selected_job_id):
@@ -1784,6 +1858,8 @@ func _record_financial_event(kind: StringName, amount: int, title: String, detai
 
 
 func _migrate_claim_fields(report: Dictionary) -> void:
+	if not report.has("report_acknowledged"):
+		report["report_acknowledged"] = str(report.get("claim_status", "none")) != "pending"
 	if report.has("claim_status"):
 		return
 	var legacy_compensation := maxi(0, int(report.get("compensation", 0)))
@@ -1875,21 +1951,54 @@ func _remove_employee_from_all_jobs(employee_id: StringName) -> void:
 			jobs[job_id] = job
 
 
-func _unlock_parallel_jobs() -> void:
-	_set_parallel_jobs_unlocked(true)
+func _update_parallel_job_unlocks() -> void:
+	var source_day := _job_completed_day(&"lava_leak")
+	var jobs_are_due := source_day > 0 and day > source_day
+	_set_job_unlocked(&"walking_wardrobe", jobs_are_due)
+	var frozen_bath_delays_portal := _has_follow_up(&"frozen_bath") and day <= source_day + 1
+	_set_job_unlocked(&"portal_mirror", jobs_are_due and not frozen_bath_delays_portal)
 
 
-func _set_parallel_jobs_unlocked(unlocked: bool) -> void:
-	for job_id: StringName in PackedStringArray(["walking_wardrobe", "portal_mirror"]):
-		if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
+func _set_job_unlocked(job_id: StringName, unlocked: bool) -> void:
+	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
+		return
+	var job: Dictionary = jobs[job_id]
+	job["unlocked"] = unlocked
+	jobs[job_id] = job
+
+
+func _has_follow_up(follow_up_id: StringName) -> bool:
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
 			continue
-		var job: Dictionary = jobs[job_id]
-		job["unlocked"] = unlocked
-		jobs[job_id] = job
+		var follow_up: Variant = (report_value as Dictionary).get("follow_up", {})
+		if follow_up is Dictionary and StringName(str((follow_up as Dictionary).get("type", ""))) == follow_up_id:
+			return true
+	return false
+
+
+func get_follow_up_data(follow_up_id: StringName) -> Dictionary:
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
+			continue
+		var follow_up: Variant = (report_value as Dictionary).get("follow_up", {})
+		if follow_up is Dictionary and StringName(str((follow_up as Dictionary).get("type", ""))) == follow_up_id:
+			return (follow_up as Dictionary).duplicate(true)
+	return {}
 
 
 func _unlock_gargoyle_job() -> void:
 	_set_gargoyle_job_unlocked(true)
+
+
+func _unlock_gargoyle_job_if_due() -> void:
+	if not completed_job_ids.has("walking_wardrobe"):
+		return
+	var portal_is_due := completed_job_ids.has("portal_mirror")
+	if jobs.has(&"portal_mirror"):
+		portal_is_due = portal_is_due or bool(jobs[&"portal_mirror"].get("unlocked", false))
+	if portal_is_due:
+		_unlock_gargoyle_job()
 
 
 func _set_gargoyle_job_unlocked(unlocked: bool) -> void:
