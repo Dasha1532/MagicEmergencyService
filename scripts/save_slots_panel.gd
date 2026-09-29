@@ -38,17 +38,17 @@ func configure(new_mode: StringName) -> void:
 func refresh() -> void:
 	if heading == null:
 		return
-	heading.text = "ВЫБЕРИТЕ СЛОТ СОХРАНЕНИЯ" if mode == &"save" else "ВЫБЕРИТЕ СОХРАНЕНИЕ"
+	heading.text = tr("ВЫБЕРИТЕ СЛОТ СОХРАНЕНИЯ") if mode == &"save" else tr("ВЫБЕРИТЕ СОХРАНЕНИЕ")
 	var autosave_summary: Dictionary = game_state.get_autosave_summary()
 	if bool(autosave_summary.get("exists", false)):
 		var tutorial_line := str(autosave_summary.get("tutorial_label", ""))
-		autosave_button.text = "АВТОСОХРАНЕНИЕ\nДень %d, %s, %d монет, репутация %d%s" % [
+		autosave_button.text = tr("АВТОСОХРАНЕНИЕ\nДень %d, %s, %d монет, репутация %d%s") % [
 			int(autosave_summary["day"]), str(autosave_summary["time"]), int(autosave_summary["money"]),
-			int(autosave_summary["reputation"]), "\n%s" % tutorial_line if not tutorial_line.is_empty() else "",
+			int(autosave_summary["reputation"]), "\n%s" % tr(tutorial_line) if not tutorial_line.is_empty() else "",
 		]
 		autosave_button.disabled = mode == &"save"
 	else:
-		autosave_button.text = "АВТОСОХРАНЕНИЕ\nПУСТО"
+		autosave_button.text = tr("АВТОСОХРАНЕНИЕ\nПУСТО")
 		autosave_button.disabled = true
 	for index in slot_buttons.size():
 		var slot := index + 1
@@ -57,14 +57,14 @@ func refresh() -> void:
 		if bool(summary.get("exists", false)):
 			var overwrite_hint := ""
 			if mode == &"save":
-				overwrite_hint = "\nНажмите ещё раз, чтобы перезаписать" if pending_overwrite_slot == slot else "\nНажмите, чтобы выбрать"
-			button.text = "СЛОТ %d\nДень %d, %s, %d монет, репутация %d%s" % [
+				overwrite_hint = "\n%s" % (tr("Нажмите ещё раз, чтобы перезаписать") if pending_overwrite_slot == slot else tr("Нажмите, чобы выбрать"))
+			button.text = tr("СЛОТ %d\nДень %d, %s, %d монет, репутация %d%s") % [
 				slot, int(summary["day"]), str(summary["time"]), int(summary["money"]), int(summary["reputation"]),
 				overwrite_hint,
 			]
 			button.disabled = false
 		else:
-			button.text = "СЛОТ %d\nПУСТО" % slot
+			button.text = tr("СЛОТ %d\nПУСТО") % slot
 			button.disabled = mode == &"load"
 
 
@@ -99,7 +99,7 @@ func _build() -> void:
 		slot_buttons.append(button)
 
 	var back := Button.new()
-	back.text = "НАЗАД"
+	back.text = tr("НАЗАД")
 	back.position = Vector2(150, 758)
 	back.size = Vector2(300, 56)
 	back.add_theme_font_size_override("font_size", 18)

@@ -1,5 +1,7 @@
 extends Control
 
+const LocalizationHelperScript := preload("res://scripts/localization_helper.gd")
+
 signal back_requested
 
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.95)
@@ -104,8 +106,8 @@ func _build_accounting() -> void:
 			else:
 				expenses += -amount
 	var denied_total: int = game_state.get_denied_claims_total()
-	summary.text = "Казна: %d, доходы: %d, расходы: %d\nОтклонённые претензии: %d, финансовый риск: %s" % [
-		game_state.money, income, expenses, denied_total, game_state.get_financial_risk_status(),
+	summary.text = tr("Казна: %d, доходы: %d, расходы: %d\nОтклонённые претензии: %d, финансовый риск: %s") % [
+		game_state.money, income, expenses, denied_total, tr(game_state.get_financial_risk_status()),
 	]
 	detail_title.text = "ДЕНЕЖНЫЕ ОПЕРАЦИИ"
 	detail_body.text = "Выберите запись слева, чтобы увидеть подробности."
@@ -116,13 +118,13 @@ func _build_accounting() -> void:
 		var event: Dictionary = game_state.financial_ledger[index]
 		var amount := int(event.get("amount", 0))
 		var sign_text := "+%d" % amount if amount >= 0 else str(amount)
-		_add_entry("%s\n%s, %s монет" % [event.get("title", "Операция"), _event_date(event), sign_text], _show_financial_event.bind(event))
+		_add_entry(tr("%s\n%s, %s монет") % [tr(str(event.get("title", "Операция"))), _event_date(event), sign_text], _show_financial_event.bind(event))
 
 
 func _build_reviews() -> void:
 	heading.text = "КНИГА ОТЗЫВОВ"
 	var titles: PackedStringArray = game_state.get_reputation_titles(2)
-	summary.text = "Репутация: %d — %s\nПрозвища: %s. Отзывов: %d" % [game_state.reputation, game_state.get_reputation_status(), ", ".join(titles), game_state.job_reports.size()]
+	summary.text = tr("Репутация: %d — %s\nПрозвища: %s. Отзывов: %d") % [game_state.reputation, tr(game_state.get_reputation_status()), ", ".join(_translated_strings(titles)), game_state.job_reports.size()]
 	detail_title.text = "ОТЗЫВЫ ЖИЛЬЦОВ"
 	detail_body.text = "Здесь появятся оценки завершённых заявок."
 	if game_state.job_reports.is_empty():
@@ -131,12 +133,12 @@ func _build_reviews() -> void:
 	for index in range(game_state.job_reports.size() - 1, -1, -1):
 		var report: Dictionary = game_state.job_reports[index]
 		var rating := _report_rating(report)
-		_add_entry("%s\n%s — %s" % [report.get("resident", "Жилец"), _stars(rating), report.get("title", "Заявка")], _show_review.bind(report))
+		_add_entry("%s\n%s — %s" % [tr(str(report.get("resident", "Жилец"))), _stars(rating), tr(str(report.get("title", "Заявка")))], _show_review.bind(report))
 
 
 func _build_archive() -> void:
 	heading.text = "АРХИВ ПРОИСШЕСТВИЙ"
-	summary.text = "Завершённых дел: %d" % game_state.job_reports.size()
+	summary.text = tr("Завершённых дел: %d") % game_state.job_reports.size()
 	detail_title.text = "АРХИВ ЗАЯВОК"
 	detail_body.text = "Выберите завершённую заявку слева."
 	if game_state.job_reports.is_empty():
@@ -144,8 +146,8 @@ func _build_archive() -> void:
 		return
 	for index in range(game_state.job_reports.size() - 1, -1, -1):
 		var report: Dictionary = game_state.job_reports[index]
-		var damage_text := _claim_status_text(report)
-		_add_entry("%s\n%s — %s" % [report.get("title", "Заявка"), _report_date(report), damage_text], _show_archive_report.bind(report))
+		var damage_text := tr(_claim_status_text(report))
+		_add_entry("%s\n%s — %s" % [tr(str(report.get("title", "Заявка"))), _report_date(report), damage_text], _show_archive_report.bind(report))
 
 
 func _show_financial_event(event: Dictionary) -> void:
@@ -162,10 +164,10 @@ func _render_financial_event(event: Dictionary) -> void:
 		"legacy_adjustment": "Старая операция", "debug_grant": "Тестовое пополнение",
 	}.get(kind, "Денежная операция")
 	var amount := int(event.get("amount", 0))
-	detail_title.text = str(event.get("title", kind_text))
-	detail_body.text = "%s\n%s\n\nИзменение средств: %s%d монет" % [kind_text, _event_date(event), "+" if amount >= 0 else "", amount]
+	detail_title.text = tr(str(event.get("title", kind_text)))
+	detail_body.text = tr("%s\n%s\n\nИзменение средств: %s%d монет") % [tr(kind_text), _event_date(event), "+" if amount >= 0 else "", amount]
 	if kind == "job":
-		detail_body.text += "\nПолучено: %d монет" % int(event.get("income", 0))
+		detail_body.text += tr("\nПолучено: %d монет") % int(event.get("income", 0))
 		var claim_status := str(event.get("claim_status", "none"))
 		for report_value: Variant in game_state.job_reports:
 			if report_value is Dictionary:
@@ -175,13 +177,13 @@ func _render_financial_event(event: Dictionary) -> void:
 					break
 		var claim_amount := int(event.get("claim_amount", 0))
 		if claim_status == "pending" and claim_amount > 0:
-			detail_body.text += "\nПредъявлена претензия: %d монет (решение не принято)" % claim_amount
+			detail_body.text += tr("\nПредъявлена претензия: %d монет (решение не принято)") % claim_amount
 		elif claim_status == "denied" and claim_amount > 0:
-			detail_body.text += "\nПретензия на %d монет отклонена; списания не было" % claim_amount
+			detail_body.text += tr("\nПретензия на %d монет отклонена; списания не было") % claim_amount
 		elif claim_status in ["paid", "paid_after_denial"] and claim_amount > 0:
-			detail_body.text += "\nКомпенсация проведена отдельной операцией: %d монет" % claim_amount
+			detail_body.text += tr("\nКомпенсация проведена отдельной операцией: %d монет") % claim_amount
 	if bool(event.get("legacy", false)):
-		detail_body.text += "\n\nЗапись восстановлена из сохранения предыдущей версии."
+		detail_body.text += tr("\n\nЗапись восстановлена из сохранения предыдущей версии.")
 
 
 func _show_review(report: Dictionary) -> void:
@@ -192,19 +194,19 @@ func _show_review(report: Dictionary) -> void:
 
 func _render_review(report: Dictionary) -> void:
 	var reputation_change := int(report.get("reputation_change", 0))
-	detail_title.text = "%s — %s" % [report.get("resident", "Жилец"), _stars(_report_rating(report))]
-	detail_body.text = "%s\n%s\n\n%s\n\nИзменение репутации: %s%d" % [
-		report.get("title", "Заявка"), _report_date(report), _review_text(report),
+	detail_title.text = "%s — %s" % [tr(str(report.get("resident", "Жилец"))), _stars(_report_rating(report))]
+	detail_body.text = tr("%s\n%s\n\n%s\n\nИзменение репутации: %s%d") % [
+		tr(str(report.get("title", "Заявка"))), _report_date(report), LocalizationHelperScript.translate_saved_text(_review_text(report)),
 		"+" if reputation_change >= 0 else "", reputation_change,
 	]
 	if bool(report.get("overdue", false)):
-		detail_body.text += "\n\nЗаявка завершена после истечения срока."
+		detail_body.text += tr("\n\nЗаявка завершена после истечения срока.")
 
 
 func _review_text(report: Dictionary) -> String:
 	var stored_review := str(report.get("review", "")).strip_edges()
 	if not stored_review.is_empty():
-		return stored_review
+		return LocalizationHelperScript.translate_saved_text(stored_review)
 	var rating := _report_rating(report)
 	match str(report.get("job_id", "")):
 		"lava_leak":
@@ -223,36 +225,37 @@ func _show_archive_report(report: Dictionary) -> void:
 
 
 func _render_archive_report(report: Dictionary) -> void:
-	detail_title.text = str(report.get("title", "Завершённая заявка"))
+	detail_title.text = tr(str(report.get("title", "Завершённая заявка")))
 	var crew: Array = report.get("crew", [])
-	var text := "%s\nЖилец: %s\nБригада: %s\n\nИтог: %s\n\nОплата: %d монет" % [
-		_report_date(report), report.get("resident", "не указан"), ", ".join(PackedStringArray(crew)) if not crew.is_empty() else "не указана",
-		report.get("summary", "Работы завершены."), int(report.get("reward", 0)),
+	var localized_crew := _translated_strings(PackedStringArray(crew))
+	var text := tr("%s\nЖилец: %s\nБригада: %s\n\nИтог: %s\n\nОплата: %d монет") % [
+		_report_date(report), tr(str(report.get("resident", "не указан"))), ", ".join(localized_crew) if not crew.is_empty() else tr("не указана"),
+		LocalizationHelperScript.translate_saved_text(report.get("summary", "Работы завершены.")), int(report.get("reward", 0)),
 	]
 	var claim_status := str(report.get("claim_status", "none"))
 	if claim_status == "pending":
-		text += "\nПретензия: %d монет\nКомпенсация: решение не принято" % int(report.get("claim_amount", 0))
+		text += tr("\nПретензия: %d монет\nКомпенсация: решение не принято") % int(report.get("claim_amount", 0))
 	elif claim_status == "denied":
-		text += "\nПретензия: %d монет\nКомпенсация: отказано" % int(report.get("claim_amount", 0))
-		text += "\nРешение по претензии: отказано"
+		text += tr("\nПретензия: %d монет\nКомпенсация: отказано") % int(report.get("claim_amount", 0))
+		text += tr("\nРешение по претензии: отказано")
 		selected_claim_key = {
 			"job_id": str(report.get("job_id", "")),
 			"completed_day": int(report.get("completed_day", 0)),
 			"completed_time": int(report.get("completed_time", -1)),
 		}
-		pay_claim_button.text = "ВЫПЛАТИТЬ %d МОНЕТ" % int(report.get("claim_amount", 0))
+		pay_claim_button.text = tr("ВЫПЛАТИТЬ %d МОНЕТ") % int(report.get("claim_amount", 0))
 		pay_claim_button.visible = int(report.get("claim_amount", 0)) > 0
 	elif claim_status == "paid":
-		text += "\nКомпенсация: %d монет" % int(report.get("compensation", 0))
-		text += "\nРешение по претензии: выплачено"
+		text += tr("\nКомпенсация: %d монет") % int(report.get("compensation", 0))
+		text += tr("\nРешение по претензии: выплачено")
 	elif claim_status == "paid_after_denial":
-		text += "\nКомпенсация: %d монет" % int(report.get("compensation", 0))
-		text += "\nРешение по претензии: выплачено после первоначального отказа"
+		text += tr("\nКомпенсация: %d монет") % int(report.get("compensation", 0))
+		text += tr("\nРешение по претензии: выплачено после первоначального отказа")
 	else:
-		text += "\nКомпенсация: не требуется"
-	text += "\n\nПОСЛЕДСТВИЯ"
+		text += tr("\nКомпенсация: не требуется")
+	text += tr("\n\nПОСЛЕДСТВИЯ")
 	for consequence: String in _report_consequences(report):
-		text += "\n— %s" % consequence
+		text += "\n— %s" % LocalizationHelperScript.translate_saved_text(consequence)
 	detail_body.text = text
 
 
@@ -263,16 +266,16 @@ func _report_consequences(report: Dictionary) -> PackedStringArray:
 		for consequence: Variant in stored:
 			var text := str(consequence).strip_edges()
 			if not text.is_empty() and not result.has(text):
-				result.append(text)
+				result.append(LocalizationHelperScript.translate_saved_text(text))
 	if bool(report.get("overdue", false)):
-		result.append("Заявка завершена после истечения срока.")
+		result.append(tr("Заявка завершена после истечения срока."))
 	match str(report.get("claim_status", "none")):
 		"paid":
-			result.append("Претензия жильца удовлетворена: выплачено %d монет." % int(report.get("compensation", 0)))
+			result.append(tr("Претензия жильца удовлетворена: выплачено %d монет.") % int(report.get("compensation", 0)))
 		"paid_after_denial":
-			result.append("После первоначального отказа служба выплатила %d монет и восстановила потерянную из-за отказа репутацию." % int(report.get("compensation", 0)))
+			result.append(tr("После первоначального отказа служба выплатила %d монет и восстановила потерянную из-за отказа репутацию.") % int(report.get("compensation", 0)))
 		"denied":
-			result.append("В компенсации ущерба отказано; репутация службы снижена на %d, а сумма претензии учитывается как финансовый риск." % int(report.get("claim_reputation_penalty", 0)))
+			result.append(tr("В компенсации ущерба отказано; репутация службы снижена на %d, а сумма претензии учитывается как финансовый риск.") % int(report.get("claim_reputation_penalty", 0)))
 	var follow_up: Variant = report.get("follow_up", {})
 	if follow_up is Dictionary and str((follow_up as Dictionary).get("type", "")) == "escaped_ghost":
 		var ghost_text := "Из портала выбрался призрак; это может создать новую заявку."
@@ -282,21 +285,21 @@ func _report_consequences(report: Dictionary) -> PackedStringArray:
 				ghost_already_listed = true
 				break
 		if not ghost_already_listed:
-			result.append(ghost_text)
+			result.append(tr(ghost_text))
 	if result.is_empty():
 		if int(report.get("compensation", 0)) > 0:
-			result.append("За причинённый ущерб выплачена компенсация %d монет." % int(report.get("compensation", 0)))
+			result.append(tr("За причинённый ущерб выплачена компенсация %d монет.") % int(report.get("compensation", 0)))
 		else:
-			result.append("Дополнительного ущерба не зафиксировано.")
+			result.append(tr("Дополнительного ущерба не зафиксировано."))
 	return result
 
 
 func _claim_status_text(report: Dictionary) -> String:
 	match str(report.get("claim_status", "none")):
 		"paid":
-			return "выплачено: %d" % int(report.get("compensation", 0))
+			return tr("выплачено: %d") % int(report.get("compensation", 0))
 		"paid_after_denial":
-			return "выплачено после отказа: %d" % int(report.get("compensation", 0))
+			return tr("выплачено после отказа: %d") % int(report.get("compensation", 0))
 		"denied":
 			return "в компенсации отказано"
 		"pending":
@@ -344,12 +347,19 @@ func _event_date(event: Dictionary) -> String:
 
 func _date_text(day_value: int, minute_value: int) -> String:
 	if day_value <= 0 or minute_value < 0:
-		return "Ранее"
-	return "День %d, %02d:%02d" % [day_value, minute_value / 60, minute_value % 60]
+		return tr("Ранее")
+	return tr("День %d, %02d:%02d") % [day_value, minute_value / 60, minute_value % 60]
 
 
 func _stars(rating: int) -> String:
 	return "★".repeat(rating) + "☆".repeat(5 - rating)
+
+
+func _translated_strings(values: PackedStringArray) -> PackedStringArray:
+	var result := PackedStringArray()
+	for value: String in values:
+		result.append(tr(value))
+	return result
 
 
 func _add_entry(text_value: String, action: Callable) -> void:

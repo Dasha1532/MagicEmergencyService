@@ -8,6 +8,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	TranslationServer.set_locale("ru")
 	var game_state := root.get_node("GameState")
 	game_state.start_new_game()
 	_check(game_state.SAVE_SLOT_COUNT == 5, "Доступно пять слотов")
@@ -37,6 +38,13 @@ func _run() -> void:
 	_check(panel.slot_buttons[4].disabled == false, "При сохранении можно выбрать пустой слот")
 	panel._select_slot(1)
 	_check(panel.pending_overwrite_slot == 1, "Перезапись занятого слота требует подтверждения")
+	TranslationServer.set_locale("en")
+	panel.pending_overwrite_slot = 0
+	panel.refresh()
+	_check("Нажмите" not in panel.slot_buttons[0].text, "Подсказка выбора слота переводится")
+	panel._select_slot(1)
+	_check("Нажмите" not in panel.slot_buttons[0].text, "Подсказка перезаписи слота переводится")
+	TranslationServer.set_locale("ru")
 	panel.queue_free()
 	_finish()
 

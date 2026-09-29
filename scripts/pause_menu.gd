@@ -22,6 +22,7 @@ var load_button: Button
 var status_label: Label
 var volume_slider: HSlider
 var fullscreen_check: CheckButton
+var language_option: OptionButton
 var menu_button: Button
 var slots_panel
 var slots_mode: StringName = &"load"
@@ -167,9 +168,26 @@ func _build_settings_panel() -> void:
 	settings_panel.add_child(fullscreen_check)
 
 	var note := _label("Изменения применяются сразу.", 15, COLOR_MUTED)
-	note.position = Vector2(55, 318)
+	note.position = Vector2(55, 398)
 	note.size = Vector2(420, 30)
 	settings_panel.add_child(note)
+
+	var language_label := _label("Язык", 19, COLOR_PARCHMENT)
+	language_label.position = Vector2(55, 310)
+	language_label.size = Vector2(150, 30)
+	settings_panel.add_child(language_label)
+
+	language_option = OptionButton.new()
+	language_option.position = Vector2(205, 300)
+	language_option.size = Vector2(270, 48)
+	language_option.add_theme_font_size_override("font_size", 18)
+	language_option.add_item("Русский")
+	language_option.set_item_metadata(0, "ru")
+	language_option.add_item("English")
+	language_option.set_item_metadata(1, "en")
+	language_option.select(1 if _current_language() == "en" else 0)
+	language_option.item_selected.connect(_set_language)
+	settings_panel.add_child(language_option)
 
 	var back_button := _button("НАЗАД", 510)
 	back_button.pressed.connect(_show_main_panel)
@@ -211,17 +229,17 @@ func _save_game() -> void:
 func _save_to_slot(slot: int) -> void:
 	var error: Error = game_state.save_game(slot)
 	if error == OK:
-		status_label.text = "Слот %d сохранён: день %d, %s" % [slot, game_state.day, game_state.format_time()]
+		status_label.text = tr("Слот %d сохранён: день %d, %s") % [slot, game_state.day, game_state.format_time()]
 		load_button.disabled = false
 	else:
-		status_label.text = "Не удалось сохранить игру. Код ошибки: %d" % error
+		status_label.text = tr("Не удалось сохранить игру. Код ошибки: %d") % error
 	_close_slots_panel()
 
 
 func _load_from_slot(slot: int) -> void:
 	var error: Error = game_state.load_autosave() if slot == 0 else game_state.load_game(slot)
 	if error != OK:
-		status_label.text = "Не удалось загрузить сохранение. Код ошибки: %d" % error
+		status_label.text = tr("Не удалось загрузить сохранение. Код ошибки: %d") % error
 		return
 
 	overlay.visible = false
@@ -302,6 +320,21 @@ func _set_fullscreen(enabled: bool) -> void:
 func _is_fullscreen() -> bool:
 	var settings_manager := get_node_or_null("/root/SettingsManager")
 	return bool(settings_manager.call(&"is_fullscreen")) if settings_manager != null else false
+
+
+func _set_language(index: int) -> void:
+	if language_option == null or index < 0 or index >= language_option.item_count:
+		return
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	if settings_manager != null:
+		settings_manager.call(&"set_language", str(language_option.get_item_metadata(index)))
+	get_tree().paused = false
+	get_tree().reload_current_scene()
+
+
+func _current_language() -> String:
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	return str(settings_manager.call(&"get_language")) if settings_manager != null else "ru"
 
 
 func _exit_game() -> void:

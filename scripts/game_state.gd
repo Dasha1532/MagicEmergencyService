@@ -252,6 +252,7 @@ var employees: Dictionary = {
 		"abilities": PackedStringArray(["diagnose", "repair"]),
 		"training_categories": PackedStringArray(["technical"]),
 		"max_special_abilities": 2,
+		"can_forget_abilities": false,
 		"core_actions": "Диагностика и точный ремонт",
 		"description": "Опытный мастер по трубам, кранам и прочей инфраструктуре, которая обычно течёт в самый неподходящий момент.",
 		"strength": "Сильная сторона: аккуратный обычный ремонт",
@@ -634,7 +635,7 @@ func train_employee(employee_id: StringName, training_id: StringName) -> bool:
 	var employee: Dictionary = employees[employee_id]
 	employee["training_id"] = training_id
 	employee["training_end_day"] = day + maxi(1, int(TRAINING_DEFINITIONS[training_id]["duration_days"]))
-	employee["status"] = "Учится: %s" % TRAINING_DEFINITIONS[training_id]["name"]
+	employee["status"] = tr("Учится: %s") % tr(str(TRAINING_DEFINITIONS[training_id]["name"]))
 	employees[employee_id] = employee
 	state_changed.emit()
 	save_autosave()
@@ -654,6 +655,8 @@ func get_forget_availability(employee_id: StringName, ability_id: StringName) ->
 	var abilities: PackedStringArray = employee["abilities"]
 	if not abilities.has(String(ability_id)):
 		return &"missing"
+	if not bool(employee.get("can_forget_abilities", true)):
+		return &"protected"
 	if is_employee_training(employee_id):
 		return &"training"
 	if not get_employee_job(employee_id).is_empty():
@@ -974,7 +977,7 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 	jobs[completed_id] = job
 	var summary: String = str(result.get("summary", "Аварийные работы приняты."))
 	if overdue:
-		summary += " Заявка выполнена после истечения срока: из оплаты удержано %d монет." % OVERDUE_PAYMENT_PENALTY
+		summary += tr(" Заявка выполнена после истечения срока: из оплаты удержано %d монет.") % OVERDUE_PAYMENT_PENALTY
 	var completed_report: Dictionary = {
 		"job_id": String(completed_id),
 		"title": str(job["title"]),
@@ -1102,7 +1105,7 @@ func get_dismissal_reason_text() -> String:
 		&"claims":
 			return "Четыре подтверждённые претензии жителей к работе службы."
 		&"debt":
-			return "Критическая задолженность службы: %d монет." % absi(money)
+			return tr("Критическая задолженность службы: %d монет.") % absi(money)
 	return "Городская инспекция признала дальнейшее руководство службой невозможным."
 
 
@@ -1228,7 +1231,7 @@ func resolve_pending_claim(pay_compensation: bool) -> bool:
 		pending_job_report["reputation_change"] = int(pending_job_report.get("reputation_change", 0)) - reputation_penalty
 		var review := str(pending_job_report.get("review", "")).strip_edges()
 		pending_job_report["review_before_claim_decision"] = review
-		pending_job_report["review"] = "%s%s" % [review, " В компенсации мне ещё и отказали." if not review.is_empty() else "Служба отказалась компенсировать причинённый ущерб."]
+		pending_job_report["review"] = "%s%s" % [tr(review), tr(" В компенсации мне ещё и отказали.") if not review.is_empty() else tr("Служба отказалась компенсировать причинённый ущерб.")]
 	pending_job_report["claim_decision_day"] = day
 	pending_job_report["claim_decision_time"] = time_minutes
 	pending_job_report["rating"] = _calculate_report_rating(
@@ -1269,7 +1272,7 @@ func pay_denied_claim(job_id: String, completed_day: int, completed_time: int) -
 		var original_review := str(report.get("review_before_claim_decision", "")).strip_edges()
 		if original_review.is_empty():
 			original_review = str(report.get("review", "")).replace(" В компенсации мне ещё и отказали.", "").replace("Служба отказалась компенсировать причинённый ущерб.", "").strip_edges()
-		report["review"] = "%s%s" % [original_review, " Позже служба всё-таки выплатила компенсацию." if not original_review.is_empty() else "После первоначального отказа служба всё-таки выплатила компенсацию."]
+		report["review"] = "%s%s" % [tr(original_review), tr(" Позже служба всё-таки выплатила компенсацию.") if not original_review.is_empty() else tr("После первоначального отказа служба всё-таки выплатила компенсацию.")]
 		report["claim_payment_day"] = day
 		report["claim_payment_time"] = time_minutes
 		report["rating"] = _calculate_report_rating(
@@ -1449,7 +1452,7 @@ func _tutorial_summary_label(value: Variant) -> String:
 		"supply_overview": "лавка снабжения", "storage_overview": "склад снаряжения",
 		"final": "новый рабочий день",
 	}
-	return "Обучение: %s" % str(labels.get(str(saved_tutorial.get("step", "")), "продолжается"))
+	return tr("Обучение: %s") % str(labels.get(str(saved_tutorial.get("step", "")), "продолжается"))
 
 
 func _existing_save_slot_path(slot: int) -> String:
@@ -2069,20 +2072,20 @@ func _update_employee_statuses() -> void:
 			continue
 		var training_id := StringName(str(employee.get("training_id", "")))
 		if not training_id.is_empty() and TRAINING_DEFINITIONS.has(training_id):
-			employee["status"] = "Учится: %s" % TRAINING_DEFINITIONS[training_id]["name"]
+			employee["status"] = tr("Учится: %s") % tr(str(TRAINING_DEFINITIONS[training_id]["name"]))
 			employees[employee_id] = employee
 			continue
 		var job_id := get_employee_job(employee_id)
 		var pending_action: Dictionary = get_pending_job_action(job_id)
 		employee["status"] = employee["idle_status"]
 		if int(employee.get("return_until", 0)) > time_minutes:
-			employee["status"] = "Возвращается, прибудет в %s" % _format_minutes(int(employee["return_until"]))
+			employee["status"] = tr("Возвращается, прибудет в %s") % _format_minutes(int(employee["return_until"]))
 		elif not job_id.is_empty() and int(employee.get("arrival_until", 0)) > time_minutes:
-			employee["status"] = "В пути, прибудет в %s" % _format_minutes(int(employee["arrival_until"]))
+			employee["status"] = tr("В пути, прибудет в %s") % _format_minutes(int(employee["arrival_until"]))
 		elif not job_id.is_empty() and str(pending_action.get("employee_id", "")) == String(employee_id):
-			employee["status"] = "Работает до %s" % _format_minutes(int(pending_action.get("ends_at", time_minutes)))
+			employee["status"] = tr("Работает до %s") % _format_minutes(int(pending_action.get("ends_at", time_minutes)))
 		elif not job_id.is_empty():
-			employee["status"] = "На заявке: %s" % jobs[job_id].get("card_title", jobs[job_id]["title"])
+			employee["status"] = tr("На заявке: %s") % tr(str(jobs[job_id].get("card_title", jobs[job_id]["title"])))
 		employees[employee_id] = employee
 
 

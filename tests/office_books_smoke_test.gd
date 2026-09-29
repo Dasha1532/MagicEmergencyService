@@ -10,6 +10,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	TranslationServer.set_locale("ru")
 	var game_state := root.get_node("GameState")
 	game_state.start_new_game()
 	_check(game_state.SAVE_VERSION == 14, "Используется формат сохранения 14")

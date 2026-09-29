@@ -30,12 +30,13 @@ static func message_for(object_state: Dictionary, default_message: String, voice
 
 
 static func title_for(object_state: Dictionary, default_title: String, object_name: String) -> String:
+	var localized_object_name := TranslationServer.translate(object_name)
 	if _is_ruined(object_state):
-		return "%s уничтожен" % object_name
+		return TranslationServer.translate("%s уничтожен") % localized_object_name
 	if bool(object_state.get("burning", false)):
-		return "%s горит" % object_name
+		return TranslationServer.translate("%s горит") % localized_object_name
 	if int(object_state.get("damage", 0)) > 0:
-		return "%s повреждён" % object_name
+		return TranslationServer.translate("%s повреждён") % localized_object_name
 	return default_title
 
 

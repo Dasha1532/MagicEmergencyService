@@ -90,7 +90,7 @@ func _process(_delta: float) -> void:
 	task_panel.visible = duration > 1
 	if task_panel.visible:
 		task_progress.value = float(elapsed) / float(duration) * 100.0
-		task_label.text = "Работа выполняется, осталось %d мин." % maxi(0, task_ends_at - game_state.time_minutes)
+		task_label.text = tr("Работа выполняется, осталось %d мин.") % maxi(0, task_ends_at - game_state.time_minutes)
 	if game_state.time_minutes < task_ends_at:
 		return
 	if not task_callback.is_valid():
@@ -162,7 +162,7 @@ func start_timed_action(employee_id: StringName, action_id: StringName, completi
 	task_callback = completion
 	task_panel.visible = actual_duration > 1
 	if task_panel.visible:
-		task_label.text = "%s работает, осталось %d мин." % [game_state.employees[employee_id]["name"], actual_duration]
+		task_label.text = tr("%s работает, осталось %d мин.") % [tr(str(game_state.employees[employee_id]["name"])), actual_duration]
 		task_progress.value = 0.0
 		long_action_started.emit(employee_id)
 	game_state.set_clock_paused(false)
@@ -193,10 +193,10 @@ func _refresh_job_time() -> void:
 		job_time_label.text = game_state.format_time()
 		return
 	if bool(job.get("overdue", false)):
-		job_time_label.text = "%s — СРОК ИСТЁК" % game_state.format_time()
+		job_time_label.text = tr("%s — СРОК ИСТЁК") % game_state.format_time()
 		job_time_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.28))
 	else:
-		job_time_label.text = "%s, осталось %d мин." % [game_state.format_time(), int(job.get("time_left", 0))]
+		job_time_label.text = tr("%s, осталось %d мин.") % [game_state.format_time(), int(job.get("time_left", 0))]
 		job_time_label.add_theme_color_override("font_color", COLOR_PARCHMENT)
 
 
@@ -269,14 +269,14 @@ func _add_employee_button(employee_id: StringName) -> void:
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait_frame.add_child(portrait)
 
-	var name_label := _label(str(employee["name"]), 15, COLOR_GOLD)
+	var name_label := _label(tr(str(employee["name"])), 15, COLOR_GOLD)
 	name_label.position = Vector2(96, 9)
 	name_label.size = Vector2(189, 28)
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	button.add_child(name_label)
 
-	var role_label := _label(str(employee["core_actions"]), 13, COLOR_PARCHMENT)
+	var role_label := _label(tr(str(employee["core_actions"])), 13, COLOR_PARCHMENT)
 	role_label.position = Vector2(96, 38)
 	role_label.size = Vector2(189, 45)
 	role_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -302,8 +302,8 @@ func _update_employee_card(employee_id: StringName) -> void:
 	var button: Button = employee_buttons[employee_id]
 	var detail_label: Label = employee_detail_labels[employee_id]
 	button.disabled = not on_site
-	button.tooltip_text = "" if on_site else str(employee["status"])
-	detail_label.text = str(employee["core_actions"]) if on_site else str(employee["status"])
+	button.tooltip_text = "" if on_site else tr(str(employee["status"]))
+	detail_label.text = tr(str(employee["core_actions"])) if on_site else tr(str(employee["status"]))
 	detail_label.add_theme_color_override("font_color", COLOR_PARCHMENT if on_site else COLOR_MUTED)
 
 
@@ -470,8 +470,8 @@ func _display_dialogue(speaker: String, message: String, is_warning: bool, portr
 	employee_reaction_heading.size = portrait_heading_size if has_portrait else Vector2(1260, portrait_heading_size.y)
 	employee_reaction_label.position = portrait_label_position if has_portrait else Vector2(24, portrait_label_position.y)
 	employee_reaction_label.size = portrait_label_size if has_portrait else Vector2(1260, portrait_label_size.y)
-	employee_reaction_heading.text = speaker
-	employee_reaction_label.text = message
+	employee_reaction_heading.text = tr(speaker)
+	employee_reaction_label.text = tr(message)
 	employee_reaction_label.add_theme_color_override("font_color", Color(1.0, 0.58, 0.35) if is_warning else COLOR_PARCHMENT)
 	if employee_panel != null:
 		employee_panel.visible = false

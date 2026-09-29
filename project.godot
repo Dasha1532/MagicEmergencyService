@@ -33,6 +33,11 @@ window/stretch/mode="canvas_items"
 
 theme/default_font_multichannel_signed_distance_field=true
 
+[internationalization]
+
+locale/fallback="ru"
+locale/translations=PackedStringArray("res://localization/en.po")
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

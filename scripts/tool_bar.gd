@@ -46,7 +46,7 @@ func _ready() -> void:
 		button.add_theme_font_size_override("font_size", 15)
 		button.add_theme_constant_override("h_separation", 9)
 		var tool_data: Array = TOOL_NAMES[button.name]
-		button.text = str(tool_data[1])
+		button.text = tr(str(tool_data[1]))
 		for child: Node in button.get_children():
 			if child is TextureRect:
 				button.icon = child.texture
@@ -72,7 +72,7 @@ func configure_for_employee(employee_name: String, ability_ids: PackedStringArra
 
 	_resize_for_action_count(available_count)
 	current_tool_id = &""
-	title_label.text = "%s — %s" % [employee_name, core_actions]
+	title_label.text = "%s — %s" % [tr(employee_name), tr(core_actions)]
 	visible = false
 
 
@@ -86,7 +86,7 @@ func show_for_object(object_name: String, anchor_position: Vector2, action_label
 	hidden_action_ids = hidden_actions.duplicate()
 	_show_ability_buttons()
 	_add_contextual_actions(contextual_actions)
-	title_label.text = object_name.to_upper()
+	title_label.text = tr(object_name).to_upper()
 	visible = true
 	position = Vector2(
 		clampf(anchor_position.x + 42.0, 20.0, 1300.0),
@@ -99,10 +99,10 @@ func show_intents(title: String, choices: Array) -> void:
 	for button in buttons:
 		button.visible = false
 	_clear_temporary_buttons()
-	title_label.text = title.to_upper()
+	title_label.text = tr(title).to_upper()
 	for choice: Dictionary in choices:
 		var button := Button.new()
-		button.text = str(choice.get("label", "Действие"))
+		button.text = tr(str(choice.get("label", "Действие")))
 		button.custom_minimum_size = Vector2(252, 46)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_copy_button_style(button)
@@ -110,7 +110,7 @@ func show_intents(title: String, choices: Array) -> void:
 		buttons_container.add_child(button)
 		temporary_buttons.append(button)
 	var back_button := Button.new()
-	back_button.text = "← Назад"
+	back_button.text = "← %s" % tr("Назад")
 	back_button.custom_minimum_size = Vector2(252, 42)
 	_copy_button_style(back_button)
 	back_button.pressed.connect(_show_ability_buttons)
@@ -149,11 +149,11 @@ func _show_ability_buttons() -> void:
 	var visible_ability_count: int = 0
 	for button in buttons:
 		var tool_data: Array = TOOL_NAMES[button.name]
-		button.text = str(current_action_labels.get(tool_data[0], tool_data[1]))
+		button.text = tr(str(current_action_labels.get(tool_data[0], tool_data[1])))
 		button.visible = available_buttons.has(button) and not hidden_action_ids.has(String(tool_data[0]))
 		if button.visible:
 			visible_ability_count += 1
-	title_label.text = current_object_name.to_upper()
+	title_label.text = tr(current_object_name).to_upper()
 	_resize_for_action_count(visible_ability_count)
 
 
@@ -167,7 +167,7 @@ func _clear_temporary_buttons() -> void:
 func _add_contextual_actions(actions: Array) -> void:
 	for action: Dictionary in actions:
 		var button := Button.new()
-		button.text = str(action.get("label", "Действие"))
+		button.text = tr(str(action.get("label", "Действие")))
 		button.custom_minimum_size = Vector2(252, 46)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_copy_button_style(button)

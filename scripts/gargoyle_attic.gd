@@ -112,7 +112,7 @@ func _on_tool_selected(action_id: StringName) -> void:
 		repair_hud.show_system_message("Сначала дождитесь завершения текущей работы.", true)
 		return
 	if not game_state.can_employee_work_on_job(selected_employee_id, game_state.active_job_id):
-		repair_hud.show_system_message("Сотрудник ещё едет на объект. %s." % game_state.employees[selected_employee_id]["status"], true)
+		repair_hud.show_system_message(tr("Сотрудник ещё едет на объект. %s.") % tr(str(game_state.employees[selected_employee_id]["status"])), true)
 		return
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var contextual: String = simulation.get_employee_reaction(selected_employee_id, action_id)

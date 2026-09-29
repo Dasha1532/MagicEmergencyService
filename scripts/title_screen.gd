@@ -3,10 +3,10 @@ extends Control
 const SaveSlotsPanelScript := preload("res://scripts/save_slots_panel.gd")
 
 const TAGLINES: PackedStringArray = [
-	"Спасаем дома, нервы и иногда реальность.",
-	"Любая авария поправима. Последствия обсуждаются отдельно.",
-	"Работаем быстро. Думаем по обстоятельствам.",
-	"Даже у магии бывают технические неполадки.",
+	"Спасаем дома, нервы и иногда реальность",
+	"Любая авария поправима. Последствия обсуждаются отдельно",
+	"Работаем быстро. Думаем по обстоятельствам",
+	"Даже у магии бывают технические неполадки",
 ]
 const PREFS_PATH := "user://menu_prefs.cfg"
 const COLOR_NAV := Color(0.018, 0.026, 0.035, 0.965)
@@ -32,6 +32,7 @@ var status_label: Label
 var volume_slider: HSlider
 var fullscreen_check: CheckButton
 var resolution_option: OptionButton
+var language_option: OptionButton
 var title_font: SystemFont
 var slots_panel
 
@@ -94,7 +95,7 @@ func _build_title() -> void:
 	logo.material = logo_material
 	add_child(logo)
 
-	var tagline := _label("✦  %s  ✦" % _choose_tagline().to_upper(), 18, COLOR_PARCHMENT)
+	var tagline := _label("✦  %s  ✦" % tr(_choose_tagline()).to_upper(), 18, COLOR_PARCHMENT)
 	tagline.add_theme_font_override("font", title_font)
 	tagline.position = Vector2(92, 445)
 	tagline.size = Vector2(780, 42)
@@ -156,7 +157,7 @@ func _build_navigation() -> void:
 func _build_settings() -> void:
 	settings_panel = Panel.new()
 	settings_panel.position = Vector2(500, 195)
-	settings_panel.size = Vector2(600, 510)
+	settings_panel.size = Vector2(600, 590)
 	settings_panel.visible = false
 	settings_panel.add_theme_stylebox_override("panel", _style(Color(0.025, 0.026, 0.032, 0.985), COLOR_BRASS, 2, 12))
 	add_child(settings_panel)
@@ -209,9 +210,26 @@ func _build_settings() -> void:
 	resolution_option.disabled = fullscreen_check.button_pressed
 	resolution_option.tooltip_text = "В полноэкранном режиме используется разрешение экрана." if resolution_option.disabled else "Размер игрового окна."
 
+	var language_label := _label("Язык", 18, COLOR_PARCHMENT)
+	language_label.position = Vector2(55, 365)
+	language_label.size = Vector2(160, 30)
+	settings_panel.add_child(language_label)
+
+	language_option = OptionButton.new()
+	language_option.position = Vector2(220, 355)
+	language_option.size = Vector2(325, 48)
+	language_option.add_theme_font_size_override("font_size", 18)
+	language_option.add_item("Русский")
+	language_option.set_item_metadata(0, "ru")
+	language_option.add_item("English")
+	language_option.set_item_metadata(1, "en")
+	language_option.select(1 if _current_language() == "en" else 0)
+	language_option.item_selected.connect(_set_language)
+	settings_panel.add_child(language_option)
+
 	var back_button := Button.new()
 	back_button.text = "НАЗАД"
-	back_button.position = Vector2(55, 400)
+	back_button.position = Vector2(55, 465)
 	back_button.size = Vector2(490, 62)
 	_apply_button_theme(back_button)
 	back_button.pressed.connect(_show_main)
@@ -257,7 +275,7 @@ func _new_game() -> void:
 func _continue_game() -> void:
 	var error: Error = game_state.load_latest_game()
 	if error != OK:
-		status_label.text = "Не удалось загрузить сохранение. Код ошибки: %d" % error
+		status_label.text = tr("Не удалось загрузить сохранение. Код ошибки: %d") % error
 		return
 	_open_loaded_game()
 
@@ -265,7 +283,7 @@ func _continue_game() -> void:
 func _load_slot(slot: int) -> void:
 	var error: Error = game_state.load_autosave() if slot == 0 else game_state.load_game(slot)
 	if error != OK:
-		status_label.text = "Не удалось загрузить сохранение. Код ошибки: %d" % error
+		status_label.text = tr("Не удалось загрузить сохранение. Код ошибки: %d") % error
 		return
 	_open_loaded_game()
 
@@ -353,6 +371,21 @@ func _current_resolution_index() -> int:
 	var current: Vector2i = settings_manager.call(&"get_window_resolution")
 	var index := WINDOW_RESOLUTIONS.find(current)
 	return index if index >= 0 else 1
+
+
+func _set_language(index: int) -> void:
+	if language_option == null or index < 0 or index >= language_option.item_count:
+		return
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	if settings_manager != null:
+		settings_manager.call(&"set_language", str(language_option.get_item_metadata(index)))
+	# Rebuild the screen so dynamically composed captions and tooltips also update.
+	get_tree().reload_current_scene()
+
+
+func _current_language() -> String:
+	var settings_manager := get_node_or_null("/root/SettingsManager")
+	return str(settings_manager.call(&"get_language")) if settings_manager != null else "ru"
 
 
 func _configure_nav_button(button: Button) -> void:

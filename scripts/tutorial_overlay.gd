@@ -111,9 +111,9 @@ func _reconcile_step(game_state: Node) -> void:
 
 func _render_step(step: String) -> void:
 	var data := _step_data(step)
-	message_label.text = str(data.get("text", ""))
+	message_label.text = tr(str(data.get("text", "")))
 	continue_button.visible = bool(data.get("continue", false))
-	continue_button.text = str(data.get("button", "ПОНЯТНО"))
+	continue_button.text = tr(str(data.get("button", "ПОНЯТНО")))
 	panel.visible = not message_label.text.is_empty()
 	_layout_panel(step)
 

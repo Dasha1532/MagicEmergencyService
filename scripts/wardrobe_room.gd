@@ -229,7 +229,7 @@ func _on_tool_selected(tool_id: StringName) -> void:
 		_show_feedback("Сначала дождитесь завершения текущей работы.", true)
 		return
 	if not game_state.can_employee_work_on_job(selected_employee_id, game_state.active_job_id):
-		_show_feedback("Сотрудник ещё едет на объект. %s." % game_state.employees[selected_employee_id]["status"], true)
+		_show_feedback(tr("Сотрудник ещё едет на объект. %s.") % tr(str(game_state.employees[selected_employee_id]["status"])), true)
 		return
 	selected_tool_id = tool_id
 	if tool_id == &"physical_move":

@@ -45,6 +45,10 @@ func _run() -> void:
 	_check(game_state.dismissal_video_seen, "Завершение ролика сохраняется")
 	_check(office.dismissal_document_layer.visible, "После ролика появляется постановление")
 	_check("Четыре подтверждённые" in office.dismissal_document_layer.get_node("Reason").text, "В постановлении указана причина увольнения")
+	TranslationServer.set_locale("en")
+	office.dismissal_document_layer.call(&"set_document_content", game_state.get_dismissal_reason_text(), game_state.get_confirmed_claim_count(), game_state.DISMISSAL_CLAIM_THRESHOLD, game_state.money)
+	_check("Четыре" not in office.dismissal_document_layer.get_node("Reason").text and "Four confirmed complaints" in office.dismissal_document_layer.get_node("Reason").text, "Причина увольнения переводится вместе с документом")
+	TranslationServer.set_locale("ru")
 	office.queue_free()
 	await process_frame
 

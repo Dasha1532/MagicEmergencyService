@@ -234,7 +234,7 @@ func apply_action(employee_id: StringName, action_id: StringName, intent: String
 			var telekinesis_result: Dictionary = ObjectInteractionRulesScript.apply_telekinesis(world_object, target_zone)
 			action_summary = str(telekinesis_result["summary"])
 			if bool(telekinesis_result["applied"]):
-				action_summary = "Шкаф аккуратно перенесён %s. Шкаф и посуда не повреждены." % ZONE_NAMES[world_object["position_zone"]]
+				action_summary = tr("Шкаф аккуратно перенесён %s. Шкаф и посуда не повреждены.") % tr(str(ZONE_NAMES[world_object["position_zone"]]))
 			applied = bool(telekinesis_result["applied"])
 
 	if applied:
@@ -265,7 +265,7 @@ func advance_burning() -> Dictionary:
 		world_object["fire_spots"] = int(world_object["fire_spots"]) + 1
 		var spread_result: Dictionary = {
 			"changed": true,
-			"message": "Пламя распространяется по шкафу: очагов уже %d." % int(world_object["fire_spots"]),
+			"message": tr("Пламя распространяется по шкафу: очагов уже %d.") % int(world_object["fire_spots"]),
 			"resolved": false,
 		}
 		_record_environment_result(spread_result)
@@ -335,7 +335,7 @@ func get_completion_result() -> Dictionary:
 			"forfeit_payment": true,
 			"compensation_cost": compensation,
 			"reputation_change": -8,
-			"summary": "Шкаф и его содержимое уничтожены огнём. Оплата отменена, назначена компенсация %d монет." % compensation,
+			"summary": tr("Шкаф и его содержимое уничтожены огнём. Оплата отменена, назначена компенсация %d монет.") % compensation,
 			"review": "Я просила усмирить зачарованный шкаф, а не устроить погребальный костёр для всей моей посуды! В следующий раз я лучше вызову экзорциста.",
 			"consequences": ["Шкаф уничтожен огнём.", "Хрупкая посуда внутри уничтожена.", "Хозяйка предъявила претензию на стоимость мебели и содержимого."],
 			"actions": action_log.duplicate(true),
@@ -358,18 +358,18 @@ func get_completion_result() -> Dictionary:
 		return {
 			"reward_adjustment": adjustment,
 			"reputation_change": -damage - contents_damage,
-			"summary": "Шкаф остановлен повреждением ножек%s." % (" и оставлен не в заказанном месте" if not correct_place else ""),
+			"summary": tr("Шкаф остановлен повреждением ножек%s.") % (tr(" и оставлен не в заказанном месте") if not correct_place else ""),
 			"review": broken_reply,
 			"consequences": ["Ножки шкафа сломаны.", "Шкаф оставлен не в заказанном месте."] if not correct_place else ["Ножки шкафа сломаны."],
 			"actions": action_log.duplicate(true),
 		}
-	var summary: String = "Шкаф закреплён у стены и больше не ходит, хотя чары всё ещё действуют." if bool(world_object["anchored"]) else "Шкаф остановлен и больше не ходит."
+	var summary: String = tr("Шкаф закреплён у стены и больше не ходит, хотя чары всё ещё действуют.") if bool(world_object["anchored"]) else tr("Шкаф остановлен и больше не ходит.")
 	if world_object["position_zone"] != &"entrance":
-		summary += " Проход освобождён."
+		summary += tr(" Проход освобождён.")
 	if contents_damage > 0:
-		summary += " Хрупкая посуда внутри шкафа повреждена."
+		summary += tr(" Хрупкая посуда внутри шкафа повреждена.")
 	if not correct_place:
-		summary += " Шкаф оставлен не там, где просила хозяйка."
+		summary += tr(" Шкаф оставлен не там, где просила хозяйка.")
 	var review := "Наконец-то шкаф стоит у левой стены и ведёт себя как приличная мебель. Посуда тоже цела — я уже отвыкла от такой роскоши."
 	if contents_damage > 0:
 		review = "Шкаф больше не гуляет, зато посуда внутри пережила небольшое землетрясение. В следующий раз предупреждайте чашки заранее."
@@ -490,10 +490,10 @@ func _compose_result_message(action_summary: String, action_id: StringName, inte
 	if action_id == &"physical_move" and intent == &"hold":
 		if int(world_object["mobility"]) <= 0:
 			return "Удерживать шкаф больше не требуется: его ножки сломаны."
-		return "%s После освобождения он снова сможет двигаться." % action_summary
+		return tr("%s После освобождения он снова сможет двигаться.") % tr(action_summary)
 	if action_id == &"physical_move" and intent == &"release":
-		return "%s Чары снова заставили его ходить." % action_summary if bool(world_object["moving"]) else "%s Шкаф остался неподвижен." % action_summary
-	return "%s %s" % [action_summary, _describe_current_hazard()]
+		return tr("%s Чары снова заставили его ходить.") % tr(action_summary) if bool(world_object["moving"]) else tr("%s Шкаф остался неподвижен.") % tr(action_summary)
+	return "%s %s" % [tr(action_summary), tr(_describe_current_hazard())]
 
 
 func _describe_current_hazard() -> String:

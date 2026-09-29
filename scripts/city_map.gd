@@ -88,8 +88,8 @@ func _refresh_marker(marker: Button, house_id: StringName) -> void:
 		return
 	var deadline := _nearest_deadline(active_job_ids)
 	var status := _house_crew_status(active_job_ids)
-	marker.text = "%s\nАктивных заявок: %d, %s\n%s" % [
-		definition["address"], active_job_ids.size(), deadline, status,
+	marker.text = tr("%s\nАктивных заявок: %d, %s\n%s") % [
+		tr(str(definition["address"])), active_job_ids.size(), tr(deadline), tr(status),
 	]
 
 
@@ -103,8 +103,8 @@ func _refresh_house_panel() -> void:
 		selected_house_id = &""
 		house_panel.visible = false
 		return
-	house_title.text = str(definition["address"])
-	house_summary.text = "Доступных заявок: %d" % active_job_ids.size()
+	house_title.text = tr(str(definition["address"]))
+	house_summary.text = tr("Доступных заявок: %d") % active_job_ids.size()
 	_clear(job_list)
 	for job_id_string: String in active_job_ids:
 		var job_id := StringName(job_id_string)
@@ -118,7 +118,7 @@ func _refresh_house_panel() -> void:
 		button.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_BRASS, 2, 7))
 		button.add_theme_stylebox_override("hover", _style(COLOR_CARD_HOVER, COLOR_GOLD, 2, 7))
 		button.add_theme_stylebox_override("disabled", _style(Color(0.07, 0.055, 0.045, 0.90), Color(0.28, 0.24, 0.19), 1, 7))
-		button.text = "%s\n%s, %s" % [job["title"], _job_deadline(job), _job_crew_status(job_id)]
+		button.text = "%s\n%s, %s" % [tr(str(job["title"])), tr(_job_deadline(job)), tr(_job_crew_status(job_id))]
 		button.pressed.connect(func() -> void: job_selected.emit(job_id))
 		job_list.add_child(button)
 
@@ -141,7 +141,7 @@ func _nearest_deadline(active_job_ids: PackedStringArray) -> String:
 		if bool(job.get("overdue", false)):
 			overdue = true
 		nearest_minutes = mini(nearest_minutes, int(job.get("time_left", 0)))
-	return "Срок истёк" if overdue else "Ближайший срок: %d мин" % nearest_minutes
+	return tr("Срок истёк") if overdue else tr("Ближайший срок: %d мин") % nearest_minutes
 
 
 func _house_crew_status(active_job_ids: PackedStringArray) -> String:
@@ -173,7 +173,7 @@ func _job_crew_status(job_id: StringName) -> String:
 func _job_deadline(job: Dictionary) -> String:
 	if bool(job.get("overdue", false)):
 		return "срок истёк"
-	return "осталось %d мин" % int(job.get("time_left", 0))
+	return tr("осталось %d мин") % int(job.get("time_left", 0))
 
 
 func _style(background: Color, border: Color, width: int, radius: int) -> StyleBoxFlat:

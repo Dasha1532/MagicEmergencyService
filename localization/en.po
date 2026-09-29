@@ -1,0 +1,3175 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Magic Emergency Service\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "\n\nЗапись восстановлена из сохранения предыдущей версии."
+msgstr "\n\nThe entry was restored from a previous version save."
+
+msgid "\n\nЗаявка завершена после истечения срока."
+msgstr "\n\nJob completed after the deadline."
+
+msgid "\n\nПОСЛЕДСТВИЯ"
+msgstr "\n\nCONSEQUENCES"
+
+msgid "\nВключено возмещение снаряжения: %d монет"
+msgstr "\nEquipment refund included: %d coins"
+
+msgid "\nИзменение репутации: %s"
+msgstr "\nReputation change: %s"
+
+msgid "\nКомпенсация жильцу: %d монет\nИзменение средств службы: %d монет"
+msgstr "\nResident compensation: %d coins\nChange of service funds: %d coins"
+
+msgid "\nКомпенсация проведена отдельной операцией: %d монет"
+msgstr "\nCompensation was carried out in a separate operation: %d coins"
+
+msgid "\nКомпенсация: %d монет"
+msgstr "\nCompensation: %d coins"
+
+msgid "\nКомпенсация: не требуется"
+msgstr "\nCompensation: not required"
+
+msgid "\nНажмите ещё раз, чтобы перезаписать"
+msgstr "\nPress again to overwrite"
+
+msgid "\nНажмите, чтобы выбрать"
+msgstr "\nClick to select"
+
+msgid "Нажмите ещё раз, чтобы перезаписать"
+msgstr "Press again to overwrite"
+
+msgid "Нажмите, чобы выбрать"
+msgstr "Click to select"
+
+msgid "\nПолучено: %d монет"
+msgstr "\nReceived: %d coins"
+
+msgid "\nПредъявлена претензия: %d монет (решение не принято)"
+msgstr "\nClaim made: %d coins (no decision made)"
+
+msgid "\nПретензия жильца: %d монет\nРешение потребуется после принятия акта"
+msgstr "\nResident's claim: %d coins\nA decision will be required after the act is adopted"
+
+msgid "\nПретензия на %d монет отклонена; списания не было"
+msgstr "\nClaim for %d coins rejected; there was no write-off"
+
+msgid "\nПретензия: %d монет\nКомпенсация: отказано"
+msgstr "\nClaim: %d coins\nCompensation: denied"
+
+msgid "\nПретензия: %d монет\nКомпенсация: решение не принято"
+msgstr "\nClaim: %d coins\nCompensation: no decision made"
+
+msgid "\nПрибудет в "
+msgstr "\nArrives at"
+
+msgid "\nРешение по претензии: выплачено"
+msgstr "\nClaim decision: paid"
+
+msgid "\nРешение по претензии: выплачено после первоначального отказа"
+msgstr "\nClaim Decision: Paid after initial denial"
+
+msgid "\nРешение по претензии: отказано"
+msgstr "\nDecision on claim: denied"
+
+msgid " — максимальная по заявке\nОценка выполнения: отлично"
+msgstr "— maximum according to the job\nRating of completion: excellent"
+
+msgid " (долг)"
+msgstr "(debt)"
+
+msgid " В компенсации мне ещё и отказали."
+msgstr "They also refused me compensation."
+
+msgid " Ванна по-прежнему повреждена."
+msgstr "The bathtub is still damaged."
+
+msgid " За дополнительный перегрев удержана компенсация за повреждение отделки."
+msgstr "For additional overheating, compensation for damage to the finish will be withheld."
+
+msgid " Заявка выполнена после истечения срока: из оплаты удержано %d монет."
+msgstr "The job was completed after the deadline: %d coins were withheld from the payment."
+
+msgid " и оставлен не в заказанном месте"
+msgstr "and left not in the ordered place"
+
+msgid " Оплавленная рама осталась деформированной."
+msgstr "The melted frame remained deformed."
+
+msgid " Позже служба всё-таки выплатила компенсацию."
+msgstr "Later, the service nevertheless paid compensation."
+
+msgid " Проход освобождён."
+msgstr "The passage is clear."
+
+msgid " Рама зеркала деформирована нагревом."
+msgstr "The mirror frame is deformed by heat."
+
+msgid " Хрупкая посуда внутри шкафа повреждена."
+msgstr "The fragile dishes inside the wardrobe are damaged."
+
+msgid " Шкаф оставлен не там, где просила хозяйка."
+msgstr "The closet was not left where the owner asked."
+
+msgid ", прибудет в "
+msgstr ", will arrive at"
+
+msgid "%d монет"
+msgstr "%d COINS"
+
+msgid "%d МОНЕТ"
+msgstr "%d COINS"
+
+msgid "%s\n\n%s\n\nРаздел подготовлен для следующего этапа разработки."
+msgstr "%s\n\n%s\n\nThe section is ready for the next stage of development."
+
+msgid "%s\n\nЗаказчик: %s\nБригада: %s\n\n%s\n\n%s"
+msgstr "%s\n\nCustomer: %s\nCrew: %s\n\n%s\n\n%s"
+
+msgid "%s\n\nТребование: %d монет.\n%s\n\nПри отказе репутация снизится на %d, а претензия останется в архиве и повысит финансовый риск."
+msgstr "%s\n\nRequirement: %d coins.\n%s\n\nIf rejected, reputation will decrease by %d, and the claim will remain in the archives and increase financial risk."
+
+msgid "%s\n%s\n\n%s\n\nИзменение репутации: %s%d"
+msgstr "%s\n%s\n\n%s\n\nReputation change: %s%d"
+
+msgid "%s\n%s\n\nИзменение средств: %s%d монет"
+msgstr "%s\n%s\n\nFund Change: %s%d coins"
+
+msgid "%s\n%s, %s монет"
+msgstr "%s\n%s, %s coins"
+
+msgid "%s\nАктивных заявок: %d, %s\n%s"
+msgstr "%s\nActive orders: %d, %s\n%s"
+
+msgid "%s\nЖилец: %s\nБригада: %s\n\nИтог: %s\n\nОплата: %d монет"
+msgstr "%s\nResident: %s\nCrew: %s\n\nTotal: %s\n\nPayment: %d coins"
+
+msgid "%s\nЖилец: %s\nОпасность: %s\n%s"
+msgstr "%s\nOccupant: %s\nDanger: %s\n%s"
+
+msgid "%s — ЗАБЫТЬ"
+msgstr "%s - FORGET"
+
+msgid "%s — СРОК ИСТЁК"
+msgstr "%s - EXPIRED"
+
+msgid "%s горит"
+msgstr "%s is on"
+
+msgid "%s забудет специализацию «%s». Это действие нельзя отменить без повторного обучения."
+msgstr "%s will forget the specialization \"%s\". This action cannot be undone without relearning."
+
+msgid "%s повреждён"
+msgstr "%s is damaged"
+
+msgid "%s После освобождения он снова сможет двигаться."
+msgstr "%s Once freed, he will be able to move again."
+
+msgid "%s работает, осталось %d мин."
+msgstr "%s is running, %d minutes left."
+
+msgid "%s уничтожен"
+msgstr "%s destroyed"
+
+msgid "%s Чары снова заставили его ходить."
+msgstr "%s The spell made him walk again."
+
+msgid "%s Шкаф остался неподвижен."
+msgstr "%s The wardrobe remained motionless."
+
+msgid "%s, осталось %d мин."
+msgstr "%s, %d minutes left."
+
+msgid "←  В ОФИС"
+msgstr "← TO THE OFFICE"
+
+msgid "←  К ОБЗОРУ ДОМА"
+msgstr "← TO REVIEW THE HOUSE"
+
+msgid "←  ОТКРЫТЬ ОФИС"
+msgstr "← OPEN AN OFFICE"
+
+msgid "← В ОФИС"
+msgstr "← TO THE OFFICE"
+
+msgid "← Назад"
+msgstr "← Back"
+
+msgid "⚠ ПЕРЕГРЕВ ТРУБЫ ЭТАЖОМ НИЖЕ"
+msgstr "⚠ OVERHEATING PIPE ON THE FLOOR BELOW"
+
+msgid "✓ В этой бригаде"
+msgstr "✓ In this crew"
+
+msgid "✓ На объекте"
+msgstr "✓ On site"
+
+msgid "35 и выше — надёжная служба; 25–34 — под наблюдением; ниже 25 — риск отзыва лицензии."
+msgstr "35 and above - reliable service; 25–34 — under supervision; below 25 – risk of license revocation."
+
+msgid "Аварийные работы приняты."
+msgstr "Emergency work has been accepted."
+
+msgid "аварийный кран"
+msgstr "emergency faucet"
+
+msgid "Аварийный кран — интерактивный объект. Нажмите прямо на него, чтобы увидеть действия выбранного сотрудника."
+msgstr "Emergency faucet is an interactive object. Click directly on it to see the actions of the selected employee."
+
+msgid "Авария закончилась. Подробности я лучше перескажу соседям — у них всё равно получится драматичнее."
+msgstr "The accident is over. I’d rather tell my neighbors the details - they’ll still make it more dramatic."
+
+msgid "АВАРИЯ: ЛАВОВЫЙ КРАН"
+msgstr "ACCIDENT: LAVA FAUCET"
+
+msgid "АВТОСОХРАНЕНИЕ\nДень %d, %s, %d монет, репутация %d%s"
+msgstr "AUTO SAVE\nDay %d, %s, %d coins, reputation %d%s"
+
+msgid "АВТОСОХРАНЕНИЕ\nПУСТО"
+msgstr "AUTO SAVE\nEMPTY"
+
+msgid "Адрес"
+msgstr "Address"
+
+msgid "АКТ ВЫПОЛНЕННЫХ РАБОТ"
+msgstr "ACT OF COMPLETED WORK"
+
+msgid "Активный портал удерживает зеркало на месте. Телекинез не может безопасно его сдвинуть."
+msgstr "The active portal holds the mirror in place. Telekinesis cannot move it safely."
+
+msgid "Анимированный пар над кружкой. Положение можно менять мышкой в 2D-редакторе."
+msgstr "Animated steam over a mug. The position can be changed with the mouse in the 2D editor."
+
+msgid "Аномалия локализована. Прошу не создавать новую до составления акта."
+msgstr "The anomaly has been localized. Please do not create a new one until the act is drawn up."
+
+msgid "Антимагия"
+msgstr "Antimagic"
+
+msgid "Антимагия — временно подавляет магические эффекты"
+msgstr "Antimagic - temporarily suppresses magical effects"
+
+msgid "Антимагия окончательно заглушила поддерживающие чары. Горгулья не проснулась, вода продолжает поступать на чердак."
+msgstr "The anti-magic completely drowned out the supporting charms. The gargoyle has not woken up, water continues to flow into the attic."
+
+msgid "Антимагия погасила поддерживающие чары. Горгулья снова уснула, и вода опять поступает на чердак."
+msgstr "Antimagic extinguished the supporting charm. The gargoyle has fallen asleep again, and the water is flowing into the attic again."
+
+msgid "Антимагия погасила связь. Портал закрыт, зеркало не повреждено."
+msgstr "Antimagic extinguished the connection. The portal is closed, the mirror is not damaged."
+
+msgid "Антимагия погасила чары."
+msgstr "Antimagic extinguished the spell."
+
+msgid "Антимагия сняла холодный след с крана. Лёд уже убран, поэтому работа выполнена полностью."
+msgstr "Antimagic removed the cold trace from the faucet. The ice has already been removed, so the job is completely done."
+
+msgid "Антимагия сняла холодный след с крана. Новая вода больше не замёрзнет, но лёд в ванне остался."
+msgstr "Antimagic removed the cold trace from the faucet. The new water will no longer freeze, but the ice remains in the bathtub."
+
+msgid "АРХИВ"
+msgstr "ARCHIVE"
+
+msgid "АРХИВ ЗАЯВОК"
+msgstr "ARCHIVE OF JOBS"
+
+msgid "Архив пока пуст"
+msgstr "The archive is still empty"
+
+msgid "АРХИВ ПРОИСШЕСТВИЙ"
+msgstr "ARCHIVE OF INCIDENTS"
+
+msgid "Башенная улица, 8"
+msgstr "Tower street, 8"
+
+msgid "Без изменений. Значит, причина не в механике — или сначала требуется другое действие."
+msgstr "No changes. This means that the reason is not mechanical - or another action is required first."
+
+msgid "без претензии"
+msgstr "without complaint"
+
+msgid "Безупречные мастера"
+msgstr "Impeccable masters"
+
+msgid "Благодарности, жалобы и угрозы."
+msgstr "Gratitude, complaints and threats."
+
+msgid "Ближайший срок: %d мин"
+msgstr "Nearest due date: %d min"
+
+msgid "Борис закрепил шкаф к стене прочными скобами. Чары всё ещё действуют, но шкаф больше не сможет ходить."
+msgstr "Boris secured the wardrobe to the wall with strong brackets. The enchantment still works, but the wardrobe will no longer be able to move."
+
+msgid "Борис заменил повреждённые уплотнения, подтянул соединения и восстановил кран."
+msgstr "Boris replaced the damaged seals, tightened the connections and restored the faucet."
+
+msgid "Борис заменил сломанные ножки и восстановил шкаф."
+msgstr "Boris replaced the broken legs and restored the wardrobe."
+
+msgid "Борис заменил сломанные ножки и укрепил основание. Чары снова заставили шкаф двигаться."
+msgstr "Boris replaced the broken legs and strengthened the base. The charm made the wardrobe move again."
+
+msgid "Борис Медяк"
+msgstr "Boris Medyak"
+
+msgid "Борис не стал прикасаться к крану: сначала нужно остановить поток лавы."
+msgstr "Boris did not touch the faucet: first the flow of lava must be stopped."
+
+msgid "Борис не станет ремонтировать горящий шкаф. Сначала потушите огонь."
+msgstr "Boris will not repair a burning wardrobe. Put out the fire first."
+
+msgid "Борис осмотрел пепел: шкаф восстановлению не подлежит."
+msgstr "Boris examined the ashes: the wardrobe cannot be restored."
+
+msgid "Борис осмотрел расплавленный кран: ремонтировать уже нечего, требуется замена."
+msgstr "Boris examined the melted faucet: there was nothing left to repair, a replacement was required."
+
+msgid "Борис прочистил боковой канал и открыл механический обход. Вода уходит, хотя горгулья продолжает спать."
+msgstr "Boris cleared the side channel and opened the mechanical bypass. The water goes away, although the gargoyle continues to sleep."
+
+msgid "Борис снял защитное полотно. Портал снова открыт и доступен для работы."
+msgstr "Boris removed the protective cloth. The portal is open and available for use again."
+
+msgid "Борис установил рунический терморегулятор воды. Кран больше не впадает в температурные крайности, но лёд в ванне остался."
+msgstr "Boris installed a runic water thermostat. The faucet no longer goes into temperature extremes, but there is still ice in the bathtub."
+
+msgid "Борис установил рунический терморегулятор воды. Кран стабилизирован, а лёд уже убран."
+msgstr "Boris installed a runic water thermostat. The faucet has been stabilized and the ice has already been removed."
+
+msgid "БРИГАДА"
+msgstr "CREW"
+
+msgid "бригада в пути"
+msgstr "crew on the way"
+
+msgid "БРИГАДА ЕЩЁ В ПУТИ"
+msgstr "THE CREW IS STILL ON THE WAY"
+
+msgid "Бригада не назначена"
+msgstr "No crew assigned"
+
+msgid "бригада не указана"
+msgstr "crew not specified"
+
+msgid "Бригада уже в пути. Дорога занимает игровое время; часы можно поставить на паузу или ускорить."
+msgstr "The crew is on its way. The road takes up game time; The clock can be paused or accelerated."
+
+msgid "Бригада:\n%s"
+msgstr "Crew:\n%s"
+
+msgid "Бригада: не назначена"
+msgstr "Crew: not assigned"
+
+msgid "Будим горгулью. Прошу не стоять у неё перед пастью: рабочее настроение не гарантируется."
+msgstr "Let's wake up the gargoyle. Please do not stand in front of her mouth: a working mood is not guaranteed."
+
+msgid "В «АКТЕ ВЫПОЛНЕННЫХ РАБОТ» указаны бригада, оплата и итог заявки. Ущерб может уменьшить результат, вызвать претензию и повлиять на репутацию службы."
+msgstr "The “ACT OF COMPLETED WORK” indicates the team, payment and outcome of the job. Damage can reduce the outcome, give rise to a claim and affect the reputation of the service."
+
+msgid "В «ЛАВКЕ СНАБЖЕНИЯ» продаются полевое снаряжение и учебные книги, открывающие новые курсы."
+msgstr "The SUPPLY SHOP sells field equipment and educational books that open new courses."
+
+msgid "В БРИГАДЕ НЕТ АНТИМАГИИ"
+msgstr "THERE IS NO ANTI-MAGIC IN THE CREW"
+
+msgid "В бригаде нет защитного полотна. Его можно купить в лавке снабжения."
+msgstr "The crew does not have protective cloth. You can buy it at the supply shop."
+
+msgid "В бригаде нет ловушки. Её можно купить в лавке снаряжения."
+msgstr "There is no trap in the crew. You can buy it at the equipment store."
+
+msgid "В бригаду можно взять любых доступных сотрудников — одного, нескольких или всех. Изучите их специализации и решите сами, кто пригодится на этом вызове."
+msgstr "You can take any available employees into the team - one, several or all. Study their specializations and decide for yourself who will be useful in this challenge."
+
+msgid "В ванной демона из трубы идёт лава. Поток усиливается, а старая медная труба уже нагрелась."
+msgstr "In the demon's bathroom, lava comes out of the pipe. The flow is increasing, and the old copper pipe is already heating up."
+
+msgid "В ГЛАВНОЕ МЕНЮ"
+msgstr "TO MAIN MENU"
+
+msgid "В зеркале открылся портал"
+msgstr "A portal opened in the mirror"
+
+msgid "В казне: %d монет"
+msgstr "In funds: %d coins"
+
+msgid "В комнате сохранилась аномальная стужа."
+msgstr "The room remained abnormally cold."
+
+msgid "в компенсации отказано"
+msgstr "compensation denied"
+
+msgid "В компенсации ущерба отказано; репутация службы снижена на %d, а сумма претензии учитывается как финансовый риск."
+msgstr "Compensation for damages is denied; The reputation of the service is reduced by %d, and the amount of the claim is taken into account as a financial risk."
+
+msgid "В полноэкранном режиме используется разрешение экрана."
+msgstr "Full screen mode uses the screen resolution."
+
+msgid "В проход на кухню"
+msgstr "In the passage to the kitchen"
+
+msgid "В проход так в проход. Только потом не спрашивайте, почему на кухню приходится ходить через шкаф."
+msgstr "Into the aisle, so into the aisle. Just don’t ask later why you have to walk through the closet to the kitchen."
+
+msgid "В пути, прибудет в %s"
+msgstr "On the way, will arrive in %s"
+
+msgid "В разделе «СОТРУДНИКИ» можно нанимать новых специалистов и отправлять сотрудников на обучение."
+msgstr "In the “EMPLOYEES” section you can hire new specialists and send employees for training."
+
+msgid "В самой ванне нет чар, которые нужно подавлять. Холодный след находится на кране."
+msgstr "There are no spells in the bath itself that need to be suppressed. The cold trail is on the faucet."
+
+msgid "Важно"
+msgstr "Important"
+
+msgid "Ванна не повреждена."
+msgstr "The bathtub is not damaged."
+
+msgid "Ванна со льдом"
+msgstr "Ice bath"
+
+msgid "Ванна цела, слив не забит. Внутри находится цельная масса льда."
+msgstr "The bathtub is intact, the drain is not clogged. There is a solid mass of ice inside."
+
+msgid "Ванна цела, слив не забит. Проблема в том, что воду теперь можно вынимать отсюда одним куском."
+msgstr "The bathtub is intact, the drain is not clogged. The problem is that the water can now be taken out of here in one piece."
+
+msgid "Ванная крупно"
+msgstr "Bathroom close up"
+
+msgid "Ванная снова безопасна. Теперь вода просто холодная, как и положено воде без личных амбиций."
+msgstr "The bathroom is safe again. Now the water is simply cold, as it should be for water without personal ambitions."
+
+msgid "Ванная: из крана течёт лава"
+msgstr "Bathroom: lava flows from the faucet"
+
+msgid "Вводная часть постановления."
+msgstr "Introductory part of the resolution."
+
+msgid "ВЕРНУТЬСЯ В ОФИС"
+msgstr "RETURN TO THE OFFICE"
+
+msgid "ВЕРНУТЬСЯ К ОБУЧЕНИЮ"
+msgstr "RETURN TO TRAINING"
+
+msgid "ВЕРНУТЬСЯ К СОСТАВУ"
+msgstr "RETURN TO COMPOSITION"
+
+msgid "Верхний город, 12"
+msgstr "Upper city, 12"
+
+msgid "Весь лёд убран из ванны телекинезом."
+msgstr "All the ice was removed from the bathtub using telekinesis."
+
+msgid "ВНИМАНИЕ"
+msgstr "ATTENTION"
+
+msgid "Внутри продолжает идти лава, а корпус крана сильно нагрет. Сначала необходимо остановить поток."
+msgstr "Lava continues to flow inside, and the body of the faucet is very hot. First you need to stop the flow."
+
+msgid "Вода больше не замерзает. Трещину на ванне я назову памятью о вашем особенно убедительном методе."
+msgstr "The water no longer freezes. I will call the crack in the bathtub a memory of your particularly convincing method."
+
+msgid "Вода в ванной замерзает сама"
+msgstr "The water in the bathroom freezes on its own"
+
+msgid "Вода в пасти замёрзла. Поток временно остановлен, но ледяная пробка давит на старый камень."
+msgstr "The water in the mouth froze. The flow is temporarily stopped, but the ice plug is pressing on the old stone."
+
+msgid "Вода отведена через механический обход."
+msgstr "Water is drained through a mechanical bypass."
+
+msgid "Вода ушла через трещину. Вместе с частью горгульи и моей верой в аккуратный ремонт."
+msgstr "The water escaped through the crack. Along with the gargoyle part and my faith in neat repairs."
+
+msgid "Водоотвод восстановлен через пролом в повреждённой горгулье."
+msgstr "The drainage system has been restored through a hole in the damaged gargoyle."
+
+msgid "Водоотвод полностью восстановлен совместной работой бригады."
+msgstr "The drainage system was completely restored by the joint work of the team."
+
+msgid "Водосточная горгулья"
+msgstr "Gutter Gargoyle"
+
+msgid "Водосточная горгулья уснула и забилась листьями. Дождевая вода уже затапливает чердак."
+msgstr "The drainage gargoyle fell asleep and became clogged with leaves. Rainwater is already flooding the attic."
+
+msgid "Возвращается, прибудет в %s"
+msgstr "Returns, will arrive in %s"
+
+msgid "возвращение в офис"
+msgstr "return to the office"
+
+msgid "Воздействие результата не дало. Магический фон не изменился."
+msgstr "The impact did not produce any results. The magical background has not changed."
+
+msgid "Воздействовать чарами"
+msgstr "Influence with spells"
+
+msgid "возле прохода на кухню"
+msgstr "near the passage to the kitchen"
+
+msgid "Возражаю: антимагия пожар не тушит."
+msgstr "I object: antimagic does not put out fires."
+
+msgid "Возражаю: нагрев усилит пожар."
+msgstr "I object: heating will intensify the fire."
+
+msgid "Восстановить водоотвод на чердаке"
+msgstr "Restore drainage in the attic"
+
+msgid "Вот так гораздо лучше. Теперь оно хотя бы не носится по моей гостиной."
+msgstr "This is much better. Now at least it's not running around my living room."
+
+msgid "Вот теперь вода уходит как положено: листья убраны, канал восстановлен. Отличная работа вдвоём."
+msgstr "Now the water flows out as expected: the leaves have been removed, the canal has been restored. Great job both of you."
+
+msgid "Вот теперь шкаф стоит там, где нужно, и больше никуда не уйдёт. Спасибо, именно этого я и просила!"
+msgstr "Now the closet is where it needs to be and won’t go anywhere else. Thank you, that's exactly what I asked for!"
+
+msgid "Все доступные заявки выполнены"
+msgstr "All available requests have been completed"
+
+msgid "Все работы завершены"
+msgstr "All work has been completed"
+
+msgid "ВСЁ РАВНО ОТПРАВИТЬ"
+msgstr "STILL SEND"
+
+msgid "Все ячейки изучаемых способностей заняты."
+msgstr "All slots of the abilities being studied are occupied."
+
+msgid "Вступительная строка над итогами."
+msgstr "Introductory line above the summary."
+
+msgid "Вы сломали ножки и оставили шкаф посреди прохода? Теперь он не ходит, зато окончательно мешает пройти! Это вы называете ремонтом?"
+msgstr "Did you break the legs and leave the wardrobe in the middle of the aisle? Now he doesn’t walk, but he completely prevents him from walking! Do you call this a renovation?"
+
+msgid "Вы уехали и оставили мой шкаф гореть! Когда я дозвонилась до службы, от него и всей посуды уже остался один пепел."
+msgstr "You drove away and left my closet on fire! When I got through to the service, all that was left of him and all the dishes was ashes."
+
+msgid "Вы уничтожили мою вещь! Я потребую полную компенсацию!"
+msgstr "You destroyed my thing! I will demand full compensation!"
+
+msgid "Вы что творите? Быстро погасите огонь!"
+msgstr "What are you doing? Put out the fire quickly!"
+
+msgid "Выберите в инспекторе, какие служебные области показывать в 2D-редакторе. Переключатель не меняет координаты узлов и не влияет на игру."
+msgstr "In the inspector, select which service areas to show in the 2D editor. The switch does not change the coordinates of the nodes and does not affect the game."
+
+msgid "Выберите действие сотрудника и примените его к аварийному крану."
+msgstr "Select an employee action and apply it to the emergency faucet."
+
+msgid "Выберите завершённую заявку слева."
+msgstr "Select a completed job on the left."
+
+msgid "Выберите занятую ячейку, чтобы освободить её."
+msgstr "Select an occupied cell to free it."
+
+msgid "Выберите запись слева, чтобы увидеть подробности."
+msgstr "Select an entry on the left to see details."
+
+msgid "ВЫБЕРИТЕ СЛОТ СОХРАНЕНИЯ"
+msgstr "SELECT SAVE SLOT"
+
+msgid "ВЫБЕРИТЕ СОХРАНЕНИЕ"
+msgstr "SELECT SAVE"
+
+msgid "Выберите, что именно Грог должен сделать со шкафом."
+msgstr "Choose what exactly Grog should do with the wardrobe."
+
+msgid "Выбить засор силой"
+msgstr "Force the blockage out"
+
+msgid "выбор бригады"
+msgstr "crew selection"
+
+msgid "выбор действия"
+msgstr "action selection"
+
+msgid "выбор сотрудника"
+msgstr "employee selection"
+
+msgid "Выбран для отправки"
+msgstr "Selected for submission"
+
+msgid "Вызов закрыт, и первый рабочий день можно завершить. Откройте «ДОСКУ ЗАЯВОК»."
+msgstr "The call is closed and the first day of work can be completed. Open the “REQUEST BOARD”."
+
+msgid "ВЫЙТИ"
+msgstr "EXIT"
+
+msgid "ВЫЙТИ ИЗ ИГРЫ"
+msgstr "QUIT THE GAME"
+
+msgid "ВЫПЛАТИТЬ %d МОНЕТ"
+msgstr "PAYOUT %d COINS"
+
+msgid "ВЫПЛАТИТЬ КОМПЕНСАЦИЮ"
+msgstr "PAY COMPENSATION"
+
+msgid "выплачено после отказа: %d"
+msgstr "paid after refusal: %d"
+
+msgid "выплачено: %d"
+msgstr "paid: %d"
+
+msgid "Выполняю регулируемый нагрев. Любые языки пламени сверх нормы будут занесены в протокол."
+msgstr "I perform controlled heating. Any flames above the norm will be recorded."
+
+msgid "высокий"
+msgstr "high"
+
+msgid "Вытащить листья"
+msgstr "Pull out the leaves"
+
+msgid "Где опять прорвало?"
+msgstr "Where did it break again?"
+
+msgid "Главный заголовок постановления."
+msgstr "The main title of the resolution."
+
+msgid "Горгулья активна, засор удалён, водосточный канал работает штатно."
+msgstr "The gargoyle is active, the blockage has been removed, and the drainage channel is working properly."
+
+msgid "Горгулья всё ещё спит, зато новая труба трудится без жалоб и перерывов на мистический сон."
+msgstr "The gargoyle is still sleeping, but the new pipe is working without complaints or interruptions for mystical sleep."
+
+msgid "Горгулья не мяукала. Я проверял."
+msgstr "The gargoyle didn't meow. I checked."
+
+msgid "Горгулья осталась неактивной и потребует отдельного обслуживания чар."
+msgstr "The gargoyle remains inactive and will require separate enchantment maintenance."
+
+msgid "Горгулья пробуждена и снова работает как штатный водосток."
+msgstr "The gargoyle is awakened and works as a regular drain again."
+
+msgid "Горгулья уже оживлена и исправно отводит воду. Дополнительные действия не требуются."
+msgstr "The gargoyle has already been revived and is draining water properly. No additional steps are required."
+
+msgid "Горгулья уже повреждена. Вода уходит через образовавшийся пролом; дополнительные действия не требуются."
+msgstr "The gargoyle is already damaged. Water leaves through the resulting gap; no additional steps are required."
+
+msgid "Горгулья уснула прямо во время ливня. На чердаке уже можно разводить уток — разбудите её или хотя бы отведите воду."
+msgstr "The gargoyle fell asleep right during the downpour. You can already raise ducks in the attic - wake her up or at least drain the water."
+
+msgid "ГОРОДСКАЯ ИНСПЕКЦИЯ МАГИЧЕСКИХ СЛУЖБ"
+msgstr "CITY INSPECTORATE OF MAGICAL SERVICES"
+
+msgid "Городская инспекция признала дальнейшее руководство службой невозможным."
+msgstr "The city inspectorate declared further management of the service impossible."
+
+msgid "Горящее не ремонтируют. Сначала тушим."
+msgstr "Burning things cannot be repaired. First we simmer."
+
+msgid "Горящий шкаф нельзя закреплять. Сначала потушите огонь."
+msgstr "A burning wardrobe must not be secured. Put out the fire first."
+
+msgid "Господин Рагнар"
+msgstr "Lord Ragnar"
+
+msgid "Госпожа Мирабель"
+msgstr "Lady Mirabelle"
+
+msgid "Госпожа Селеста"
+msgstr "Lady Celeste"
+
+msgid "Госпожа Элеонора"
+msgstr "Lady Eleanor"
+
+msgid "Гостиная: портал в зеркале"
+msgstr "Living room: portal in the mirror"
+
+msgid "Гостиная: ходячий шкаф"
+msgstr "Living room: walking wardrobe"
+
+msgid "Грог Кувалда"
+msgstr "Grog Sledgehammer"
+
+msgid "Грог отпустил шкаф."
+msgstr "Grog let go of the wardrobe."
+
+msgid "Грог попытался схватить привидение, но руки прошли насквозь. Привидение возмутилось."
+msgstr "Grog tried to grab the ghost, but his hands went right through him. The ghost was indignant."
+
+msgid "Грог разбил зеркало. Портал разрушен, и связь с привидением оборвалась."
+msgstr "Grog broke the mirror. The portal is destroyed, and communication with the ghost is severed."
+
+msgid "Грог сейчас не удерживает шкаф."
+msgstr "Grog is no longer holding the wardrobe."
+
+msgid "Грог удержал шкаф на месте."
+msgstr "Grog held the wardrobe in place."
+
+msgid "Грог удерживает шкаф, ножки целы, а оживляющие чары продолжают действовать."
+msgstr "Grog holds the wardrobe, the legs are intact, and the reviving charm continues to work."
+
+msgid "Гроза интерьеров"
+msgstr "Storm of interiors"
+
+msgid "ДА, УСКОРИТЬ"
+msgstr "YES, SPEED UP"
+
+msgid "Даже у магии бывают технические неполадки"
+msgstr "Even magic has technical problems"
+
+msgid "ДАЛЕЕ"
+msgstr "NEXT"
+
+msgid "ДЕЙСТВИЕ"
+msgstr "Action"
+
+msgid "Действие"
+msgstr "Action"
+
+msgid "Действие не изменило"
+msgstr "The action didn't change"
+
+msgid "Действие не изменило состояние водостока."
+msgstr "The action did not change the condition of the drain."
+
+msgid "Действие не изменило состояние зеркала."
+msgstr "The action did not change the state of the mirror."
+
+msgid "Действие не изменило состояние объекта."
+msgstr "The action did not change the state of the object."
+
+msgid "ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА"
+msgstr "DEMONSTRATION COMPLETED"
+
+msgid "Денежная операция"
+msgstr "Money transaction"
+
+msgid "ДЕНЕЖНЫЕ ОПЕРАЦИИ"
+msgstr "MONEY TRANSACTIONS"
+
+msgid "День %d"
+msgstr "Day %d"
+
+msgid "День %d, %02d:%02d"
+msgstr "Day %d, %02d:%02d"
+
+msgid "Дерево загорелось. Если не потушить огонь, пожар распространится по шкафу."
+msgstr "The tree caught fire. If the fire is not put out, the fire will spread throughout the wardrobe."
+
+msgid "Диагностика"
+msgstr "Diagnostics"
+
+msgid "Диагностика и точный ремонт"
+msgstr "Diagnostics and precise repairs"
+
+msgid "Диспетчерская заявок"
+msgstr "Dispatch of requests"
+
+msgid "Диспетчерская сводка по адресам"
+msgstr "Dispatch report by address"
+
+msgid "Дистанционное перемещение незакреплённых предметов."
+msgstr "Remote movement of loose objects."
+
+msgid "Для установки нужен рунический терморегулятор из лавки снабжения."
+msgstr "To install, you need a runic thermostat from the supply shop."
+
+msgid "Добавлю тепла аккуратно. Заметки о пожаре сегодня не планировала."
+msgstr "I'll add heat carefully. I didn't plan to write any notes about the fire today."
+
+msgid "Добавлю холода ровно столько, сколько нужно. Ни градусом больше."
+msgstr "I will add just as much cold as needed. Not a degree more."
+
+msgid "Добро пожаловать в Магическую аварийную службу. Здесь принимают вызовы, собирают бригады и разбираются с последствиями — желательно в таком порядке."
+msgstr "Welcome to Arcane Emergency Service. Here they take calls, assemble teams and deal with the consequences - preferably in that order."
+
+msgid "Дождитесь возвращения сотрудника."
+msgstr "Wait for the employee to return."
+
+msgid "Дождитесь прибытия сотрудников, затем нажмите «ОТКРЫТЬ ОБЪЕКТ». Если бригада ещё в пути, игра предложит ускорить ожидание."
+msgstr "Wait for staff to arrive, then click “OPEN FACILITY.” If the crew is still on the way, the game will offer to speed up the wait."
+
+msgid "Долг: %d"
+msgstr "Debt: %d"
+
+msgid "Долг: %d монет"
+msgstr "Debt: %d coins"
+
+msgid "Дом"
+msgstr "House"
+
+msgid "Дополнительного ущерба не зафиксировано."
+msgstr "No additional damage was recorded."
+
+msgid "ДОСКА ЗАЯВОК"
+msgstr "job board"
+
+msgid "доска заявок"
+msgstr "job board"
+
+msgid "Доступных заявок: %d"
+msgstr "Available jobs: %d"
+
+msgid "Древесина промёрзла и стала хрупкой."
+msgstr "The wood froze and became brittle."
+
+msgid "Если оживить ванну, она, возможно, уйдёт искать место потеплее. Ремонтировать это не поможет."
+msgstr "If you revive the bath, she may go off to find a warmer place. It won't help to repair it."
+
+msgid "Жалобы и финансовые риски требуют срочного вмешательства городской инспекции."
+msgstr "Complaints and financial risks require urgent intervention by the city inspectorate."
+
+msgid "Жилец"
+msgstr "Resident"
+
+msgid "Жилец потребовал компенсацию за причинённый ущерб. Можно возместить указанную сумму или отказать — решение повлияет на казну, отчёт и репутацию."
+msgstr "The resident demanded compensation for the damage caused. You can refund the specified amount or refuse - the decision will affect the funds, report and reputation."
+
+msgid "Жилец предъявил службе претензию на стоимость оборудования."
+msgstr "The resident filed a claim with the service for the cost of the equipment."
+
+msgid "За причинённый ущерб выплачена компенсация %d монет."
+msgstr "Compensation of %d coins was paid for the damage caused."
+
+msgid "За срочность предусмотрена доплата сметаной."
+msgstr "For urgency, an additional payment in sour cream is provided."
+
+msgid "ЗАБЫТЬ"
+msgstr "FORGET"
+
+msgid "ЗАБЫТЬ СПЕЦИАЛИЗАЦИЮ?"
+msgstr "FORGET SPECIALIZATION?"
+
+msgid "завершение дня"
+msgstr "end of the day"
+
+msgid "завершение работы"
+msgstr "shutdown"
+
+msgid "Завершённая заявка"
+msgstr "Completed job"
+
+msgid "Завершённых дел: %d"
+msgstr "Completed cases: %d"
+
+msgid "Завершённых заявок пока нет"
+msgstr "There are no completed jobs yet"
+
+msgid "ЗАВЕРШИТЬ ДЕНЬ"
+msgstr "END THE DAY"
+
+msgid "ЗАВЕРШИТЬ РАБОТУ"
+msgstr "FINISH JOB"
+
+msgid "Завешенное зеркало — не то, чего я ожидала от ремонта. Но если другого выхода нет, пусть пока будет так."
+msgstr "The curtained mirror is not what I expected from the renovation. But if there is no other choice, so be it for now."
+
+msgid "Загнать в ловушку"
+msgstr "Trapped"
+
+msgid "Заголовок финала."
+msgstr "Final title."
+
+msgid "ЗАГРУЗИТЬ ИГРУ"
+msgstr "DOWNLOAD GAME"
+
+msgid "Заклинание прекращено. Гарантия на мебель в мои обязанности не входит."
+msgstr "The spell has stopped. Furniture warranty is not my responsibility."
+
+msgid "Заклинание прошло сквозь бестелесное привидение. Оно разозлилось и теперь мечется по комнате."
+msgstr "The spell passed through the disembodied ghost. It got angry and is now rushing around the room."
+
+msgid "ЗАКЛЮЧЕНИЕ: %s\n%s\n\nВыполнено заявок: %d из %d\nРепутация: %d — %s\nПрозвища: %s\nКазна: %d монет%s\nОтклонённые претензии: %d монет\nФинансовый риск: %s\nВыплачено компенсаций: %d монет"
+msgstr "CONCLUSION: %s\n%s\n\nRequests completed: %d of %d\nReputation: %d - %s\nNicknames: %s\nFunds: %d coins%s\nRejected claims: %d coins\nFinancial risk: %s\nPaid out compensation: %d coins"
+
+msgid "Закрепить у стены"
+msgstr "Secure to the wall"
+
+msgid "Закреплять больше нечего: от шкафа остался пепел."
+msgstr "There is nothing left to secure: the ashes from the wardrobe remain."
+
+msgid "Закрою канал. Незарегистрированным порталам здесь не место."
+msgstr "I'll close the channel. There is no place for unregistered portals here."
+
+msgid "ЗАКРЫТЬ"
+msgstr "CLOSE"
+
+msgid "Закрыть защитным полотном"
+msgstr "Cover with protective cloth"
+
+msgid "Закрыть портал"
+msgstr "Close portal"
+
+msgid "Закрыть портал в зеркале"
+msgstr "Close the portal in the mirror"
+
+msgid "Закрыть портал может только специалист по магической изоляции."
+msgstr "Only a specialist in magical isolation can close the portal."
+
+msgid "Закрыть портал через защитное полотно нельзя. Сначала снимите полотно."
+msgstr "It is impossible to close the portal through the protective cloth. First, remove the canvas."
+
+msgid "Закрыть сообщение"
+msgstr "Close message"
+
+msgid "Замёрзшая ванна"
+msgstr "Frozen bath"
+
+msgid "Замёрзшая ванна — это большая миска. Но неудобная."
+msgstr "A frozen bath is a big bowl. But uncomfortable."
+
+msgid "Заморозить"
+msgstr "Freeze"
+
+msgid "Заморозить воду"
+msgstr "Freeze water"
+
+msgid "Заморозить воду можно. Но каток на чердаке в заявку, кажется, не входил."
+msgstr "You can freeze water. But the skating rink in the attic, it seems, was not included in the job."
+
+msgid "Заморозить ещё сильнее можно. Смысл этого решения обсудим после оттаивания."
+msgstr "You can freeze it even more. We will discuss the meaning of this decision after thawing."
+
+msgid "Заморозка"
+msgstr "Freezing"
+
+msgid "Заморозка — сильно снижает температуру объекта"
+msgstr "Freeze - greatly reduces the temperature of an object"
+
+msgid "Заморозка и магия огня"
+msgstr "Freezing and fire magic"
+
+msgid "Заморозка охладила кран, но для образования инея холода пока недостаточно."
+msgstr "The freeze has cooled the faucet, but it is not yet cold enough to form frost."
+
+msgid "Заморозка снова сковала ванну льдом. Состояние крана не изменилось."
+msgstr "The freeze had frozen the bathtub again. The state of the faucet has not changed."
+
+msgid "Заморозка усилила холодный след на кране. Состояние ванны не изменилось."
+msgstr "Freezing increased the cold mark on the faucet. The condition of the bath has not changed."
+
+msgid "ЗАНЯТА: ПРИВИДЕНИЕ В ЛОВУШКЕ"
+msgstr "BUSY: TRAPPED GHOST"
+
+msgid "Засор удалён без повреждений."
+msgstr "The blockage was removed without damage."
+
+msgid "Засор удалён, основной канал очищен и подключён к исправному механическому водоотводу."
+msgstr "The blockage has been removed, the main channel has been cleaned and connected to a working mechanical drain."
+
+msgid "Засор удалён."
+msgstr "The blockage has been removed."
+
+msgid "Зачарованный шкаф ходит по комнатам, гремит хрупкой посудой и не позволяет хозяйке открыть входную дверь."
+msgstr "An enchanted wardrobe walks around the rooms, rattling fragile dishes and preventing the owner from opening the front door."
+
+msgid "Защитное полотно"
+msgstr "Protective fabric"
+
+msgid "Защитное полотно осталось на зеркале, но привидение прошло сквозь него и теперь мечется по гостиной."
+msgstr "The protective cloth remained on the mirror, but the ghost passed through it and is now darting around the living room."
+
+msgid "Защитное полотно уже закреплено на раме."
+msgstr "The protective sheet is already attached to the frame."
+
+msgid "Защитное полотно уже снято."
+msgstr "The protective sheet has already been removed."
+
+msgid "Заявка"
+msgstr "Job"
+
+msgid "Заявка завершена после истечения срока."
+msgstr "Job completed after the deadline."
+
+msgid "ЗАЯВКА: ПОРТАЛ В ЗЕРКАЛЕ"
+msgstr "JOB: PORTAL IN THE MIRROR"
+
+msgid "ЗАЯВКА: ХОДЯЧИЙ ШКАФ"
+msgstr "JOB: WALKING WARDROBE"
+
+msgid "Здесь будет реплика жильца."
+msgstr "The resident's response will be here."
+
+msgid "Здесь во время игры автоматически появятся итоги прохождения. Размер и положение можно менять мышкой."
+msgstr "Here, during the game, the results of the passage will automatically appear. The size and position can be changed with the mouse."
+
+msgid "Здесь и без того было холодно!"
+msgstr "It was already cold here!"
+
+msgid "Здесь показаны действия выбранного сотрудника, доступные для крана. Выберите любое и посмотрите, к чему оно приведёт."
+msgstr "This shows the actions of the selected employee that are available for the faucet. Pick any one and see where it leads."
+
+msgid "Здесь появятся оценки завершённых заявок."
+msgstr "Ratings of completed jobs will appear here."
+
+msgid "Здесь уже достаточно тепло. Повторный огонь ничего не исправит."
+msgstr "It's already quite warm here. Fire again won't fix anything."
+
+msgid "Зеркало"
+msgstr "Mirror"
+
+msgid "Зеркало показывает потусторонний мир. Гарантия, полагаю, уже закончилась."
+msgstr "The mirror shows the other world. I think the warranty has already expired."
+
+msgid "Зеркало разбито. Воздействовать больше не на что."
+msgstr "The mirror is broken. There is nothing more to influence."
+
+msgid "Зеркало разбито. Портал исчез, но имущество уничтожено."
+msgstr "The mirror is broken. The portal has disappeared, but the property has been destroyed."
+
+msgid "Зеркало снова обычное. И этот ужасный холод исчез."
+msgstr "The mirror is again normal. And this terrible cold disappeared."
+
+msgid "Зеркало сохранено."
+msgstr "The mirror has been saved."
+
+msgid "Зеркало уже разбито."
+msgstr "The mirror is already broken."
+
+msgid "знакомство с офисом"
+msgstr "getting to know the office"
+
+msgid "Из зеркала тянет ледяным холодом. Пожалуйста, остановите это — в комнате уже невозможно находиться."
+msgstr "An icy cold breath comes from the mirror. Please stop this - it is no longer possible to stay in the room."
+
+msgid "Из крана течёт лава"
+msgstr "Lava flows from the faucet"
+
+msgid "Из портала выбрался призрак; это может создать новую заявку."
+msgstr "A ghost emerged from the portal; this may create a new ticket."
+
+msgid "Из портала успел выбраться призрак."
+msgstr "The ghost managed to escape from the portal."
+
+msgid "Изгнать в портал"
+msgstr "Banish into portal"
+
+msgid "Изгнать или поймать привидение"
+msgstr "Banish or catch a ghost"
+
+msgid "Изгнать призрака такой бригадой не получится. Купленная служебная ловушка позволит поймать привидение. Всё равно отправить бригаду?"
+msgstr "Such a crew will not be able to exorcise the ghost. A purchased service trap will allow you to catch a ghost. Send a crew anyway?"
+
+msgid "Изгнать призрака такой бригадой не получится. Может потребоваться служебная ловушка — её можно купить в лавке снаряжения. Всё равно отправить бригаду?"
+msgstr "Such a crew will not be able to exorcise the ghost. You may need a service trap - you can buy it at the equipment store. Send a crew anyway?"
+
+msgid "Изменения применяются сразу."
+msgstr "Changes are applied immediately."
+
+msgid "Иллюстрация Феликса. Меняйте размер и положение мышкой."
+msgstr "Illustration by Felix. Change size and position with the mouse."
+
+msgid "ИМЯ ЖИЛЬЦА"
+msgstr "RESIDENT NAME"
+
+msgid "Иней растает, и застывшая лава снова пойдёт. Если это эксперимент — предупреждение я сделала."
+msgstr "The frost will melt, and the frozen lava will flow again. If this is an experiment, I gave a warning."
+
+msgid "Инспектор по нестабильным чарам. Локализует магические утечки и безопасно подавляет опасные заклинания."
+msgstr "Inspector of Unstable Charms. Contains magical leaks and safely suppresses dangerous spells."
+
+msgid "Инспекция признаёт службу устойчивой и разрешает продолжить работу."
+msgstr "The inspection recognizes the service as sustainable and allows it to continue operating."
+
+msgid "Инструменты Бориса для диагностики\nи обычного ремонта. Набор не расходуется."
+msgstr "Boris's tools for diagnostics\nand routine repairs. The set is not consumed."
+
+msgid "Испытательный срок"
+msgstr "Probationary period"
+
+msgid "Итоги службы"
+msgstr "Results of the service"
+
+msgid "Итоговые показатели подставляются во время игры."
+msgstr "The final indicators are adjusted during the game."
+
+msgid "итоговый отчёт"
+msgstr "final report"
+
+msgid "К левой стене"
+msgstr "To the left wall"
+
+msgid "К левой стене так к левой. Если снова уйдёт — принесу цепь."
+msgstr "To the left wall so to the left. If he leaves again, I’ll bring the chain."
+
+msgid "Кадровый экран"
+msgstr "Frame screen"
+
+msgid "Каждое воздействие меняет состояние объекта и может повлиять на помещение, оплату и репутацию. Наблюдайте за результатом и действуйте дальше по своему усмотрению."
+msgstr "Each impact changes the condition of the property and can affect premises, payment and reputation. Observe the result and proceed further at your own discretion."
+
+msgid "Казна: %d, доходы: %d, расходы: %d\nОтклонённые претензии: %d, финансовый риск: %s"
+msgstr "Funds: %d, Revenue: %d, Expenses: %d\nRejected Claims: %d, Financial Risk: %s"
+
+msgid "Каменная горгулья серьёзно повреждена."
+msgstr "The stone gargoyle is seriously damaged."
+
+msgid "Каменный корпус расколот, но вода уходит через образовавшийся пролом. Потребуется замена крепления и реставрация."
+msgstr "The stone body is split, but water escapes through the resulting gap. Replacement of fastenings and restoration will be required."
+
+msgid "Камень прогрею. Если она проснётся сердитой, разговаривать будете вы."
+msgstr "I'll warm up the stone. If she wakes up angry, you will do the talking."
+
+msgid "КАНДИДАТ"
+msgstr "CANDIDATE"
+
+msgid "КАРТА ГОРОДА"
+msgstr "CITY MAP"
+
+msgid "КАТАЛОГ"
+msgstr "CATALOG"
+
+msgid "Ключи у меня прочные, руки тоже. Но в раскалённый металл я ими не полезу."
+msgstr "My keys are strong, and so are my hands. But I won’t use them in hot metal."
+
+msgid "Книга заклинания"
+msgstr "Book of spells"
+
+msgid "КНИГА ОТЗЫВОВ"
+msgstr "BOOK OF REVIEWS"
+
+msgid "КНИГА УЧЁТА"
+msgstr "ACCOUNTING BOOK"
+
+msgid "Книги открывают курсы. Расходные материалы списываются на объектах."
+msgstr "Books open courses. Consumables are written off at the facilities."
+
+msgid "Кнопка выхода расположена на столе и не закрывает подписи документа."
+msgstr "The exit button is located on the table and does not cover the signature of the document."
+
+msgid "Кнопка запускает финальный ролик, после которого игра переходит в главное меню. Размер и положение можно менять мышкой."
+msgstr "The button launches the final video, after which the game goes to the main menu. The size and position can be changed with the mouse."
+
+msgid "Комната крупно"
+msgstr "Room large"
+
+msgid "Компенсация жильцу"
+msgstr "Resident compensation"
+
+msgid "КОМПЕНСИРОВАТЬ: −%d МОНЕТ"
+msgstr "COMPENSATE: −%d COINS"
+
+msgid "Контейнер офисного кота. Внутри находятся четыре независимо настраиваемых состояния и общая область клика."
+msgstr "Office cat container. Inside there are four independently configurable states and a common clickable area."
+
+msgid "Контроль холода и остановка опасных потоков."
+msgstr "Control the cold and stop dangerous flows."
+
+msgid "Корпус крана расплавлен. Нужна полная замена, полевой ремонт невозможен."
+msgstr "The faucet body is melted. A complete replacement is required; field repair is not possible."
+
+msgid "Кот внёс вас в книгу учёта. В раздел расходов."
+msgstr "The cat entered you into the accounting book. In the expenses section."
+
+msgid "Кот демонстративно вас игнорирует."
+msgstr "The cat pointedly ignores you."
+
+msgid "Кот занят. Оставьте заявку у диспетчера."
+msgstr "The cat is busy. Leave a request with the dispatcher."
+
+msgid "Кот отвернулся и демонстративно вас игнорирует."
+msgstr "The cat turned away and pointedly ignored you."
+
+msgid "Край ванны треснул после силового удаления льда."
+msgstr "The edge of the tub cracked after forcefully removing the ice."
+
+msgid "Кран"
+msgstr "Faucet"
+
+msgid "Кран безопасен, но перегрев повредил соединения. Можно выполнить обычный ремонт."
+msgstr "The faucet is safe, but overheating has damaged the connections. Normal repairs can be performed."
+
+msgid "Кран больше не плюётся лавой — уже праздник. Жаль, что ванная после вашей бригады выглядит так, будто праздник был с фейерверками."
+msgstr "The faucet no longer spits lava - it’s already a holiday. It's a shame that the bathroom after your crew looks like there was a party with fireworks."
+
+msgid "Кран вы исправили, и новая вода больше не замерзает. Но ванна всё ещё занята айсбергом, поэтому полную оплату не ждите."
+msgstr "You fixed the faucet, and the new water no longer freezes. But the bathtub is still occupied by the iceberg, so don't expect full payment."
+
+msgid "Кран вы исправили, но ванна всё ещё занята айсбергом — и теперь ещё треснула. За такой курорт полной оплаты не будет."
+msgstr "You've fixed the faucet, but the bathtub is still occupied by the iceberg - and now it's also cracked. There will be no full payment for such a resort."
+
+msgid "Кран закреплён, телекинезом двигать его не стану. Лёд нужно убирать из ванны."
+msgstr "The faucet is fixed, I won’t move it with telekinesis. Ice must be removed from the bath."
+
+msgid "Кран исправен. Работу можно завершить."
+msgstr "The faucet is working. The work can be completed."
+
+msgid "Кран остыл и перестал деформироваться, но поток лавы ещё не остановлен."
+msgstr "The faucet has cooled down and stopped deforming, but the lava flow has not yet stopped."
+
+msgid "Кран остыл. Лава не возобновилась, но следы перегрева повлияют на итог работы."
+msgstr "The faucet has cooled down. The lava has not resumed, but traces of overheating will affect the outcome of the work."
+
+msgid "Кран очищен от остаточной магии холода."
+msgstr "The faucet is cleared of residual cold magic."
+
+msgid "Кран перегрет и деформируется, но остановленная лава не возобновилась."
+msgstr "The faucet is overheated and deformed, but the stopped lava has not resumed."
+
+msgid "Кран перегрет. Остановите поток лавы перед завершением работы."
+msgstr "The faucet is overheated. Stop the lava flow before finishing the job."
+
+msgid "Кран полностью уничтожен и требует замены."
+msgstr "The faucet is completely destroyed and requires replacement."
+
+msgid "Кран раскалился докрасна и начал деформироваться. Ещё один нагрев расплавит металл."
+msgstr "The faucet became red hot and began to deform. One more heat will melt the metal."
+
+msgid "Кран расплавлен и полностью сломан. Спёкшийся металл перекрыл поток лавы; это конечный исход заявки."
+msgstr "The faucet is melted and completely broken. The sintered metal blocked the flow of lava; this is the final outcome of the job."
+
+msgid "Кран снова покрылся инеем, а лёд в ванне стал толще. Ванная убедительно доказала, что способна замерзнуть ещё сильнее."
+msgstr "The faucet became frosted again, and the ice in the bathtub became thicker. The bathroom has convincingly proven that it can freeze even more."
+
+msgid "Кран стал горячее, но металл пока сохраняет форму."
+msgstr "The faucet has become hotter, but the metal still retains its shape."
+
+msgid "Кран уже не течёт и не покрыт инеем. Нагрев здесь будет только новым испытанием для металла."
+msgstr "The faucet no longer leaks and is not covered with frost. Heating here will only be a new test for the metal."
+
+msgid "Кран уже расплавлен: температурные воздействия больше не могут его восстановить."
+msgstr "The faucet is already melted: temperature effects can no longer restore it."
+
+msgid "Крепления целы, канал забит, чары спят. Обычный понедельник, только под крышей."
+msgstr "The fastenings are intact, the channel is clogged, the spell is asleep. An ordinary Monday, only under the roof."
+
+msgid "Крепления целы. Канал забит листьями, а поддерживающие чары спят. Горгулью можно оживить или открыть механический обход."
+msgstr "The fastenings are intact. The canal is clogged with leaves, and the supporting charms are dormant. The gargoyle can be revived or a mechanical bypass can be opened."
+
+msgid "Критическая задолженность службы: %d монет."
+msgstr "Critical service debt: %d coins."
+
+msgid "Кто сегодня работает?"
+msgstr "Who's working today?"
+
+msgid "Куда делись деньги?"
+msgstr "Where did the money go?"
+
+msgid "Куда переместить?"
+msgstr "Where to move?"
+
+msgid "КУПИТЬ: %d МОНЕТ"
+msgstr "BUY: %d COINS"
+
+msgid "Курс дистанционного перемещения незакреплённых предметов. Открывает однодневное обучение телекинезу."
+msgstr "Course on remote movement of loose objects. Unlocks one-day telekinesis training."
+
+msgid "КУРС НЕ ПОДХОДИТ СОТРУДНИКУ"
+msgstr "COURSE IS NOT SUITABLE FOR EMPLOYEE"
+
+msgid "Курс пока недоступен."
+msgstr "The course is not yet available."
+
+msgid "Курс пройден, действие доступно на объектах."
+msgstr "The course has been completed, the action is available at the facilities."
+
+msgid "КУРС УЖЕ ПРОЙДЕН"
+msgstr "COURSE ALREADY COMPLETED"
+
+msgid "Лава застыла. Кран покрылся инеем и снова безопасен."
+msgstr "The lava has frozen. The faucet is covered with frost and is safe again."
+
+msgid "Лава, высокая температура"
+msgstr "Lava, high temperature"
+
+msgid "лавка снабжения"
+msgstr "SUPPLY SHOP"
+
+msgid "ЛАВКА СНАБЖЕНИЯ"
+msgstr "SUPPLY SHOP"
+
+msgid "Лаву вы остановили — это главное. А подпалины я назову авторской отделкой, пока не увижу счёт за ремонт."
+msgstr "You stopped the lava - that's the main thing. And I'll call the scorch marks a designer's finish until I see the bill for the repairs."
+
+msgid "Лаву остужу. Главное — не получить вместо аварийного крана памятник аварийному крану."
+msgstr "I'll cool the lava. The main thing is not to get a monument to the emergency faucet instead of the emergency faucet."
+
+msgid "Лёд в ванне не растоплен."
+msgstr "The ice in the bathtub is not melted."
+
+msgid "Лёд в ванне уже растоплен. Повторный нагрев не требуется."
+msgstr "The ice in the bath has already been melted. No reheating required."
+
+msgid "Лёд вынесу телекинезом. Надеюсь, во дворе как раз не хватало маленького айсберга."
+msgstr "I can remove the ice with telekinesis. I hope there was just a small iceberg missing in the yard."
+
+msgid "Лёд и осколки убраны из ванны телекинезом. Повреждения ванны остались."
+msgstr "Ice and debris were removed from the bathtub using telekinesis. The damage to the bathtub remains."
+
+msgid "Лёд из ванны уже убран. Телекинезу больше нечего перемещать."
+msgstr "The ice has already been removed from the bathtub. Telekinesis has nothing left to move."
+
+msgid "Лёд расколот, но холодный след остался в кране. Ванна получила трещину, а вода снова начинает замерзать."
+msgstr "The ice is broken, but a cold trace remains in the faucet. The bathtub is cracked and the water is starting to freeze again."
+
+msgid "Лёд уберу. Если появится снова — в следующий раз принесу молот побольше."
+msgstr "I'll remove the ice. If it appears again, next time I’ll bring a bigger hammer."
+
+msgid "Лёд уже убран — поставлю терморегулятор, чтобы новая партия не успела сформироваться."
+msgstr "The ice has already been removed - I’ll install a thermostat so that a new batch does not have time to form."
+
+msgid "Лёд уже убран. Второй раз выносить из пустой ванны нечего."
+msgstr "The ice has already been removed. The second time there is nothing to take out of the empty bathtub."
+
+msgid "Лёд уже убран. Осталось снять холодный след с крана, чтобы он не появился снова."
+msgstr "The ice has already been removed. All that remains is to remove the cold mark from the faucet so that it does not appear again."
+
+msgid "Лёд я расколю. Кран тоже могу расколоть, но заявка от этого короче не станет."
+msgstr "I'll break the ice. I can also split the faucet, but this will not make the job shorter."
+
+msgid "Лилия Морозова"
+msgstr "Liliya Morozova"
+
+msgid "Лилия рассеяла холод вокруг портала. Иней растаял, в комнате снова стало тепло."
+msgstr "Lily dispelled the cold around the portal. The frost melted and the room became warm again."
+
+msgid "Листья вытащу. Надеюсь, горгулья не считает их своей коллекцией."
+msgstr "I'll take out the leaves. I hope the gargoyle doesn't consider them his collection."
+
+msgid "Лицензированное руководство по подавлению чар и закрытию магических каналов. Открывает однодневное обучение антимагии."
+msgstr "A licensed guide to suppressing spells and closing magical channels. Unlocks one-day Anti-Magic training."
+
+msgid "Лицензия под угрозой"
+msgstr "License at risk"
+
+msgid "Лицензия подтверждена"
+msgstr "License confirmed"
+
+msgid "Лицензия сохранена, но службе предстоит выбраться из долга и урегулировать отклонённые претензии."
+msgstr "The license has been retained, but the service will have to get out of debt and settle rejected claims."
+
+msgid "Ловушка втянула привидение и запечатала его внутри."
+msgstr "The trap pulled in the ghost and sealed it inside."
+
+msgid "Ловушка для привидений"
+msgstr "Ghost Trap"
+
+msgid "Ловушка уже установлена."
+msgstr "The trap has already been set."
+
+msgid "Ловушка установлена и готова к захвату привидения."
+msgstr "The trap is set and ready to capture the ghost."
+
+msgid "Любая авария поправима. Последствия обсуждаются отдельно"
+msgstr "Any accident can be repaired. The consequences are discussed separately"
+
+msgid "Любознательна, энергична, ведёт слишком подробные записи"
+msgstr "Curious, energetic, takes very detailed notes"
+
+msgid "Маг-практик"
+msgstr "Magician practitioner"
+
+msgid "Маг-телекинетик"
+msgstr "Telekinetic Mage"
+
+msgid "Маг-телекинетик. Аккуратно перемещает незакреплённые объекты на расстоянии и быстро осваивает новые инструменты."
+msgstr "Telekinetic magician. Carefully moves loose objects at a distance and quickly masters new tools."
+
+msgid "МАГИЧЕСКАЯ АВАРИЙНАЯ СЛУЖБА"
+msgstr "Arcane Emergency Service"
+
+msgid "Магическая аварийная служба"
+msgstr "Arcane Emergency Service"
+
+msgid "Магическая изоляция"
+msgstr "Magical isolation"
+
+msgid "Магическая опасность устранена. Кран можно привести в рабочее состояние обычным ремонтом."
+msgstr "The magical danger has been eliminated. The faucet can be brought back into working order by normal repairs."
+
+msgid "Магическая связь с привидением оборвана."
+msgstr "The magical connection with the ghost has been severed."
+
+msgid "Магическая температура уже стабилизирована. Дополнительные действия не требуются."
+msgstr "The magical temperature has already stabilized. No additional steps are required."
+
+msgid "Магические книги хранятся в учебном фонде и на склад не поступают."
+msgstr "Magic books are stored in the educational fund and are not delivered to the warehouse."
+
+msgid "МАГИЧЕСКИЕ КУРСЫ"
+msgstr "MAGIC COURSES"
+
+msgid "Магический водосток полностью восстановлен."
+msgstr "The magical drain has been completely restored."
+
+msgid "Магический инспектор"
+msgstr "Magic Inspector"
+
+msgid "Магический фон подавлен. Можете приступать к обычному ремонту — желательно обычным способом."
+msgstr "The magical background is suppressed. You can proceed with normal repairs - preferably in the usual way."
+
+msgid "Магического фона нет."
+msgstr "There is no magical background."
+
+msgid "Магическое нарушение устранено. Протокол доволен, жилец — посмотрим."
+msgstr "The magical violation has been corrected. The resident is happy with the protocol - we'll see."
+
+msgid "Магическое пламя"
+msgstr "Magic flame"
+
+msgid "Магия огня"
+msgstr "Fire magic"
+
+msgid "Магия, затопление"
+msgstr "Magic, flooding"
+
+msgid "Магия, портал"
+msgstr "Magic, portal"
+
+msgid "Магия, привидение"
+msgstr "Magic, ghost"
+
+msgid "Магия, шум"
+msgstr "Magic, noise"
+
+msgid "Мастер-сантехник"
+msgstr "Master plumber"
+
+msgid "Мастера на все руки"
+msgstr "Jack of all trades"
+
+msgid "Мебель обычно не прогревают до послушания. Но приказ я услышала."
+msgstr "Furniture is usually not heated until it becomes obedient. But I heard the order."
+
+msgid "МЕНЮ"
+msgstr "MENU"
+
+msgid "Меню (Esc)"
+msgstr "Menu (Esc)"
+
+msgid "Металл всё ещё раскалён. Борис отказывается начинать ремонт, пока кран не остынет."
+msgstr "The metal is still hot. Boris refuses to start repairs until the faucet cools down."
+
+msgid "Методичен, невозмутим, замечает нарушения с порога"
+msgstr "Methodical, calm, notices violations right away"
+
+msgid "Механическая часть шкафа исправна; оставшаяся проблема связана с магией."
+msgstr "The mechanical part of the wardrobe is in good working order; the remaining problem involves magic."
+
+msgid "Механических поломок нет. Шкаф движется из-за чар, обычный ремонт их не снимет."
+msgstr "There are no mechanical failures. The wardrobe is moving because of the enchantment; normal repairs will not remove it."
+
+msgid "Могу закрыть зеркало защитным полотном, но у нас его нет. Полотно можно купить в лавке снабжения."
+msgstr "I can cover the mirror with a protective sheet, but we don’t have one. Canvas can be purchased at the supply store."
+
+msgid "Монеты"
+msgstr "Coins"
+
+msgid "Мурчание не является официальной консультацией."
+msgstr "Purring does not constitute formal advice."
+
+msgid "Мяу. Перевод: отойдите от рабочего места."
+msgstr "Meow. Translation: step away from your desk."
+
+msgid "На «СКЛАДЕ СНАРЯЖЕНИЯ» можно проверить, какое имущество доступно службе и где оно сейчас находится."
+msgstr "At the \"EQUIPMENT WAREHOUSE\" you can check what equipment is available to the service and where it is currently located."
+
+msgid "НА ЗАЯВКЕ"
+msgstr "ON JOB"
+
+msgid "На заявке: %s"
+msgstr "On request: %s"
+
+msgid "На объекте пока никого нет. Ускорить время до прибытия первого сотрудника?"
+msgstr "There is no one on site yet. Speed ​​up the time until the first employee arrives?"
+
+msgid "НА СКЛАДЕ, ГОТОВО К ВЫЕЗДУ"
+msgstr "IN STOCK, READY TO GO"
+
+msgid "На этот раз из зеркала вышел только мой собственный вид — усталый, но исключительно довольный. Вот теперь это действительно закрытый портал."
+msgstr "This time, only my own appearance came out of the mirror - tired, but extremely happy. Now this is truly a closed portal."
+
+msgid "Наблюдательна, осторожна, любит точные формулировки"
+msgstr "Observant, careful, loves precise wording"
+
+msgid "Наводите курсор на предметы. Кота не будите — он занят важным."
+msgstr "Hover your cursor over objects. Don't wake the cat - he's busy with something important."
+
+msgid "Нагрев"
+msgstr "Heating"
+
+msgid "Нагрев — повышает температуру объекта"
+msgstr "Heating - increases the temperature of an object"
+
+msgid "Нагрев растопил лёд и подсушил камень, но не разбудил горгулью и не восстановил водоотвод."
+msgstr "The heating melted the ice and dried the stone, but did not wake the gargoyle or restore the drainage system."
+
+msgid "Нагрев растопил ледяную пробку. Лава снова течёт из крана."
+msgstr "The heat melted the ice plug. Lava flows from the faucet again."
+
+msgid "Нагреть"
+msgstr "Heat"
+
+msgid "Нагреть камень"
+msgstr "Heat the stone"
+
+msgid "Нагреть кран, из которого течёт лава? Уточняю: приказ точно записан без опечатки?"
+msgstr "Heat up a faucet with lava flowing from it? Let me clarify: was the order written down accurately without a typo?"
+
+msgid "Надёжен, терпелив, бережёт казённый инструмент"
+msgstr "Reliable, patient, protects official instruments"
+
+msgid "Надёжная служба"
+msgstr "Reliable service"
+
+msgid "Наделяет подходящие неживые объекты автономным поведением. Неосторожное применение может усилить уже действующие чары."
+msgstr "Gives suitable non-living objects autonomous behavior. Careless use can enhance existing spells."
+
+msgid "Нажмите «ЗАВЕРШИТЬ ДЕНЬ». Утром город принесёт новые вызовы, а служба продолжит работу."
+msgstr "Click \"END DAY\". In the morning the city will bring new challenges, and the service will continue to work."
+
+msgid "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение"
+msgstr "Click to assign an employee to the selected request or unassign"
+
+msgid "НАЗАД"
+msgstr "BACK"
+
+msgid "Название органа. Можно перемещать и менять размер рамки мышью."
+msgstr "Name of the organ. You can move and resize the frame with the mouse."
+
+msgid "Назначено: %d"
+msgstr "Assigned to: %d"
+
+msgid "Найм сотрудника"
+msgstr "Hiring an employee"
+
+msgid "Наконец-то зеркало снова показывает только меня. Никогда не думала, что буду так рада обычному отражению."
+msgstr "Finally, the mirror shows only me again. I never thought that I would be so happy with an ordinary reflection."
+
+msgid "Наконец-то стало теплее. Но портал всё ещё открыт."
+msgstr "It's finally getting warmer. But the portal is still open."
+
+msgid "Наконец-то шкаф стоит у левой стены и ведёт себя как приличная мебель. Посуда тоже цела — я уже отвыкла от такой роскоши."
+msgstr "Finally, the wardrobe is against the left wall and behaves like decent furniture. The dishes are also intact - I’m already unaccustomed to such luxury."
+
+msgid "НАНЯТЬ: %d МОНЕТ"
+msgstr "HIRE: %d COINS"
+
+msgid "НАСТРОЙКИ"
+msgstr "SETTINGS"
+
+msgid "Начальные средства службы"
+msgstr "Initial Service Tools"
+
+msgid "Начальный баланс"
+msgstr "Initial balance"
+
+msgid "НАЧАТЬ КУРС «%s»: %d ДЕНЬ"
+msgstr "START COURSE \"%s\": %d DAY"
+
+msgid "НАЧАТЬ РАБОЧИЙ ДЕНЬ"
+msgstr "START THE WORKING DAY"
+
+msgid "Не нанят"
+msgstr "Not hired"
+
+msgid "Не нанята"
+msgstr "Not hired"
+
+msgid "НЕ ОТПРАВЛЯТЬ"
+msgstr "DO NOT SEND"
+
+msgid "Не поддалось. Давить сильнее без причины не буду."
+msgstr "It didn't give in. I won’t push harder without a reason."
+
+msgid "Не сдвинулось ни на палец. Либо закреплено, либо очень упрямо."
+msgstr "It didn't move even a finger. Either fixed or very stubborn."
+
+msgid "Не удалось загрузить сохранение. Код ошибки: %d"
+msgstr "Failed to load save. Error code: %d"
+
+msgid "Не удалось сохранить игру. Код ошибки: %d"
+msgstr "Failed to save game. Error code: %d"
+
+msgid "не указан"
+msgstr "not specified"
+
+msgid "не указана"
+msgstr "not specified"
+
+msgid "НЕ ХВАТАЕТ МОНЕТ: %d"
+msgstr "NOT ENOUGH COINS: %d"
+
+msgid "Нельзя забывать способности во время обучения."
+msgstr "We must not forget abilities during training."
+
+msgid "Несовместим с магическим обучением этого типа."
+msgstr "Incompatible with magical training of this type."
+
+msgid "нет"
+msgstr "NO"
+
+msgid "НЕТ"
+msgstr "NO"
+
+msgid "Нет изученных специализаций"
+msgstr "No specializations learned"
+
+msgid "НЕТ СВОБОДНОЙ ЯЧЕЙКИ"
+msgstr "NO FREE CELL"
+
+msgid "Нет сохранённой игры"
+msgstr "No saved game"
+
+msgid "Ниже находятся сотрудники службы. Нажмите на карточку любого свободного сотрудника, чтобы включить его в бригаду."
+msgstr "Below are the service staff. Click on the card of any available employee to include him in the team."
+
+msgid "низкий"
+msgstr "low"
+
+msgid "Ника Искра"
+msgstr "Nika Iskra"
+
+msgid "Ника убрала листья, Борис наладил канал — вода снова уходит как положено. Горгулья может спокойно досмотреть свой каменный сон."
+msgstr "Nika removed the leaves, Boris fixed the channel - the water flows out again as expected. The gargoyle can calmly finish his stone dream."
+
+msgid "НОВАЯ ИГРА"
+msgstr "NEW GAME"
+
+msgid "Новая служба"
+msgstr "New service"
+
+msgid "Новые вызовы ждут на «ДОСКЕ ЗАЯВОК». Откройте её и посмотрим, кому сегодня особенно не повезло."
+msgstr "New challenges await on the JOB BOARD. Open it and let's see who is especially unlucky today."
+
+msgid "Новые вызовы появятся на следующем этапе игрового цикла."
+msgstr "New challenges will appear in the next stage of the game cycle."
+
+msgid "новый рабочий день"
+msgstr "new working day"
+
+msgid "Ножки сломаны, но корпус ещё можно восстановить. Чары при этом никуда не исчезли."
+msgstr "The legs are broken, but the body can still be restored. The enchantment did not disappear anywhere."
+
+msgid "Ножки сломаны, поэтому шкаф больше не может ходить."
+msgstr "The legs are broken so the wardrobe can no longer walk."
+
+msgid "Ножки шкафа не повреждены — ремонт не требуется."
+msgstr "The wardrobe legs are not damaged - no repairs are required."
+
+msgid "Ножки шкафа сломаны."
+msgstr "The wardrobe legs are broken."
+
+msgid "НУЖЕН КОМПЛЕКТ ИЗ ЛАВКИ"
+msgstr "NEED A SET FROM THE STORE"
+
+msgid "НУЖНО %d МОНЕТ"
+msgstr "%d COINS NEEDED"
+
+msgid "Обзор дома"
+msgstr "Home overview"
+
+msgid "ОБЛАСТЬ ПАНЕЛИ «БРИГАДА» (от 1 до 3 карточек)"
+msgstr "CREW PANEL AREA (1 to 3 cards)"
+
+msgid "Обучается до начала дня %d."
+msgstr "Trained before the start of the day %d."
+
+msgid "Обучение завершено"
+msgstr "Training completed"
+
+msgid "ОБУЧЕНИЕ ИДЁТ ДО ДНЯ %d"
+msgstr "TRAINING CONTINUES UNTIL DAY %d"
+
+msgid "Обучение начнётся после возвращения сотрудника."
+msgstr "Training will begin upon the employee's return."
+
+msgid "ОБУЧЕНИЕ НЕДОСТУПНО"
+msgstr "TRAINING NOT AVAILABLE"
+
+msgid "Обучение пропущено"
+msgstr "Training missed"
+
+msgid "Обучение: %s"
+msgstr "Training: %s"
+
+msgid "Общая громкость"
+msgstr "General volume"
+
+msgid "Объект"
+msgstr "Object"
+
+msgid "Объект аккуратно перемещён в выбранное место."
+msgstr "The object is carefully moved to the selected location."
+
+msgid "Объект закреплён и не может быть перемещён телекинезом."
+msgstr "The object is fixed and cannot be moved by telekinesis."
+
+msgid "Объект закреплён. Тянуть опасно."
+msgstr "The object is pinned. It's dangerous to pull."
+
+msgid "Объект уже находится в выбранном месте."
+msgstr "The object is already in the selected location."
+
+msgid "Объект уничтожен: телекинезу больше не на что воздействовать."
+msgstr "The object is destroyed: there is nothing left for telekinesis to influence."
+
+msgid "Обычная"
+msgstr "Regular"
+
+msgid "Огонь погашен холодом. На шкафу осталась копоть, а древесина стала хрупкой."
+msgstr "The fire is extinguished by the cold. Soot remained on the wardrobe, and the wood became brittle."
+
+msgid "Огонь снова охватил уже оплавленную раму, но её состояние заметно не изменилось."
+msgstr "The fire again engulfed the already melted frame, but its condition did not noticeably change."
+
+msgid "Ограничение: действует медленно и по инструкции"
+msgstr "Limitation: acts slowly and according to instructions"
+
+msgid "Ограничение: мало полевого опыта"
+msgstr "Limitation: little field experience"
+
+msgid "Ограничение: не работает с чарами напрямую"
+msgstr "Limitation: Does not work with enchantments directly"
+
+msgid "Ограничение: силовой ремонт требует напарника"
+msgstr "Restriction: power repair requires a partner"
+
+msgid "Ограничение: тонкая магия — не его участок"
+msgstr "Restriction: subtle magic is not his area"
+
+msgid "Оживить ванну"
+msgstr "Revitalize your bath"
+
+msgid "Оживление"
+msgstr "Revival"
+
+msgid "Оживление — пробуждает простое поведение предмета"
+msgstr "Animate - awakens an object's simple behavior"
+
+msgid "Оживление ванны не исправит температуру воды и добавит к заявке подвижную сантехнику."
+msgstr "Revitalizing the bathtub will not correct the water temperature and will add moving plumbing to the job."
+
+msgid "Оживление разбудило горгулью. Она выплюнула засор и снова направила дождевую воду в трубу."
+msgstr "The revival woke the gargoyle. She spat out the clog and directed the rainwater back into the pipe."
+
+msgid "Оживление разбудило уже очищенную горгулью. Она снова направила дождевую воду в трубу."
+msgstr "The revival woke up the already purified gargoyle. She directed the rainwater back into the pipe."
+
+msgid "Он больше не ходит, это правда. Но я просила остановить шкаф, а не покалечить его! Кто теперь будет чинить ножки?"
+msgstr "He doesn't walk anymore, that's true. But I asked you to stop the wardrobe, not to hurt it! Who will fix the legs now?"
+
+msgid "Оно прошло прямо сквозь полотно! Пожалуйста, верните привидение обратно или поймайте его."
+msgstr "It went right through the canvas! Please bring the ghost back or catch him."
+
+msgid "Операции прежней версии сохранения"
+msgstr "Legacy save operations"
+
+msgid "Операций пока нет"
+msgstr "No operations yet"
+
+msgid "Операция"
+msgstr "Operation"
+
+msgid "Оплата: %d монет"
+msgstr "Payment: %d coins"
+
+msgid "Определить связь"
+msgstr "Define Relationship"
+
+msgid "Опытный мастер по трубам, кранам и прочей инфраструктуре, которая обычно течёт в самый неподходящий момент."
+msgstr "An experienced specialist in pipes, faucets and other infrastructure that usually leaks at the most inopportune moment."
+
+msgid "Орк-такелажник"
+msgstr "Orc Rigger"
+
+msgid "ОСМОТР"
+msgstr "Inspection"
+
+msgid "Осмотр"
+msgstr "Inspection"
+
+msgid "Осмотр — определить состояние и опасности объекта"
+msgstr "Inspection - determine the condition and dangers of the object"
+
+msgid "Осмотреть"
+msgstr "Inspect"
+
+msgid "Осмотреть ванну"
+msgstr "Inspect the bath"
+
+msgid "Осмотреть водосток"
+msgstr "Inspect the drain"
+
+msgid "Осмотреть кран"
+msgstr "Inspect the faucet"
+
+msgid "ОСНОВАНИЕ ДЛЯ УВОЛЬНЕНИЯ\n%s"
+msgstr "GROUND FOR DISMISSAL\n%s"
+
+msgid "Основы практической заморозки"
+msgstr "Basics of Practical Freezing"
+
+msgid "ОСОБЕННОСТИ\n%s\n\nСПЕЦИАЛИЗАЦИЯ\n%s\n\nКУРС «%s»\n%s"
+msgstr "FEATURES\n%s\n\nSPECIALIZATION\n%s\n\nCOURSE “%s”\n%s"
+
+msgid "осталось %d мин"
+msgstr "%d minutes left"
+
+msgid "осталось %d мин."
+msgstr "%d min left"
+
+msgid "Остановите лаву и приведите кран в безопасное состояние. И осторожнее с ванной — сантехника здесь дорогая!"
+msgstr "Stop the lava and make the faucet safe. And be careful with the bathroom - the plumbing here is expensive!"
+
+msgid "Остановить лаву из крана"
+msgstr "Stop lava from faucet"
+
+msgid "Остановить магическое замерзание ванны"
+msgstr "Stop the magical freezing of the bath"
+
+msgid "Остановить шкаф и поставить к левой стене"
+msgstr "Stop the wardrobe and place it against the left wall"
+
+msgid "Остановлю его ненадолго. Очень надеюсь, что шкаф не умеет дрожать от холода."
+msgstr "I'll stop him for a moment. I really hope that the closet does not shudder from the cold."
+
+msgid "Остаточный холодный след устранён; вода в ванной больше не замерзает. Ванна не повреждена."
+msgstr "The residual cold trace has been eliminated; The water in the bathroom no longer freezes. The bathtub is not damaged."
+
+msgid "Остаточный холодный след устранён; вода в ванной больше не замерзает. После силового удаления льда ванна треснула, повреждение не устранено."
+msgstr "The residual cold trace has been eliminated; The water in the bathroom no longer freezes. After forcefully removing the ice, the bathtub cracked, but the damage was not repaired."
+
+msgid "Осторожная работа сохраняет оплату и репутацию службы. Если пострадает имущество, жилец может потребовать компенсацию."
+msgstr "Careful work preserves the pay and reputation of the service. If property is damaged, the resident may seek compensation."
+
+msgid "Осторожнее! Вы уже портите моё имущество!"
+msgstr "Be careful! You are already ruining my property!"
+
+msgid "Осторожнее! Рама уже начинает плавиться."
+msgstr "Be careful! The frame is already starting to melt."
+
+msgid "Осторожный нагрев растопил лёд в ванне, но холодный след на кране ещё нужно снять."
+msgstr "Gentle heating has melted the ice in the tub, but the cold mark on the faucet still needs to be removed."
+
+msgid "Осторожный нагрев растопил лёд и завершил работу."
+msgstr "Gentle heating melted the ice and completed the job."
+
+msgid "Осторожный нагрев растопил лёд. Холодный след больше не действует, но прежние повреждения ванны остались."
+msgstr "Gentle heating melted the ice. The cold mark no longer works, but the previous damage to the bathtub remains."
+
+msgid "Осторожный нагрев растопил оставшийся лёд и полностью завершил работу."
+msgstr "Gentle heating melted the remaining ice and completed the job completely."
+
+msgid "Осторожный нагрев снял холодный след с крана и полностью завершил работу."
+msgstr "Gentle heating removed the cold mark from the faucet and completed the job completely."
+
+msgid "Осторожный нагрев снял холодный след с крана. Новая вода больше не замёрзнет, но лёд в ванне нужно убрать отдельно."
+msgstr "Gentle heating removed the cold mark from the faucet. The new water will no longer freeze, but the ice in the bathtub must be removed separately."
+
+msgid "От крана остался оплавленный ком металла. В следующий раз сразу скажите, что вместо ремонта оказываете услуги по сносу."
+msgstr "A melted lump of metal remained from the faucet. Next time, immediately say that instead of repairs you provide demolition services."
+
+msgid "От шкафа осталась только куча пепла. Воздействовать больше не на что."
+msgstr "All that was left of the closet was a pile of ashes. There is nothing more to influence."
+
+msgid "От шкафа остался пепел, восстановление невозможно."
+msgstr "The wardrobe was left in ashes and restoration is impossible."
+
+msgid "От шкафа остался только пепел. Здесь больше не на что воздействовать магией."
+msgstr "All that was left of the closet was ashes. There is nothing more to be affected by magic here."
+
+msgid "Отделка ванной повреждена дополнительным перегревом."
+msgstr "Bathroom finish damaged by additional heat."
+
+msgid "ОТЗЫВЫ"
+msgstr "REVIEWS"
+
+msgid "ОТЗЫВЫ ЖИЛЬЦОВ"
+msgstr "RESIDENT FEEDBACK"
+
+msgid "ОТКАЗАТЬ: −%d РЕПУТАЦИИ"
+msgstr "REFUSE: −%d REPUTATION"
+
+msgid "Открыт механический обходной водосток; чердак больше не затапливает."
+msgstr "The mechanical bypass drain is open; The attic no longer floods."
+
+msgid "Открыть обходной канал"
+msgstr "Open bypass channel"
+
+msgid "ОТКРЫТЬ ОБЪЕКТ"
+msgstr "OPEN PROPERTY"
+
+msgid "Открыть сохранённую игру"
+msgstr "Open saved game"
+
+msgid "ОТМЕНА"
+msgstr "CANCELLATION"
+
+msgid "ОТОЗВАТЬ: 15 МИН."
+msgstr "RECALL: 15 MIN."
+
+msgid "ОТПРАВИТЬ БРИГАДУ"
+msgstr "SEND A Crew"
+
+msgid "ОТПРАВИТЬ ВЫБРАННЫХ"
+msgstr "SEND SELECTED"
+
+msgid "отправка бригады"
+msgstr "sending a crew"
+
+msgid "Отпустить"
+msgstr "Let go"
+
+msgid "Офис"
+msgstr "Office"
+
+msgid "Очаг нестабильности погашен. Всё остальное классифицируется как обычная поломка."
+msgstr "The source of instability has been extinguished. Everything else is classified as a normal breakdown."
+
+msgid "Очень нужные покупки"
+msgstr "Much needed purchases"
+
+msgid "Пауза — время остановлено, можно спокойно отдавать команды"
+msgstr "Pause - time has stopped, you can safely give commands"
+
+msgid "первая заявка"
+msgstr "first job"
+
+msgid "Первые рабочие дни позади. Город и сотрудники уцелели — уже хороший результат."
+msgstr "The first working days are behind us. The city and its employees survived, which is already a good result."
+
+msgid "Первый вызов — «Из крана течёт лава». Нажмите на карточку, чтобы прочитать адрес, описание и опасности."
+msgstr "The first challenge is “Lava is flowing from the faucet.” Click on the card to read the address, description and hazards."
+
+msgid "Первый день позади. Дальше вы сами выбираете заявки, сотрудников и способы работы. Город запомнит каждое решение вашей службы."
+msgstr "The first day is over. Then you choose your jobs, employees and methods of work. The city will remember every decision your service makes."
+
+msgid "Переданный пользователем полноэкранный ассет постановления."
+msgstr "A user-submitted full-screen resolution asset."
+
+msgid "Перейти к следующему рабочему дню."
+msgstr "Continue to next business day."
+
+msgid "Перемещать уже нечего."
+msgstr "There is nothing left to move."
+
+msgid "Переносная ловушка для безопасного захвата бестелесных существ."
+msgstr "A portable trap for safely capturing incorporeal creatures."
+
+msgid "Переносной зачарованный контейнер. После двухминутной установки позволяет поймать бестелесное существо без открытия портала."
+msgstr "Portable enchanted container. After a two-minute installation, it allows you to catch an incorporeal creature without opening a portal."
+
+msgid "Переносной регулятор с рунами тепла и холода. Стабилизирует магическую температуру крана после установки."
+msgstr "Portable regulator with heat and cold runes. Stabilizes the magical temperature of the faucet after installation."
+
+msgid "Перерыв на сон согласован с руководством."
+msgstr "The sleep break has been agreed upon with management."
+
+msgid "Переставить шкаф без царапин — прекрасно. Осталось договориться со шкафом."
+msgstr "Rearranging a wardrobe without scratching it is great. All that remains is to agree with the closet."
+
+msgid "Пламя распространяется по шкафу: очагов уже %d."
+msgstr "The flame spreads through the closet: there are already %d fires."
+
+msgid "Плотная ткань с защитными рунами и латунными зажимами. Позволяет временно изолировать активный магический объект."
+msgstr "Thick fabric with protective runes and brass clips. Allows you to temporarily isolate an active magical object."
+
+msgid "По прибытии первый сотрудник в бригаде выбирается автоматически. Нажмите другую карточку, если хотите поручить действие кому-то ещё."
+msgstr "Upon arrival, the first employee in the team is automatically selected. Click another card if you want to assign an action to someone else."
+
+msgid "По результатам внеочередной проверки действующий руководитель освобождён от должности. Управление Магической аварийной службой передано другому специалисту."
+msgstr "Based on the results of the extraordinary inspection, the current manager was relieved of his position. Management of the Arcane Emergency Service has been transferred to another specialist."
+
+msgid "Повторное нажатие не ускоряет обработку заявки."
+msgstr "Clicking again does not speed up the processing of the job."
+
+msgid "Повторный нагрев расшатал портал. Рама зеркала начала деформироваться."
+msgstr "Repeated heating shook the portal. The mirror frame began to deform."
+
+msgid "повышенный"
+msgstr "elevated"
+
+msgid "Под наблюдением"
+msgstr "Under supervision"
+
+msgid "Подавить чары"
+msgstr "Suppress the spell"
+
+msgid "Подавление чар и закрытие магических каналов."
+msgstr "Suppressing spells and closing magical channels."
+
+msgid "Подавлять уже нечего. Оформляю акт."
+msgstr "There is nothing left to suppress. I am drawing up an act."
+
+msgid "Подниму всё разом и постараюсь ничего не уронить. Особенно важна вторая часть."
+msgstr "I’ll pick it all up at once and try not to drop anything. The second part is especially important."
+
+msgid "Подниму температуру постепенно, без новых аварийных эффектов."
+msgstr "We will raise the temperature gradually, without new emergency effects."
+
+msgid "ПОДРОБНОСТИ"
+msgstr "DETAILS"
+
+msgid "Подтверждённых претензий: %d из %d\nСостояние казны: %d монет"
+msgstr "Verified claims: %d out of %d\nFunds status: %d coins"
+
+msgid "Поздравляю. Вы назначены Инспектором кошачьего отдела. Должность неоплачиваемая."
+msgstr "Congratulations. You have been appointed Cat Department Inspector. The position is unpaid."
+
+msgid "Пока бригада отсутствовала, оставленный без присмотра пожар уничтожил шкаф и посуду. Оплаты не будет; хозяйка предъявила службе претензию."
+msgstr "While the crew was away, an unattended fire destroyed the wardrobe and dishes. There will be no payment; The owner filed a complaint with the service."
+
+msgid "Покупка"
+msgstr "Purchase"
+
+msgid "Полевое снаряжение"
+msgstr "Field equipment"
+
+msgid "Полевой маг широкого профиля. Аккуратно меняет температуру повреждённых объектов и сдерживает стихийные аварии."
+msgstr "Generalist field magician. Gently changes the temperature of damaged objects and curbs natural accidents."
+
+msgid "Полевой телекинез"
+msgstr "Field telekinesis"
+
+msgid "Полноэкранный режим"
+msgstr "Full screen mode"
+
+msgid "Положение и размер шкафа"
+msgstr "Wardrobe position and size"
+
+msgid "Полотно очень милое. Голоса из зеркала стали тише, а зубы всё ещё стучат в полный голос."
+msgstr "The canvas is very cute. The voices from the mirror have become quieter, and the teeth are still chattering loudly."
+
+msgid "Полотно повешу. Если портал обидится — пусть пишет претензию."
+msgstr "I'll hang the canvas. If the portal is offended, let it write a complaint."
+
+msgid "Полотно снято и возвращено на склад. Портал снова открыт; теперь привидение можно вернуть внутрь."
+msgstr "The canvas was removed and returned to the warehouse. The portal is open again; Now the ghost can be returned inside."
+
+msgid "Полотно снято и возвращено на склад. Портал снова открыт."
+msgstr "The canvas was removed and returned to the warehouse. The portal is open again."
+
+msgid "Полотно удерживается креплениями, но портал под ним остаётся открытым. Бестелесное существо сможет пройти сквозь ткань."
+msgstr "The canvas is held in place by fastenings, but the portal underneath remains open. A disembodied creature will be able to pass through the fabric."
+
+msgid "Полотно уже снято."
+msgstr "The canvas has already been removed."
+
+msgid "Понижу температуру. Надеюсь, в этот раз холод действительно нужен."
+msgstr "I'll lower the temperature. I hope the cold is really needed this time."
+
+msgid "ПОНЯТНО"
+msgstr "UNDERSTANDING"
+
+msgid "Попробую заморозку. Для отчёта уже придумала отдельную колонку «неожиданный иней»."
+msgstr "I'll try freezing. I have already come up with a separate column “unexpected frost” for the report."
+
+msgid "Попробую оживление. Сначала убедимся, что предмет настроен дружелюбно."
+msgstr "I'll try to revive. First, let's make sure the subject is friendly."
+
+msgid "Попробую сдвинуть кран. Если вместе со стеной — в отчёте это будет одна строка или две?"
+msgstr "I'll try to move the faucet. If together with the wall, will it be one line or two in the report?"
+
+msgid "Попытаться схватить"
+msgstr "Try to grab"
+
+msgid "Портал вы спрятали под полотном, но раму перед этим успели оплавить. Теперь зеркало выглядит так, будто его ремонтировали свечой."
+msgstr "You hid the portal under the canvas, but before that you managed to melt the frame. Now the mirror looks like it was repaired with a candle."
+
+msgid "Портал закрыт плотным защитным полотном, закреплённым механическими зажимами. Это временная изоляция: портал остаётся открытым под тканью."
+msgstr "The portal is closed with a dense protective cloth secured with mechanical clamps. This is temporary isolation: the portal remains open under the fabric."
+
+msgid "Портал закрыт полотном, но в комнате всё ещё холодно."
+msgstr "The portal is covered with canvas, but the room is still cold."
+
+msgid "Портал закрыт ценой уничтоженного зеркала."
+msgstr "The portal is closed at the cost of the destroyed mirror."
+
+msgid "Портал закрыт, зеркало сохранено."
+msgstr "The portal is closed, the mirror is preserved."
+
+msgid "Портал закрыт, но оплавленная рама никуда не делась. Хорошо хоть отражение снова моё."
+msgstr "The portal is closed, but the melted frame has not gone away. Well, at least the reflection is mine again."
+
+msgid "Портал закрыт, но рама зеркала осталась деформированной после нагрева."
+msgstr "The portal is closed, but the mirror frame remains deformed after heating."
+
+msgid "Портал закрыт. Зеркало снова стало обычным."
+msgstr "The portal is closed. The mirror became normal again."
+
+msgid "Портал закрыт. Зеркало тоже, причём навсегда. Придётся любоваться собой по памяти."
+msgstr "The portal is closed. The mirror too, and forever. You'll have to admire yourself from memory."
+
+msgid "Портал излучает холод. Связь можно закрыть антимагией, временно изолировать защитным полотном или оборвать, уничтожив зеркало."
+msgstr "The portal emits coldness. The connection can be closed with antimagic, temporarily isolated with a protective cloth, or severed by destroying the mirror."
+
+msgid "Портал исчез, но зеркало пережило это хуже всех. Придётся любоваться собой по памяти."
+msgstr "The portal disappeared, but the mirror survived it worst of all. You'll have to admire yourself from memory."
+
+msgid "Портал окончательно закрыт."
+msgstr "The portal is finally closed."
+
+msgid "Портал остаётся временно закрыт полотном."
+msgstr "The portal remains temporarily closed by the canvas."
+
+msgid "Портал сейчас скрыт полотном."
+msgstr "The portal is now hidden by the canvas."
+
+msgid "Портал теперь под покрывалом. Не совсем ремонт, зато отражение наконец перестало спорить со мной."
+msgstr "The portal is now covered. Not exactly a repair, but the reflection finally stopped arguing with me."
+
+msgid "Портал только временно изолирован."
+msgstr "The portal is only temporarily isolated."
+
+msgid "Портал уже закрыт. Второй раз закрывать его не стану — так недолго открыть обратно."
+msgstr "The portal is already closed. I won’t close it a second time - it won’t take long to open it back."
+
+msgid "Портал уже закрыт. Зеркало выглядит обычным."
+msgstr "The portal is already closed. The mirror looks ordinary."
+
+msgid "Портал уничтожен вместе с зеркалом. Привидение осталось в ловушке."
+msgstr "The portal was destroyed along with the mirror. The ghost remained trapped."
+
+msgid "Портал уничтожен вместе с зеркалом. Связь с привидением оборвана."
+msgstr "The portal was destroyed along with the mirror. The connection with the ghost has been severed."
+
+msgid "После выплаты в казне останется %d монет."
+msgstr "After payment, %d coins will remain in the funds."
+
+msgid "После выплаты долг службы составит %d монет. Покупки и найм будут недоступны."
+msgstr "After payment, the service debt will be %d coins. Shopping and hiring will not be available."
+
+msgid "После использования стоимость полотна включается в оплату заявки. Если полотно удастся снять и вернуть на склад, его можно будет использовать снова."
+msgstr "After use, the cost of the canvas is included in the job fee. If the canvas can be removed and returned to the warehouse, it can be used again."
+
+msgid "После первоначального отказа служба всё-таки выплатила компенсацию."
+msgstr "After the initial refusal, the service still paid compensation."
+
+msgid "После первоначального отказа служба выплатила %d монет и восстановила потерянную из-за отказа репутацию."
+msgstr "After the initial failure, the service paid out %d coins and restored the reputation lost due to the failure."
+
+msgid "После покупки книга откроет курс «%s». Выберите её в каталоге, затем откройте личное дело совместимого сотрудника."
+msgstr "After purchasing the book, the course \"%s\" will open. Select it from the directory, then open the compatible employee's personal file."
+
+msgid "После покупки снаряжение поступит в собственность службы и станет доступно на подходящих заявках."
+msgstr "After purchase, the equipment will become the property of the service and will become available on eligible jobs."
+
+msgid "После ремонта лавового крана вода начала замерзать прямо в тёплой ванной. На кране остался устойчивый холодный магический след."
+msgstr "After repairing the lava faucet, the water began to freeze right in the warm bathtub. There was a persistent cold magical trace left on the faucet."
+
+msgid "После телекинетической очистки Борис восстановил свободный проход в основном канале и подключил его к механическому водоотводу."
+msgstr "After telekinetic cleaning, Boris restored free passage in the main channel and connected it to the mechanical drainage system."
+
+msgid "Последнее предупреждение перед применением когтей."
+msgstr "One final warning before using the claws."
+
+msgid "последствия работы"
+msgstr "consequences of work"
+
+msgid "последствия решения"
+msgstr "consequences of the decision"
+
+msgid "Поставить в проход на кухню"
+msgstr "Place it in the kitchen aisle"
+
+msgid "Поставить к левой стене"
+msgstr "Place it against the left wall"
+
+msgid "ПОСТАНОВЛЕНИЕ ОБ УВОЛЬНЕНИИ"
+msgstr "DECISION ON DISMISSAL"
+
+msgid "Постановление об увольнении. Заголовок, вводный текст, причина и показатели — отдельные узлы: их можно выбирать и перемещать мышью в 2D-редакторе."
+msgstr "Resolution on dismissal. The title, introductory text, reason and indicators are separate nodes: they can be selected and moved with the mouse in the 2D editor."
+
+msgid "Посуда внутри шкафа повреждена."
+msgstr "The dishes inside the wardrobe are damaged."
+
+msgid "Поток лавы остановлен расплавленным металлом, но кран уничтожен. Нажмите «ЗАВЕРШИТЬ РАБОТУ», чтобы принять последствия."
+msgstr "The lava flow is stopped by molten metal, but the faucet is destroyed. Click \"FINISH\" to accept the consequences."
+
+msgid "Поток лавы остановлен, кран принят в исправном состоянии."
+msgstr "The lava flow has been stopped and the faucet is accepted in good condition."
+
+msgid "Поток остановлен, но металл всё ещё раскалён. Прикасаться к крану пока опасно."
+msgstr "The flow has stopped, but the metal is still hot. It is still dangerous to touch the faucet."
+
+msgid "Поток остановлен, соединения герметичны, кран исправен."
+msgstr "The flow has stopped, the connections are tight, the faucet is working."
+
+msgid "Потоп остановили. Горгулью тоже — теперь она состоит из нескольких очень спокойных частей."
+msgstr "The flood was stopped. The gargoyle too - now it consists of several very calm parts."
+
+msgid "Потушите это немедленно!"
+msgstr "Put it out immediately!"
+
+msgid "Потушу холодом, но древесина станет хрупкой."
+msgstr "I'll put it out with cold, but the wood will become brittle."
+
+msgid "Похоже, без изменений. Значит, одного температурного воздействия здесь недостаточно."
+msgstr "Looks like no change. This means that temperature exposure alone is not enough."
+
+msgid "Практичен, экономен, не доверяет говорящим вентилям"
+msgstr "Practical, economical, does not trust talking valves"
+
+msgid "Практическая заморозка"
+msgstr "Practical freezing"
+
+msgid "Практический курс управления холодом. Открывает однодневное обучение заморозке для совместимого сотрудника."
+msgstr "Practical course on cold management. Unlocks one-day freezing training for a compatible employee."
+
+msgid "Практическое оживление"
+msgstr "Practical revival"
+
+msgid "Практическое оживление бытовых предметов"
+msgstr "Practical revitalization of everyday objects"
+
+msgid "Предупреждение: терпение специалиста заканчивается."
+msgstr "Warning: the specialist's patience is running out."
+
+msgid "ПРЕТЕНЗИЯ ЖИЛЬЦА"
+msgstr "resident's complaint"
+
+msgid "претензия жильца"
+msgstr "resident's complaint"
+
+msgid "Претензия жильца удовлетворена: выплачено %d монет."
+msgstr "The resident's claim was satisfied: %d coins were paid."
+
+msgid "претензия ожидает решения"
+msgstr "the claim is awaiting resolution"
+
+msgid "ПРЕТЕНЗИЯ: %s"
+msgstr "CLAIM: %s"
+
+msgid "прибытие на объект"
+msgstr "arrival at the site"
+
+msgid "Привидение"
+msgstr "Ghost"
+
+msgid "Привидение в банке? Главное, чтобы не тунец."
+msgstr "Ghost in a bank? The main thing is not tuna."
+
+msgid "Привидение возвращено в портал, портал закрыт без ущерба."
+msgstr "The ghost is returned to the portal, the portal is closed without damage."
+
+msgid "Привидение возвращено в портал, портал закрыт. Оплавленная рама осталась деформированной."
+msgstr "The ghost is returned to the portal, the portal is closed. The melted frame remained deformed."
+
+msgid "Привидение возвращено в портал."
+msgstr "The ghost is returned to the portal."
+
+msgid "Привидение выбралось из зеркала"
+msgstr "A ghost climbed out of the mirror"
+
+msgid "Привидение изолировано в служебной ловушке."
+msgstr "The ghost is isolated in a service trap."
+
+msgid "Привидение направлено обратно в портал. Теперь портал нужно закрыть."
+msgstr "The ghost is directed back into the portal. Now the portal needs to be closed."
+
+msgid "Привидение поймано в служебную ловушку, портал окончательно закрыт."
+msgstr "The ghost is caught in a service trap, the portal is finally closed."
+
+msgid "Привидение поймано в служебную ловушку. Зеркало осталось временно изолировано полотном."
+msgstr "A ghost is caught in a service trap. The mirror remained temporarily isolated by the canvas."
+
+msgid "Привидение связано с зеркалом остаточным магическим следом. Его можно вернуть в портал или изолировать в служебной ловушке."
+msgstr "The ghost is connected to the mirror by a residual magical trace. It can be returned to the portal or isolated in a service trap."
+
+msgid "Привидения в комнате больше нет."
+msgstr "The ghost is no longer in the room."
+
+msgid "призрак"
+msgstr "ghost"
+
+msgid "Призрак в ловушке, портал закрыт. Наконец-то в этой комнате всё остаётся на своих местах."
+msgstr "The ghost is trapped, the portal is closed. Finally, everything in this room remains in its place."
+
+msgid "Призрак теперь сидит в банке, зеркало — под покрывалом. Не тот интерьер, который я заказывала, но хотя бы никто больше не летает сквозь мебель."
+msgstr "The ghost is now sitting in the jar, the mirror is under the blanket. Not the interior I ordered, but at least no one is flying through the furniture anymore."
+
+msgid "Прикладная антимагия"
+msgstr "Applied anti-magic"
+
+msgid "Прикручу к стене. После этого гулять сможет только вместе с домом."
+msgstr "I'll screw it to the wall. After this, he will only be able to walk with the house."
+
+msgid "Применю контролируемое охлаждение. Неконтролируемого здесь и без нас достаточно."
+msgstr "I'll use controlled cooling. There is enough uncontrollable here without us."
+
+msgid "ПРИНЯТЬ ОТЧЁТ"
+msgstr "ACCEPT THE REPORT"
+
+msgid "ПРИОБРЕТЕНО"
+msgstr "PURCHASED"
+
+msgid "Причина аварии устранена. Когда будете готовы принять последствия работы, нажмите «ЗАВЕРШИТЬ РАБОТУ»."
+msgstr "The cause of the accident has been eliminated. When you are ready to accept the consequences of the job, click FINISH JOB."
+
+msgid "Причина увольнения подставляется во время игры. Этот узел можно передвинуть после проверки."
+msgstr "The reason for dismissal is given during the game. This unit can be moved after checking."
+
+msgid "Проверенные делом"
+msgstr "Proven by practice"
+
+msgid "Прогрею постепенно. Резкие перепады оставим погоде."
+msgstr "I'll warm it up gradually. We'll leave sudden changes to the weather."
+
+msgid "продолжается"
+msgstr "continues"
+
+msgid "Продолжайте работу так, как считаете нужным. Обучение не будет подсказывать сотрудника или способ устранения аварии."
+msgstr "Continue working as you see fit. The training will not tell the employee or how to resolve the accident."
+
+msgid "ПРОДОЛЖИТЬ"
+msgstr "CONTINUE"
+
+msgid "Продолжить последнее сохранение"
+msgstr "Continue last save"
+
+msgid "ПРОПУСТИТЬ"
+msgstr "SKIP"
+
+msgid "Пропустить обучение"
+msgstr "Skip training"
+
+msgid "Пропустить обучение в этом сохранении?\nВсе разделы останутся доступны,\nа подсказки больше не появятся."
+msgstr "Skip the tutorial in this save?\nAll sections will remain available,\nand tips will no longer appear."
+
+msgid "Проснулась! И смотрит так, будто это мы мешали ей работать. Главное — вода снова уходит."
+msgstr "Woke up! And she looks as if we were interfering with her work. The main thing is that the water goes away again."
+
+msgid "ПРОСРОЧЕНО"
+msgstr "EXPIRED"
+
+msgid "Пусть спит, если хочет. Обходная труба работает тише неё и хотя бы не требует уговоров."
+msgstr "Let him sleep if he wants. The bypass pipe is quieter and at least does not require persuasion."
+
+msgid "Путь обратно закрыт полотном. Сначала нужно открыть зеркало."
+msgstr "The way back is blocked by a canvas. First you need to open the mirror."
+
+msgid "Работа выполняется"
+msgstr "Work in progress"
+
+msgid "Работа выполняется, осталось %d мин."
+msgstr "Work in progress, %d minutes left."
+
+msgid "Работаем быстро. Думаем по обстоятельствам"
+msgstr "We work quickly. We think according to the circumstances"
+
+msgid "Работает до %s"
+msgstr "Works until %s"
+
+msgid "Работу нельзя завершить: вода всё ещё замерзает."
+msgstr "The work cannot be completed: the water is still freezing."
+
+msgid "Работу нельзя завершить: вода всё ещё затапливает чердак."
+msgstr "The work cannot be completed: water is still flooding the attic."
+
+msgid "Работу нельзя завершить: кран находится в опасном состоянии."
+msgstr "The work cannot be completed: the faucet is in a dangerous condition."
+
+msgid "Работу нельзя завершить: лава всё ещё течёт."
+msgstr "The work cannot be completed: the lava is still flowing."
+
+msgid "Работу нельзя завершить: портал всё ещё открыт."
+msgstr "The work cannot be completed: the portal is still open."
+
+msgid "Работу нельзя завершить: привидение всё ещё находится в комнате."
+msgstr "The job cannot be completed: the ghost is still in the room."
+
+msgid "Работу нельзя завершить: шкаф всё ещё ходит или перекрывает вход."
+msgstr "The work cannot be completed: the wardrobe is still moving or blocking the entrance."
+
+msgid "Работы завершены."
+msgstr "The work has been completed."
+
+msgid "Разбить зеркало"
+msgstr "Break the mirror"
+
+msgid "Разбить зеркало могу. Семь лет несчастья в наряд не входят."
+msgstr "I can break a mirror. Seven years of unhappiness are not included in the outfit."
+
+msgid "Разбудили с первого раза. Если бы ещё научили её не ворчать на дождь, я бы поставила шестую звезду."
+msgstr "Woke up the first time. If they had also taught her not to grumble about the rain, I would have given her a sixth star."
+
+msgid "Разбудить горгулью"
+msgstr "Wake up the gargoyle"
+
+msgid "Разбудить камень могу. Насколько целым он проснётся — другой вопрос."
+msgstr "I can wake up the stone. How intact he will wake up is another question."
+
+msgid "раздел сотрудников"
+msgstr "employees section"
+
+msgid "Размер игрового окна."
+msgstr "Game window size."
+
+msgid "Разрешение окна"
+msgstr "Window resolution"
+
+msgid "Рама зеркала деформирована нагревом."
+msgstr "The mirror frame is deformed by heat."
+
+msgid "Рама зеркала осталась деформированной после предыдущего нагрева."
+msgstr "The mirror frame remained deformed after the previous heating."
+
+msgid "Ранее"
+msgstr "Previously"
+
+msgid "Раскалённый металл не выдержал повторного нагрева: кран расплавился и полностью сломан, а спёкшийся металл перекрыл поток лавы."
+msgstr "The red-hot metal could not withstand reheating: the faucet melted and was completely broken, and the sintered metal blocked the flow of lava."
+
+msgid "Расколоть лёд"
+msgstr "Break the ice"
+
+msgid "Расплавленный металл перекрыл трубу и остановил поток лавы, но кран полностью уничтожен. Оплаты не будет; стоимость замены оборудования предъявлена службе как претензия."
+msgstr "The molten metal blocked the pipe and stopped the flow of lava, but the faucet was completely destroyed. There will be no payment; the cost of replacing equipment is presented to the service as a claim."
+
+msgid "Растопить лёд"
+msgstr "Melt the ice"
+
+msgid "Растоплю лёд постепенно. Ванне уже хватило резких перепадов температуры."
+msgstr "I will melt the ice gradually. The bath had already had enough of sudden temperature changes."
+
+msgid "Расходное полотно для временной изоляции активных магических объектов."
+msgstr "Consumable cloth for temporary isolation of active magical objects."
+
+msgid "Расходное снаряжение"
+msgstr "Consumable Equipment"
+
+msgid "РЕЗУЛЬТАТ"
+msgstr "RESULT"
+
+msgid "РЕЗУЛЬТАТ ОСМОТРА"
+msgstr "INSPECTION RESULT"
+
+msgid "РЕМОНТ"
+msgstr "Repair"
+
+msgid "Ремонт"
+msgstr "Repair"
+
+msgid "Ремонт — исправить безопасный механический объект"
+msgstr "Repair - fix a safe mechanical object"
+
+msgid "Ремонтировать здесь нечего: ножки целы, корпус исправен. Шкаф ходит из-за чар, а не из-за поломки."
+msgstr "There is nothing to repair here: the legs are intact, the body is in good working order. The wardrobe moves because of the enchantment, not because it is broken."
+
+msgid "Ремонтный набор Бориса"
+msgstr "Boris's repair kit"
+
+msgid "Репутация"
+msgstr "Reputation"
+
+msgid "Репутация %d\n%s"
+msgstr "Reputation %d\n%s"
+
+msgid "Репутация: %d — %s\nПрозвища: %s. Отзывов: %d"
+msgstr "Reputation: %d - %s\nNicknames: %s. Reviews: %d"
+
+msgid "Риск отзыва лицензии"
+msgstr "Risk of license revocation"
+
+msgid "Рунический терморегулятор"
+msgstr "Runic thermostat"
+
+msgid "Рунический терморегулятор установлен. Он удерживает воду между состояниями «лава» и «ледяная глыба»."
+msgstr "Runic thermostat installed. It holds water between the states of \"lava\" and \"ice block\"."
+
+msgid "Русский"
+msgstr "Russian"
+
+msgid "самостоятельная работа"
+msgstr "independent work"
+
+msgid "Сантехника обычная. Лава — дополнительная комплектация, которой в смете не было."
+msgstr "The plumbing is ordinary. Lava is an additional equipment that was not included in the estimate."
+
+msgid "сведения о вызове"
+msgstr "call details"
+
+msgid "Свободен"
+msgstr "Available"
+
+msgid "Свободна"
+msgstr "Available"
+
+msgid "Сводка"
+msgstr "Summary"
+
+msgid "Свойства объекта не позволяют переместить его телекинезом."
+msgstr "The properties of the object do not allow it to be moved using telekinesis."
+
+msgid "Сдвину осторожно. Если за зеркалом другой мир, надеюсь, он не прибит к стене."
+msgstr "I'll move it carefully. If there's another world behind the mirror, I hope it's not nailed to the wall."
+
+msgid "Сдвинуть зеркало"
+msgstr "Move the mirror"
+
+msgid "Сделаем обычную трубу. Она хотя бы не притворяется архитектурой."
+msgstr "Let's make a regular pipe. At least it doesn't pretend to be architecture."
+
+msgid "Сейчас для вызовов доступны три сотрудника — все они помещаются на экране. Когда вы наймёте новых специалистов, список можно будет прокручивать колёсиком мыши или горизонтальным ползунком."
+msgstr "Currently, three employees are available for calls - all of them fit on the screen. When you hire new specialists, the list can be scrolled with the mouse wheel or horizontal slider."
+
+msgid "Силовая работа"
+msgstr "Strength work"
+
+msgid "Силовая работа — позволяет физически удержать, сдвинуть или демонтировать объект"
+msgstr "Force work - allows you to physically hold, move or dismantle an object"
+
+msgid "Силовой удар расколол каменную пасть. Вода уходит через пролом, но горгулья серьёзно повреждена."
+msgstr "The forceful blow split the stone mouth. The water escapes through the gap, but the gargoyle is seriously damaged."
+
+msgid "Сильная сторона: аккуратный обычный ремонт"
+msgstr "Strengths: neat, routine repairs"
+
+msgid "Сильная сторона: антимагия и безопасность"
+msgstr "Strengths: Anti-magic and security"
+
+msgid "Сильная сторона: дистанционное и бережное перемещение"
+msgstr "Strength: Remote and gentle movement"
+
+msgid "Сильная сторона: контроль температуры и стихий"
+msgstr "Strength: Temperature and elemental control"
+
+msgid "Сильная сторона: сила и устойчивость"
+msgstr "Strengths: Strength and resilience"
+
+msgid "Систематический ущерб имуществу жителей и критическая задолженность службы."
+msgstr "Systematic damage to residents' property and critical service backlog."
+
+msgid "склад снаряжения"
+msgstr "EQUIPMENT WAREHOUSE"
+
+msgid "СКЛАД СНАРЯЖЕНИЯ"
+msgstr "EQUIPMENT WAREHOUSE"
+
+msgid "Складская мышь локализована. Работы ведутся."
+msgstr "The warehouse mouse has been localized. Work is underway."
+
+msgid "Скупая контора"
+msgstr "Buying office"
+
+msgid "Следы магии, мебельный характер и ни одного гарантийного талона."
+msgstr "Traces of magic, furniture character and not a single warranty card."
+
+msgid "Сломать ножки"
+msgstr "Break legs"
+
+msgid "СЛОТ %d\nДень %d, %s, %d монет, репутация %d%s"
+msgstr "SLOT %d\nDay %d, %s, %d coins, reputation %d%s"
+
+msgid "СЛОТ %d\nПУСТО"
+msgstr "SLOT %d\nEMPTY"
+
+msgid "Слот %d сохранён: день %d, %s"
+msgstr "Slot %d saved: day %d, %s"
+
+msgid "СЛУЖБА В ДОЛГУ"
+msgstr "SERVICE IN DEBT"
+
+msgid "Служба выплачивает компенсацию за зеркало."
+msgstr "The service pays compensation for the mirror."
+
+msgid "Служба отказалась компенсировать причинённый ущерб."
+msgstr "The service refused to compensate for the damage caused."
+
+msgid "Служба продолжит работу под наблюдением, пока не восстановит доверие жителей."
+msgstr "The service will continue to operate under supervision until it restores the trust of residents."
+
+msgid "Служебная ловушка для привидений"
+msgstr "Service Ghost Trap"
+
+msgid "Служебное имущество и купленное полевое оборудование"
+msgstr "Official property and purchased field equipment"
+
+msgid "Служебное руководство, учебный кристалл и набор безопасных печатей. Открывает однодневный курс «Оживление» для совместимого сотрудника."
+msgstr "Service manual, training crystal and set of safe seals. Unlocks a one-day Revitalization course for a compatible employee."
+
+msgid "СЛУЖЕБНОЕ СНАРЯЖЕНИЕ\nВСЕГДА В НАЛИЧИИ"
+msgstr "SERVICE EQUIPMENT\nALWAYS IN STOCK"
+
+msgid "Смелые экспериментаторы"
+msgstr "Brave experimenters"
+
+msgid "СНАРЯЖЕНИЕ"
+msgstr "EQUIPMENT"
+
+msgid "Сначала выберите место, куда нужно переместить объект."
+msgstr "First, select the location where you want to move the object."
+
+msgid "Сначала выберите сотрудника из бригады."
+msgstr "First, select an employee from the team."
+
+msgid "Сначала дождитесь завершения текущей работы."
+msgstr "First, wait for the current job to complete."
+
+msgid "Сначала завершите доступные заявки."
+msgstr "Complete available jobs first."
+
+msgid "Сначала нужно вернуть привидение в портал."
+msgstr "First you need to return the ghost to the portal."
+
+msgid "Сначала нужно установить ловушку."
+msgstr "First you need to set a trap."
+
+msgid "Сначала освободите сотрудника от заявки."
+msgstr "First, release the employee from the job."
+
+msgid "Сначала остановите поток лавы."
+msgstr "First stop the lava flow."
+
+msgid "Сначала поставьте шкаф к левой стене."
+msgstr "First, place the wardrobe against the left wall."
+
+msgid "Сначала снимите полотно. Я должен видеть границы портала, чтобы закрыть его, а не запечатать ткань вместе с ним."
+msgstr "First, remove the canvas. I need to be able to see the edges of the portal in order to close it, rather than seal the fabric along with it."
+
+msgid "Сначала снимите сотрудника с заявки."
+msgstr "First, remove the employee from the job."
+
+msgid "СНАЧАЛА СНЯТЬ С ЗАЯВКИ"
+msgstr "WITHDRAW FROM JOB FIRST"
+
+msgid "Сначала сотрудника нужно нанять."
+msgstr "First, an employee must be hired."
+
+msgid "Сначала устраните причину аварии"
+msgstr "Eliminate the cause of the accident first"
+
+msgid "Снимать полотно бесполезно: в бригаде нет специалиста по антимагии, способного закрыть портал."
+msgstr "It is useless to remove the canvas: the team does not have an anti-magic specialist capable of closing the portal."
+
+msgid "Сниму активные чары и проверю, что магический след исчез."
+msgstr "I'll remove the active spell and check that the magical trace has disappeared."
+
+msgid "Сниму активные чары. Прошу до окончания проверки не накладывать новые."
+msgstr "I'll remove the active spell. Please do not apply new ones until the inspection is completed."
+
+msgid "Сниму чары с крана. Сам лёд от этого не растает, но хотя бы перестанет появляться снова."
+msgstr "I'll remove the spell from the faucet. The ice itself will not melt, but at least it will stop appearing again."
+
+msgid "Снять защитное полотно"
+msgstr "Remove the protective sheet"
+
+msgid "Снять полотно"
+msgstr "Remove the canvas"
+
+msgid "Снять след огнём"
+msgstr "Remove the trail with fire"
+
+msgid "Снять холодный след"
+msgstr "Remove cold mark"
+
+msgid "Совместим, но учебный комплект ещё не куплен."
+msgstr "Compatible, but the training kit has not yet been purchased."
+
+msgid "Совместим. Можно начать обучение."
+msgstr "Compatible. You can start training."
+
+msgid "Согрею комнату. Портал, вероятно, воспримет это как личное оскорбление."
+msgstr "I'll warm the room. The portal will probably take this as a personal insult."
+
+msgid "Содержимое"
+msgstr "Contents"
+
+msgid "Соединения исправны. Для стабилизации температуры нужен рунический терморегулятор из лавки снабжения."
+msgstr "Connections are OK. To stabilize the temperature, you need a runic thermostat from the supply shop."
+
+msgid "состав бригады"
+msgstr "crew composition"
+
+msgid "Состав готов. Нажмите «ОТПРАВИТЬ БРИГАДУ», чтобы сотрудники выехали по адресу."
+msgstr "The composition is ready. Click “SEND Crew” to have employees go to the address."
+
+msgid "Состояние 1: кот спит. Положение и размер можно менять независимо от остальных состояний."
+msgstr "State 1: the cat is sleeping. The position and size can be changed independently of other states."
+
+msgid "Состояние 2: кот насторожился. Временно включите глазик, чтобы настроить его относительно других поз."
+msgstr "Condition 2: the cat is alert. Temporarily turn on the eye to adjust it relative to other poses."
+
+msgid "Состояние 3: кот поднял лапу. Положение и размер настраиваются отдельно."
+msgstr "Condition 3: the cat raised its paw. Position and size can be adjusted separately."
+
+msgid "Состояние 4: кот отвернулся. Положение и размер настраиваются отдельно."
+msgstr "Condition 4: the cat turned away. Position and size can be adjusted separately."
+
+msgid "Сотрудник"
+msgstr "Employee"
+
+msgid "СОТРУДНИК ЕЩЁ ВОЗВРАЩАЕТСЯ"
+msgstr "THE EMPLOYEE IS STILL RETURNING"
+
+msgid "Сотрудник ещё едет на объект. %s."
+msgstr "The employee is still on his way to the site. %s."
+
+msgid "Сотрудник ещё едет на объект. Прибытие: %s."
+msgstr "The employee is still on his way to the site. Arrival: %s."
+
+msgid "Сотрудник ещё не нанят."
+msgstr "The employee has not yet been hired."
+
+msgid "Сотрудник заканчивает обучение на следующий день"
+msgstr "The employee finishes training the next day"
+
+msgid "Сотрудник находится на объекте"
+msgstr "An employee is on site"
+
+msgid "сотрудники"
+msgstr "STAFF"
+
+msgid "СОТРУДНИКИ"
+msgstr "STAFF"
+
+msgid "СОТРУДНИКИ — выберите заявку, затем назначьте специалистов"
+msgstr "STAFF - select a request, then assign specialists"
+
+msgid "Сотрудники в пути"
+msgstr "Employees on the go"
+
+msgid "Сотрудники на объекте"
+msgstr "Employees on site"
+
+msgid "СОХРАНИТЬ ИГРУ"
+msgstr "SAVE GAME"
+
+msgid "Спасаем дома, нервы и иногда реальность"
+msgstr "We save houses, nerves and sometimes reality"
+
+msgid "Спасибо! Из крана снова не течёт лава. Для демона звучит как жалоба, но для владельца ванной — настоящее счастье."
+msgstr "Thank you! No lava flows from the faucet again. For a demon it sounds like a complaint, but for the owner of the bathroom it sounds like real happiness."
+
+msgid "СПЕЦИАЛИЗАЦИИ"
+msgstr "SPECIALIZATIONS"
+
+msgid "СПЕЦИАЛИЗАЦИИ: %s"
+msgstr "SPECIALIZATIONS: %s"
+
+msgid "Специализацию можно забыть."
+msgstr "You can forget about specialization."
+
+msgid "Специализацию сейчас нельзя забыть."
+msgstr "Specialization cannot be forgotten now."
+
+msgid "Врождённые профессиональные навыки нельзя забыть."
+msgstr "Innate professional skills cannot be forgotten."
+
+msgid "Специалист по когтетехническому надзору просит не мешать."
+msgstr "The claw technician asks you not to interfere."
+
+msgid "Справа собраны сведения о вызове: адрес, жилец, опасности и описание происшествия. Перед выездом стоит прочитать всё, что сообщил заказчик."
+msgstr "On the right is collected information about the call: address, occupant, hazards and description of the incident. Before leaving, you should read everything that the customer said."
+
+msgid "срок истёк"
+msgstr "Time limit has expired"
+
+msgid "Срок истёк"
+msgstr "Time limit has expired"
+
+msgid "Сроков нет"
+msgstr "No deadlines"
+
+msgid "Срочно"
+msgstr "Urgently"
+
+msgid "СРОЧНОЕ СООБЩЕНИЕ"
+msgstr "URGENT MESSAGE"
+
+msgid "Срочное сообщение: оставленный без присмотра шкаф полностью сгорел. Хозяйка требует объяснений и компенсации."
+msgstr "Urgent message: An unattended wardrobe has completely burned down. The owner demands an explanation and compensation."
+
+msgid "Стабилизирует магическую температуру воды после установки на объекте."
+msgstr "Stabilizes the magical water temperature after installation at the site."
+
+msgid "Старая операция"
+msgstr "Old operation"
+
+msgid "Старинное зеркало превратилось в нестабильный портал. Из отражения доносятся голоса, а магическое поле в комнате усиливается."
+msgstr "An ancient mirror has turned into an unstable portal. Voices are heard from the reflection, and the magical field in the room intensifies."
+
+msgid "Старинное зеркало уничтожено."
+msgstr "The ancient mirror was destroyed."
+
+msgid "Старый квартал, 5"
+msgstr "Old Quarter, 5"
+
+msgid "СТАТУС\n%s"
+msgstr "STATUS\n%s"
+
+msgid "Так больше не делать."
+msgstr "Don't do that anymore."
+
+msgid "Такелажник для случаев, когда аварийный объект нужно удержать, передвинуть или убедительно поставить на место."
+msgstr "Rigger for cases when an emergency object needs to be held, moved or convincingly put in place."
+
+msgid "Такую раму нельзя восстановить на выезде: потребуется мастерская или изготовление замены."
+msgstr "Such a frame cannot be restored on site: a workshop or replacement will be required."
+
+msgid "Текущая казна службы. При долге покупки и найм недоступны до восстановления положительного баланса."
+msgstr "Current service funds. If you are in debt, purchases and hiring are unavailable until a positive balance is restored."
+
+msgid "ТЕКУЩИЕ ЗАЯВКИ"
+msgstr "CURRENT JOBS"
+
+msgid "Телекинез"
+msgstr "Telekinesis"
+
+msgid "Телекинез — магически переносит объект в допустимую точку"
+msgstr "Telekinesis - magically transports an object to a valid point"
+
+msgid "Телекинез вытащил листья, но спящая горгулья не направляет воду в трубу. Нужен запуск чар или механический обход."
+msgstr "Telekinesis pulled out the leaves, but the sleeping gargoyle does not direct the water into the pipe. Requires enchantment launch or mechanical bypass."
+
+msgid "Телекинез для полевых работ"
+msgstr "Telekinesis for field work"
+
+msgid "Телекинез не удерживает бестелесную цель. Привидение вырвалось и заметалось быстрее."
+msgstr "Telekinesis does not hold an incorporeal target. The ghost broke free and ran faster."
+
+msgid "Температура воды стабилизирована."
+msgstr "The water temperature has stabilized."
+
+msgid "Температура воды уже стабилизирована."
+msgstr "The water temperature has already stabilized."
+
+msgid "Температура снизилась, поверхность крана покрылась инеем."
+msgstr "The temperature dropped and the surface of the faucet became covered with frost."
+
+msgid "Теперь и привидение поймано, и портал закрыт. Вот так гораздо лучше."
+msgstr "Now the ghost has been caught and the portal is closed. This is much better."
+
+msgid "Теперь можно работать по-сантехнически: уплотнения, соединения и никаких новых стихий."
+msgstr "Now you can work like a plumber: seals, connections and no new elements."
+
+msgid "Теперь у нас не потоп, а каток на чердаке. Не уверена, что это улучшение."
+msgstr "Now we don't have a flood, but a skating rink in the attic. Not sure if this is an improvement."
+
+msgid "ТЕСТ: +500 МОНЕТ"
+msgstr "TEST: +500 COINS"
+
+msgid "Тестовое пополнение"
+msgstr "Test replenishment"
+
+msgid "Точный ремонт"
+msgstr "Precision repair"
+
+msgid "Требуется реставрация крепления и корпуса."
+msgstr "Restoration of the mounting and housing is required."
+
+msgid "Трещина ванны не восстановлена."
+msgstr "The bathtub crack has not been repaired."
+
+msgid "Трубы целы, кран цел. Похоже, после прошлого ремонта у него осталось слишком холодное отношение к работе."
+msgstr "The pipes are intact, the faucet is intact. It seems that after the last renovation he had too cold an attitude towards work."
+
+msgid "у входной двери"
+msgstr "at the front door"
+
+msgid "У выбранного сотрудника нет подходящего действия для этого объекта."
+msgstr "The selected employee does not have a suitable action for this object."
+
+msgid "у левой стены"
+msgstr "at the left wall"
+
+msgid "У меня нет подходящего действия для этой части ванной."
+msgstr "I don't have a suitable action for this part of the bathroom."
+
+msgid "У меня тут пожар! Немедленно тушите!"
+msgstr "There's a fire here! Put it out immediately!"
+
+msgid "У сотрудника две ячейки.\nЗабытая способность исчезнет из доступных действий.\nПри необходимости её можно изучить заново."
+msgstr "The employee has two cells.\nThe forgotten ability will disappear from available actions.\nIf necessary, it can be learned again."
+
+msgid "Уберу это с дороги, ничего лишнего не задевая."
+msgstr "I'll get this out of the way without touching anything unnecessary."
+
+msgid "Убрать лёд"
+msgstr "Remove ice"
+
+msgid "Удержание и силовая работа"
+msgstr "Holding and strength work"
+
+msgid "Удержать телекинезом"
+msgstr "Hold with telekinesis"
+
+msgid "Удерживать"
+msgstr "Hold"
+
+msgid "Удерживать шкаф больше не требуется: его ножки сломаны."
+msgstr "There is no longer any need to hold the wardrobe: its legs are broken."
+
+msgid "Управляемое магическое пламя"
+msgstr "Controlled magical flame"
+
+msgid "Управляемый нагрев и магическое пламя."
+msgstr "Controlled heating and magical flame."
+
+msgid "Усилить заморозку"
+msgstr "Increase freezing"
+
+msgid "Установить ловушку — 2 мин."
+msgstr "Set the trap - 2 min."
+
+msgid "Установить терморегулятор воды — 3 мин."
+msgstr "Install the water thermostat - 3 min."
+
+msgid "УСТАНОВЛЕН: СТАРЫЙ КВАРТАЛ, 5"
+msgstr "INSTALLED: OLD QUARTER, 5"
+
+msgid "УСТАНОВЛЕНА НА ОБЪЕКТЕ"
+msgstr "INSTALLED ON SITE"
+
+msgid "УСТАНОВЛЕНО НА ЗЕРКАЛЕ"
+msgstr "MOUNTED ON MIRROR"
+
+msgid "устранение аварии"
+msgstr "troubleshooting"
+
+msgid "Учебник безопасного нагрева и магического огня. Открывает однодневное обучение для совместимого сотрудника."
+msgstr "A tutorial on safe heating and magical fire. Opens a one-day training session for a compatible employee."
+
+msgid "Учебный комплект"
+msgstr "Training kit"
+
+msgid "УЧЁТ"
+msgstr "ACCOUNTING"
+
+msgid "Учится: %s"
+msgstr "Studying: %s"
+
+msgid "Ущерб общедомовому имуществу предъявлен службе как претензия."
+msgstr "Damage to common property was presented to the service as a claim."
+
+msgid "Феликс Пепельный"
+msgstr "Felix the Ash"
+
+msgid "Финальная книга"
+msgstr "Final book"
+
+msgid "Финальный экран демонстрации. Все элементы ниже можно выбирать и перемещать мышкой в 2D-редакторе."
+msgstr "Final screen of the demo. All elements below can be selected and moved with the mouse in a 2D editor."
+
+msgid "Финансовое оздоровление"
+msgstr "Financial recovery"
+
+msgid "Фоновое изображение раскрытой книги. Меняйте размер и положение мышкой."
+msgstr "Background image of an open book. Change size and position with the mouse."
+
+msgid "Хозяйка предъявила претензию на стоимость мебели и содержимого."
+msgstr "The owner made a claim for the cost of the furniture and contents."
+
+msgid "Холод ослабил пожар, но шкаф всё ещё горит."
+msgstr "The cold has weakened the fire, but the closet is still burning."
+
+msgid "Холод стабилизировал края портала, но не закрыл его."
+msgstr "The cold stabilized the edges of the portal, but did not close it."
+
+msgid "Холод устранён, портал временно изолирован защитным полотном."
+msgstr "The cold has been eliminated, the portal is temporarily isolated with a protective sheet."
+
+msgid "Холод, бытовая магия"
+msgstr "Cold, household magic"
+
+msgid "Холодный магический след снят с крана, но образовавшийся лёд остался в ванне.%s"
+msgstr "The cold magic trace was removed from the faucet, but the resulting ice remained in the bathtub.%s"
+
+msgid "Холодный портал предлагается заморозить. Люблю последовательные технические задания."
+msgstr "The cold portal is proposed to be frozen. I love consistent technical tasks."
+
+msgid "Холодный след с крана уже снят. Повторная антимагия не требуется."
+msgstr "The cold trail from the faucet has already been removed. Repeated antimagic is not required."
+
+msgid "Холодный след с крана уже снят. Повторный нагрев не требуется."
+msgstr "The cold trail from the faucet has already been removed. No reheating required."
+
+msgid "Холодный след уже снят. Повторно гасить отсутствующие чары не стану."
+msgstr "The cold trail has already been removed. I will not extinguish the missing spell again."
+
+msgid "ХОРОШО"
+msgstr "GOOD"
+
+msgid "Хорошо, установлю терморегулятор. Кран перестанет выбирать между лавой и ледником, а сам лёд придётся растопить отдельно."
+msgstr "Okay, I'll install the thermostat. The faucet will no longer choose between lava and glacier, and the ice itself will have to be melted separately."
+
+msgid "Хрупкая посуда внутри уничтожена."
+msgstr "The fragile dishes inside were destroyed."
+
+msgid "Чары всё ещё действуют, поэтому шкаф продолжает ходить."
+msgstr "The spell is still in effect, so the wardrobe continues to move."
+
+msgid "Чары здесь и без того едва работают. Но если приказ требует окончательной тишины — зафиксирую."
+msgstr "The spell barely works here anyway. But if the order requires complete silence, I will record it."
+
+msgid "Чары оживления усилились."
+msgstr "The spell of revival intensified."
+
+msgid "Чары сниму. Дурной характер, если останется, оформим отдельно."
+msgstr "I'll remove the spell. Bad character, if it remains, will be processed separately."
+
+msgid "Чары сняты. Если объект всё ещё ведёт себя странно, это уже вопрос к мастеру."
+msgstr "The spell is broken. If the object still behaves strangely, this is a question for the master."
+
+msgid "Чем будем чинить?"
+msgstr "What are we going to fix it with?"
+
+msgid "Четыре подтверждённые претензии жителей к работе службы."
+msgstr "Four confirmed complaints from residents regarding the work of the service."
+
+msgid "Что вы наделали! Я буду жаловаться!"
+msgstr "What have you done! I'll complain!"
+
+msgid "Что опять случилось?"
+msgstr "What happened again?"
+
+msgid "ЧТО СДЕЛАТЬ СО ШКАФОМ?"
+msgstr "WHAT TO DO WITH THE WARDROBE?"
+
+msgid "Шкаф"
+msgstr "Wardrobe"
+
+msgid "Шкаф аккуратно перенесён %s. Шкаф и посуда не повреждены."
+msgstr "The wardrobe was carefully moved by %s. The wardrobe and dishes are not damaged."
+
+msgid "Шкаф больше не гуляет, зато посуда внутри пережила небольшое землетрясение. В следующий раз предупреждайте чашки заранее."
+msgstr "The wardrobe no longer moves, but the dishes inside survived a small earthquake. Next time, warn the cups in advance."
+
+msgid "Шкаф больше не движется."
+msgstr "The wardrobe doesn't move anymore."
+
+msgid "Шкаф больше не ходит, зато теперь ему явно нужен мебельный врач. Я просила усмирить его, а не победить в поединке."
+msgstr "The closet no longer moves, but now it clearly needs a furniture doctor. I asked to pacify him, not to win the duel."
+
+msgid "Шкаф больше не ходит: ножки сломаны. Он повреждён и остался не у левой стены."
+msgstr "The wardrobe no longer works: the legs are broken. It was damaged and remained off the left wall."
+
+msgid "Шкаф больше не ходит: ножки сломаны. Он стоит у левой стены, но повреждён."
+msgstr "The wardrobe no longer works: the legs are broken. It stands against the left wall, but is damaged."
+
+msgid "Шкаф вы остановили, спасибо. Но до левой стены он так и не дошёл — видимо, устал раньше ваших сотрудников."
+msgstr "You stopped the closet, thank you. But he never reached the left wall - apparently he was tired before your employees."
+
+msgid "Шкаф горит; в комнате появилась дополнительная опасность."
+msgstr "The wardrobe is on fire; there was additional danger in the room."
+
+msgid "Шкаф горит. До тушения приближаться и ремонтировать его опасно."
+msgstr "The closet is on fire. It is dangerous to approach and repair it before the fire is extinguished."
+
+msgid "Шкаф закреплён"
+msgstr "The wardrobe is secured"
+
+msgid "Шкаф закреплён у стены и больше не ходит, хотя чары всё ещё действуют."
+msgstr "The wardrobe is fixed to the wall and no longer moves, although the spell is still in effect."
+
+msgid "Шкаф и его содержимое уничтожены огнём. Оплата отменена, назначена компенсация %d монет."
+msgstr "The wardrobe and its contents were destroyed by fire. The payment was cancelled, compensation of %d coins was assigned."
+
+msgid "Шкаф исправен и уже закреплён к стене."
+msgstr "The wardrobe is in good working order and is already attached to the wall."
+
+msgid "Шкаф нагрелся."
+msgstr "The wardrobe got hot."
+
+msgid "Шкаф надёжно закреплён к стене. Чары действуют, но сдвинуть его уже не могут."
+msgstr "The wardrobe is securely attached to the wall. The spell works, but they can no longer move it."
+
+msgid "Шкаф оставлен не в заказанном месте."
+msgstr "The wardrobe was not left in the ordered place."
+
+msgid "Шкаф остановлен и больше не ходит."
+msgstr "The wardrobe is stopped and no longer runs."
+
+msgid "Шкаф остановлен повреждением ножек%s."
+msgstr "The wardrobe is stopped due to damage to %s legs."
+
+msgid "Шкаф полностью сгорел. От мебели и хрупкой посуды осталась куча пепла."
+msgstr "The wardrobe was completely burnt down. A pile of ash remained from furniture and fragile dishes."
+
+msgid "Шкаф получил повреждения."
+msgstr "The wardrobe was damaged."
+
+msgid "Шкаф поставлен в проход на кухню."
+msgstr "The wardrobe is placed in the passage to the kitchen."
+
+msgid "Шкаф поставлен к левой стене."
+msgstr "The wardrobe is placed against the left wall."
+
+msgid "Шкаф продолжает двигаться."
+msgstr "The wardrobe continues to move."
+
+msgid "Шкаф сильный. Но я сегодня завтракал."
+msgstr "The closet is strong. But today I had breakfast."
+
+msgid "Шкаф снова притворяется обычной мебелью. Надеюсь, вы не научили его делать это только при проверяющих."
+msgstr "The closet again pretends to be ordinary furniture. I hope you didn't teach him to do this only in front of inspectors."
+
+msgid "Шкаф стоит не у стены. К воздуху его не прикрутишь — сначала поставьте к левой стене."
+msgstr "The wardrobe is not against the wall. You can’t screw it to the air - first place it on the left wall."
+
+msgid "Шкаф удерживается"
+msgstr "The wardrobe is held"
+
+msgid "Шкаф уже закреплён к стене."
+msgstr "The wardrobe is already fixed to the wall."
+
+msgid "Шкаф уничтожен огнём."
+msgstr "The wardrobe was destroyed by fire."
+
+msgid "Шкаф ходил подозрительно. Как собака."
+msgstr "The closet was moving suspiciously. Like a dog."
+
+msgid "Шкаф ходит по квартире"
+msgstr "The wardrobe moves around the apartment"
+
+msgid "Это было фамильное зеркало!"
+msgstr "It was a family mirror!"
+
+msgid "Это было фамильное зеркало! Теперь из него действительно больше никто не выйдет — как и моё отражение."
+msgstr "It was a family mirror! Now no one else will really come out of it - just like my reflection."
+
+msgid "Это вы называете ремонтом? От моего имущества ничего не осталось!"
+msgstr "Do you call this a renovation? There is nothing left of my property!"
+
+msgid "Это действие не влияет на магическое замерзание."
+msgstr "This action does not affect magical freezing."
+
+msgid "Это действие не изменило"
+msgstr "This action did not change"
+
+msgid "Это действие не изменило состояние шкафа."
+msgstr "This action did not change the state of the wardrobe."
+
+msgid "Это действие не меняет"
+msgstr "This action does not change"
+
+msgid "Это действие не меняет состояние крана."
+msgstr "This action does not change the state of the faucet."
+
+msgid "Это действие не поможет поймать привидение."
+msgstr "This action will not help catch the ghost."
+
+msgid "Этот проклятый шкаф снова разгуливает по комнате! Остановите его и поставьте у левой стены. Сделайте аккуратно, там хрупкая посуда."
+msgstr "That damn closet is walking around the room again! Stop it and place it against the left wall. Do it carefully, the dishes are fragile."
+
+msgid "Я вижу новые повреждения. За это придётся отвечать!"
+msgstr "I see new damage. You will have to answer for this!"
+
+msgid "Я вызывал ремонтную бригаду, а не подрывников! Прекратите всё ломать!"
+msgstr "I called the repair team, not the demolitions! Stop breaking everything!"
+
+msgid "Я мастер-сантехник, не кузнец. Сначала уберите лаву — потом полезу с ключом."
+msgstr "I'm a master plumber, not a blacksmith. First, remove the lava - then I’ll go with the key."
+
+msgid "Я просил сделать ванную безопасной, а не перевести её из вулкана в ледник."
+msgstr "I asked to make the bathroom safe, not to transfer it from a volcano to a glacier."
+
+msgid "Я просила усмирить зачарованный шкаф, а не устроить погребальный костёр для всей моей посуды! В следующий раз я лучше вызову экзорциста."
+msgstr "I asked to pacify the enchanted wardrobe, not to arrange a funeral pyre for all my dishes! Next time I'd better call an exorcist."
+
+msgid "Язык"
+msgstr "Language"
+
+msgid "ЯЧЕЙКА %d — СВОБОДНА"
+msgstr "CELL %d - FREE"
+
+msgid "CENTERWALL — ПРОХОД НА КУХНЮ"
+msgstr "CENTERWALL - PASSAGE TO THE KITCHEN"
+
+msgid "Esc — закрыть меню"
+msgstr "Esc - close menu"
+
+msgid "LEFTWALL — У ЛЕВОЙ СТЕНЫ"
+msgstr "LEFTWALL - AT THE LEFT WALL"

@@ -13,6 +13,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	TranslationServer.set_locale("ru")
 	var game_state := root.get_node("GameState")
 	var audio_manager := root.get_node("AudioManager")
 	_check(audio_manager.coin_player.stream != null, "Звук монет подключён")
@@ -53,6 +54,16 @@ func _run() -> void:
 	_check(steam.position.x < 700.0 and steam.position.y < 500.0, "Пар привязан к области кружки, а не книги")
 	var office_menu := office.find_child("OfficeMenuButton", true, false) as TextureButton
 	_check(office_menu != null and office_menu.self_modulate.r < 0.75, "Главный рубильник приглушён относительно исходного ассета")
+	var previous_locale := TranslationServer.get_locale()
+	TranslationServer.set_locale("ru")
+	_check(office._office_menu_texture_path().ends_with("office_menu.png"), "Русская версия сохраняет исходный ассет меню")
+	TranslationServer.set_locale("en")
+	_check(office._office_menu_texture_path().ends_with("office_menu_en.png"), "Английская версия использует отдельный ассет меню")
+	TranslationServer.set_locale(previous_locale)
+	_check(office.detail_body.position.y - (office.detail_title.position.y + office.detail_title.size.y) >= 12.0, "Между заголовком и описанием заявки есть заметный отступ")
+	_check(office.detail_body.position.y + office.detail_body.size.y < office.assignment_label.position.y, "Описание заявки не пересекает блок бригады")
+	var boris_card := office.find_child("PersonnelCard_boris", true, false) as Button
+	_check(boris_card != null and boris_card.mouse_default_cursor_shape == Control.CURSOR_ARROW, "Карточка сотрудника сохраняет обычный курсор")
 	_check(office.cat_sprite.texture.resource_path.ends_with("sleeping.png"), "Поверх фонового кота показан новый спящий ассет")
 	office._on_cat_pressed()
 	_check(office.cat_phrase_panel.visible and not office.cat_phrase_label.text.is_empty(), "Невидимая зона кота показывает шуточную реплику")
@@ -88,6 +99,12 @@ func _run() -> void:
 	office._select_personnel_employee(&"grog")
 	_check("КУРС НЕ ПОДХОДИТ" in office.personnel_training_button.text, "Грог показывает состояние несовместимого курса")
 	_check(is_equal_approx(office.personnel_training_button.position.x + office.personnel_training_button.size.x * 0.5, status_guide.get_center().x), "Неактивное состояние курса расположено по центру")
+	office._select_personnel_employee(&"boris")
+	_check(not office.personnel_specializations_button.visible and not office.personnel_training_button.visible, "У Бориса нет управления забыванием недоступных для повторного изучения навыков")
+	office._open_specializations()
+	_check(not office.specialization_layer.visible, "Окно забывания специализаций Бориса нельзя открыть обходным вызовом")
+	_check(game_state.get_forget_availability(&"boris", &"diagnose") == &"protected", "Профессиональная диагностика Бориса защищена от забывания")
+	_check(not game_state.forget_employee_ability(&"boris", &"repair"), "Профессиональный ремонт Бориса нельзя удалить из состояния игры")
 	office._select_personnel_employee(&"nika")
 	_check("НАЧАТЬ КУРС" in office.personnel_training_button.text, "Кадровый экран предлагает начать доступный курс")
 	office._open_specializations()

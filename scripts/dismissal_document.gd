@@ -11,8 +11,8 @@ func _ready() -> void:
 
 
 func set_document_content(reason_text: String, confirmed_claims: int, claim_threshold: int, money: int) -> void:
-	reason_label.text = "ОСНОВАНИЕ ДЛЯ УВОЛЬНЕНИЯ\n%s" % reason_text
-	stats_label.text = "Подтверждённых претензий: %d из %d\nСостояние казны: %d монет" % [confirmed_claims, claim_threshold, money]
+	reason_label.text = tr("ОСНОВАНИЕ ДЛЯ УВОЛЬНЕНИЯ\n%s") % tr(reason_text)
+	stats_label.text = tr("Подтверждённых претензий: %d из %d\nСостояние казны: %d монет") % [confirmed_claims, claim_threshold, money]
 
 
 func _on_menu_button_pressed() -> void:

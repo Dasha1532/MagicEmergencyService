@@ -8,6 +8,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	TranslationServer.set_locale("ru")
 	var game_state := root.get_node("GameState")
 	game_state.start_new_game()
 	var map_scene := load("res://scenes/ui/CityMap.tscn") as PackedScene
