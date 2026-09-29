@@ -5,6 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://bpnvyoflgkcpn" path="res://assets/objects/drain_gargoyle/awakened.png" id="3_awakened"]
 [ext_resource type="Texture2D" uid="uid://b43n2hxjt76b2" path="res://assets/objects/drain_gargoyle/dormant_clean.png" id="4_clean"]
 [ext_resource type="Texture2D" uid="uid://dxg7agxnjc0ee" path="res://assets/objects/drain_gargoyle/damaged.png" id="4_damaged"]
+[ext_resource type="Texture2D" uid="uid://dr6ist8qpcubx" path="res://assets/objects/drain_gargoyle/damaged_clean.png" id="4_damaged_clean"]
 [ext_resource type="Texture2D" uid="uid://b61iegc5gif1o" path="res://assets/effects/gargoyle_attic/flooding.png" id="4_flooding"]
 [ext_resource type="Texture2D" uid="uid://c560pi6vsg3qv" path="res://assets/objects/drain_gargoyle/frozen.png" id="4_frozen"]
 [ext_resource type="Texture2D" uid="uid://c8wnhaocvvlva" path="res://assets/effects/gargoyle_attic/frozen_flooding.png" id="4_frozen_flooding"]
@@ -119,6 +120,22 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("4_damaged")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="DamagedClean" type="TextureRect" parent="GargoylePlacement" unique_id=1726527577]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 1.0
+offset_top = -91.0
+offset_right = -128.0
+offset_bottom = -230.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_damaged_clean")
 expand_mode = 1
 stretch_mode = 5
 

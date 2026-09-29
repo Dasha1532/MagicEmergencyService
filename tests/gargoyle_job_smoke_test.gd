@@ -33,6 +33,7 @@ func _run() -> void:
 	_check(load("res://assets/objects/drain_gargoyle/dormant.png") != null, "Спящая горгулья загружается")
 	_check(load("res://assets/objects/drain_gargoyle/awakened.png") != null, "Пробуждённая горгулья загружается")
 	_check(load("res://assets/objects/drain_gargoyle/damaged.png") != null, "Повреждённая горгулья загружается")
+	_check(load("res://assets/objects/drain_gargoyle/damaged_clean.png") != null, "Повреждённая горгулья без листьев загружается")
 	_check(load("res://assets/objects/drain_gargoyle/dormant_clean.png") != null, "Очищенная спящая горгулья загружается")
 	_check(load("res://assets/objects/drain_gargoyle/frozen.png") != null, "Замёрзшая горгулья загружается")
 	_check(load("res://assets/effects/gargoyle_attic/flooding.png") != null, "Слой протечек загружается")
@@ -97,6 +98,14 @@ func _run() -> void:
 	_check(not bool(failed_animation["applied"]), "Повреждённую горгулью нельзя оживить")
 	var failed_repair: Dictionary = damaged.apply_action(&"boris", &"repair")
 	_check(not bool(failed_repair["applied"]) and "пролом" in str(failed_repair["message"]), "Борис сообщает, что вода уже уходит через пролом")
+
+	var cleaned_then_damaged: RefCounted = GargoyleSimulationScript.new()
+	cleaned_then_damaged.apply_action(&"nika", &"telekinesis")
+	cleaned_then_damaged.apply_action(&"grog", &"physical_move")
+	_check(cleaned_then_damaged.visual_state() == &"damaged_clean", "После удаления листьев силовое воздействие включает повреждённый вид с чистой пастью")
+	var restored_clean_damage: RefCounted = GargoyleSimulationScript.new()
+	restored_clean_damage.load_state(cleaned_then_damaged.get_state())
+	_check(restored_clean_damage.visual_state() == &"damaged_clean", "Повреждённый вид с чистой пастью восстанавливается из сохранения")
 	_finish()
 
 

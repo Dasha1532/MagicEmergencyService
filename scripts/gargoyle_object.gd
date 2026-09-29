@@ -6,6 +6,7 @@ signal selected
 @onready var dormant_clean_pose: TextureRect = $DormantClean
 @onready var awakened_pose: TextureRect = $Awakened
 @onready var damaged_pose: TextureRect = $Damaged
+@onready var damaged_clean_pose: TextureRect = $DamagedClean
 @onready var frozen_pose: TextureRect = $Frozen
 @onready var interaction_button: Button = $InteractionButton
 @onready var target_marker: Marker2D = $Target
@@ -23,6 +24,7 @@ func show_state(state: StringName) -> void:
 	dormant_clean_pose.visible = state == &"dormant_clean"
 	awakened_pose.visible = state == &"awakened"
 	damaged_pose.visible = state == &"damaged"
+	damaged_clean_pose.visible = state == &"damaged_clean"
 	frozen_pose.visible = state == &"frozen"
 	interaction_button.visible = true
 

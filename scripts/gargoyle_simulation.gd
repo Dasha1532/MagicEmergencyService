@@ -7,6 +7,7 @@ var world_object: Dictionary = {
 	"clogged": true,
 	"bypass_open": false,
 	"damaged": false,
+	"clog_removed_before_damage": false,
 	"frozen": false,
 	"magic_level": 3,
 	"damage": 0,
@@ -106,6 +107,7 @@ func apply_action(employee_id: StringName, action_id: StringName) -> Dictionary:
 		&"physical_move":
 			applied = true
 			warning = true
+			world_object["clog_removed_before_damage"] = not bool(world_object["clogged"])
 			world_object["damaged"] = true
 			world_object["clogged"] = false
 			world_object["damage"] = 8
@@ -151,7 +153,7 @@ func is_terminal() -> bool:
 
 func visual_state() -> StringName:
 	if bool(world_object["damaged"]):
-		return &"damaged"
+		return &"damaged_clean" if bool(world_object["clog_removed_before_damage"]) else &"damaged"
 	if bool(world_object["frozen"]):
 		return &"frozen"
 	if not bool(world_object["clogged"]):
