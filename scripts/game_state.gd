@@ -1,13 +1,14 @@
 extends Node
 
 const WardrobeSimulationScript := preload("res://scripts/wardrobe_simulation.gd")
+const GeneratedJobGeneratorScript := preload("res://scripts/generated_job_generator.gd")
 
 signal state_changed
 signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 14
+const SAVE_VERSION: int = 15
 const LEGACY_SAVE_PATH: String = "user://savegame.json"
 const AUTOSAVE_PATH: String = "user://autosave.json"
 const SAVE_SLOT_COUNT: int = 5
@@ -130,6 +131,9 @@ var dismissal_video_seen: bool = false
 var financial_ledger: Array = []
 var job_repair_states: Dictionary = {}
 var tutorial_state: Dictionary = {}
+var campaign_seed: int = 0
+var next_generated_job_index: int = 0
+var generated_jobs: Dictionary = {}
 var clock_paused: bool = true
 var clock_speed: int = 1
 var _clock_accumulator: float = 0.0
@@ -846,28 +850,32 @@ func advance_time(minutes: int, excluded_job_id: StringName = &"") -> PackedStri
 
 
 func _process_timed_job_consequences() -> void:
-	var job_id := &"walking_wardrobe"
-	# Пока игрок находится на объекте, стадии огня и реакция хозяйки
-	# обрабатываются комнатой. Глобальный расчёт нужен только вне объекта.
-	if active_job_id == job_id or completed_job_ids.has(String(job_id)) or not jobs.has(job_id):
-		return
-	var saved_state := get_job_repair_state(job_id)
-	if saved_state.is_empty():
-		return
-	var simulation: RefCounted = WardrobeSimulationScript.new()
-	simulation.load_state(saved_state)
-	if not bool(simulation.world_object.get("burning", false)):
-		return
-	var results: Array[Dictionary] = simulation.advance_burning_until(time_minutes, WARDROBE_FIRE_SPREAD_MINUTES)
-	if results.is_empty():
-		return
-	set_job_repair_state(job_id, simulation.get_state())
-	if simulation.is_resolved():
-		var completion: Dictionary = simulation.get_completion_result()
-		completion["summary"] = "Пока бригада отсутствовала, оставленный без присмотра пожар уничтожил шкаф и посуду. Оплаты не будет; хозяйка предъявила службе претензию."
-		completion["review"] = "Вы уехали и оставили мой шкаф гореть! Когда я дозвонилась до службы, от него и всей посуды уже остался один пепел."
-		completion["incident_message"] = "Срочное сообщение: оставленный без присмотра шкаф полностью сгорел. Хозяйка требует объяснений и компенсации."
-		complete_job(job_id, completion)
+	for job_id: StringName in jobs:
+		var job: Dictionary = jobs[job_id]
+		var is_wardrobe_job: bool = job_id == &"walking_wardrobe" or StringName(str(job.get("simulation_type", ""))) == &"generated_wardrobe"
+		if not is_wardrobe_job:
+			continue
+		# Пока игрок находится на объекте, стадии огня и реакция хозяйки
+		# обрабатываются комнатой. Глобальный расчёт нужен только вне объекта.
+		if active_job_id == job_id or completed_job_ids.has(String(job_id)):
+			continue
+		var saved_state := get_job_repair_state(job_id)
+		if saved_state.is_empty():
+			continue
+		var simulation: RefCounted = WardrobeSimulationScript.new()
+		simulation.load_state(saved_state)
+		if not bool(simulation.world_object.get("burning", false)):
+			continue
+		var results: Array[Dictionary] = simulation.advance_burning_until(time_minutes, WARDROBE_FIRE_SPREAD_MINUTES)
+		if results.is_empty():
+			continue
+		set_job_repair_state(job_id, simulation.get_state())
+		if simulation.is_resolved():
+			var completion: Dictionary = simulation.get_completion_result()
+			completion["summary"] = "Пока бригада отсутствовала, оставленный без присмотра пожар уничтожил шкаф и посуду. Оплаты не будет; хозяйка предъявила службе претензию."
+			completion["review"] = "Вы уехали и оставили мой шкаф гореть! Когда я дозвонилась до службы, от него и всей посуды уже остался один пепел."
+			completion["incident_message"] = "Срочное сообщение: оставленный без присмотра шкаф полностью сгорел. Хозяйка требует объяснений и компенсации."
+			complete_job(job_id, completion)
 
 
 func get_job_repair_state(job_id: StringName) -> Dictionary:
@@ -1467,6 +1475,7 @@ func _existing_save_slot_path(slot: int) -> String:
 
 
 func start_new_game() -> void:
+	_remove_generated_job_entries()
 	day = 1
 	time_minutes = 9 * 60
 	money = 600
@@ -1483,6 +1492,9 @@ func start_new_game() -> void:
 	dismissal_video_seen = false
 	financial_ledger = [_financial_event(&"opening_balance", money, "Начальные средства службы")]
 	job_repair_states = {}
+	campaign_seed = int(Time.get_unix_time_from_system()) ^ randi()
+	next_generated_job_index = 0
+	generated_jobs = {}
 	tutorial_state = {"version": 1, "status": "active", "step": "office_welcome"}
 	clock_paused = true
 	clock_speed = 1
@@ -1503,6 +1515,7 @@ func start_new_game() -> void:
 	_reset_employee(&"boris", true, PackedStringArray(["diagnose", "repair"]), "Свободен")
 	_reset_employee(&"nika", false, PackedStringArray(["telekinesis"]), "Не нанята")
 	_reset_employee(&"felix", false, PackedStringArray(["antimagic"]), "Не нанят")
+	_publish_generated_wardrobe_job(campaign_seed)
 
 	_update_employee_statuses()
 	state_changed.emit()
@@ -1605,6 +1618,9 @@ func _save_to_path(path: String) -> Error:
 		"financial_ledger": financial_ledger,
 		"job_repair_states": job_repair_states,
 		"tutorial_state": tutorial_state,
+		"campaign_seed": campaign_seed,
+		"next_generated_job_index": next_generated_job_index,
+		"generated_jobs": generated_jobs,
 		"job_assignments": job_assignments,
 		"job_progress": job_progress,
 		"employee_progress": employee_progress,
@@ -1668,6 +1684,16 @@ func _load_from_path(path: String) -> Error:
 	var version := int(save_data.get("version", 0))
 	if version <= 0 or version > SAVE_VERSION:
 		return ERR_FILE_UNRECOGNIZED
+	_remove_generated_job_entries()
+	generated_jobs = {}
+	campaign_seed = int(save_data.get("campaign_seed", 0))
+	next_generated_job_index = int(save_data.get("next_generated_job_index", 0))
+	var loaded_generated_jobs: Variant = save_data.get("generated_jobs", {})
+	if loaded_generated_jobs is Dictionary:
+		for generated_id_value: Variant in loaded_generated_jobs:
+			var instance_value: Variant = (loaded_generated_jobs as Dictionary)[generated_id_value]
+			if instance_value is Dictionary:
+				_register_generated_job((instance_value as Dictionary).duplicate(true))
 
 	day = maxi(1, int(save_data.get("day", day)))
 	time_minutes = maxi(0, int(save_data.get("time_minutes", time_minutes)))
@@ -1845,12 +1871,61 @@ func _load_from_path(path: String) -> Error:
 
 	if version < 9 or financial_ledger.is_empty():
 		_rebuild_legacy_financial_ledger()
+	if version < 15 and generated_jobs.is_empty():
+		if campaign_seed == 0:
+			campaign_seed = hash([day, time_minutes, money, completed_job_ids])
+		_publish_generated_wardrobe_job(campaign_seed)
+		if completed_job_ids.has("lava_leak"):
+			_update_parallel_job_unlocks()
 
 	_complete_finished_training()
 	_update_employee_statuses()
 	_evaluate_dismissal()
 	state_changed.emit()
 	return OK
+
+
+func _publish_generated_wardrobe_job(seed_value: int) -> bool:
+	if generated_jobs.has(String(GeneratedJobGeneratorScript.JOB_ID)):
+		return true
+	var instance: Dictionary = GeneratedJobGeneratorScript.generate(seed_value, _available_ability_ids())
+	if instance.is_empty():
+		return false
+	_register_generated_job(instance)
+	next_generated_job_index += 1
+	return true
+
+
+func _register_generated_job(instance: Dictionary) -> void:
+	var instance_id := StringName(str(instance.get("instance_id", GeneratedJobGeneratorScript.JOB_ID)))
+	if instance_id.is_empty():
+		return
+	generated_jobs[String(instance_id)] = instance.duplicate(true)
+	var job: Dictionary = GeneratedJobGeneratorScript.materialize_job(instance)
+	if not job.is_empty():
+		jobs[instance_id] = job
+
+
+func _remove_generated_job_entries() -> void:
+	var ids_to_remove: Array[StringName] = []
+	for job_id: StringName in jobs:
+		if bool((jobs[job_id] as Dictionary).get("generated", false)):
+			ids_to_remove.append(job_id)
+	for job_id: StringName in ids_to_remove:
+		jobs.erase(job_id)
+
+
+func _available_ability_ids() -> PackedStringArray:
+	var result := PackedStringArray()
+	for employee_id: StringName in employees:
+		var employee: Dictionary = employees[employee_id]
+		if not bool(employee.get("available", false)):
+			continue
+		for ability_value: Variant in employee.get("abilities", PackedStringArray()):
+			var ability := str(ability_value)
+			if not result.has(ability):
+				result.append(ability)
+	return result
 
 
 func _record_financial_event(kind: StringName, amount: int, title: String, details: Dictionary = {}) -> void:
@@ -1958,6 +2033,7 @@ func _update_parallel_job_unlocks() -> void:
 	var source_day := _job_completed_day(&"lava_leak")
 	var jobs_are_due := source_day > 0 and day > source_day
 	_set_job_unlocked(&"walking_wardrobe", jobs_are_due)
+	_set_job_unlocked(GeneratedJobGeneratorScript.JOB_ID, jobs_are_due)
 	var frozen_bath_delays_portal := _has_follow_up(&"frozen_bath") and day <= source_day + 1
 	_set_job_unlocked(&"portal_mirror", jobs_are_due and not frozen_bath_delays_portal)
 

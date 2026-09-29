@@ -52,7 +52,10 @@ var long_action_pose: StringName = &""
 
 
 func _ready() -> void:
-	if game_state.active_job_id != &"walking_wardrobe":
+	var active_job: Dictionary = game_state.get_active_job()
+	var is_manual_wardrobe: bool = game_state.active_job_id == &"walking_wardrobe"
+	var is_generated_wardrobe: bool = StringName(str(active_job.get("simulation_type", ""))) == &"generated_wardrobe"
+	if not is_manual_wardrobe and not is_generated_wardrobe:
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 		return
 	simulation = WardrobeSimulationScript.new()
@@ -63,7 +66,10 @@ func _ready() -> void:
 	add_child(wardrobe_steps_player)
 	var saved_state: Dictionary = game_state.get_job_repair_state(game_state.active_job_id)
 	if saved_state.is_empty():
-		simulation.initialize_variant(hash("%s:%s" % [game_state.day, game_state.active_job_id]))
+		if is_generated_wardrobe:
+			simulation.initialize_generated(active_job.get("generated_instance", {}))
+		else:
+			simulation.initialize_variant(hash("%s:%s" % [game_state.day, game_state.active_job_id]))
 	else:
 		simulation.load_state(saved_state)
 	# Начальное положение берётся непосредственно из сохранённого узла Wardrobe.
@@ -235,20 +241,26 @@ func _on_tool_selected(tool_id: StringName) -> void:
 	if tool_id == &"physical_move":
 		tool_bar.show_intents("Силовая работа", [
 			{"id": &"hold", "label": "Отпустить" if bool(simulation.world_object.get("held", false)) else "Удерживать"},
-			{"id": &"move_left", "label": "Поставить к левой стене"},
-			{"id": &"move_kitchen", "label": "Поставить в проход на кухню"},
+			{"id": &"move_left", "label": _move_label(&"left_wall")},
+			{"id": &"move_kitchen", "label": _move_label(&"kitchen_passage")},
 			{"id": &"break_legs", "label": "Сломать ножки"},
 		])
 		return
 	if tool_id == &"telekinesis":
 		tool_bar.show_intents("Куда переместить?", [
-			{"id": &"move_left", "label": "К левой стене"},
-			{"id": &"move_kitchen", "label": "В проход на кухню"},
+			{"id": &"move_left", "label": _move_label(&"left_wall")},
+			{"id": &"move_kitchen", "label": _move_label(&"kitchen_passage")},
 		])
 		return
 	tool_bar.visible = false
 	pending_intent = &""
 	_request_action()
+
+
+func _move_label(zone_id: StringName) -> String:
+	var requested: bool = zone_id == simulation.world_object["requested_zone"]
+	var label := "К левой стене" if zone_id == &"left_wall" else "В проход на кухню"
+	return "%s %s" % [tr(label), tr("(просьба хозяйки)")] if requested else tr(label)
 
 
 func _on_employee_selected(employee_id: StringName) -> void:

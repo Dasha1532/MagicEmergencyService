@@ -55,6 +55,17 @@ func initialize_variant(_seed_value: int) -> void:
 		world_object["held"] = false
 
 
+func initialize_generated(instance: Dictionary) -> void:
+	var initial_state: Variant = instance.get("initial_state", {})
+	if initial_state is Dictionary:
+		world_object.merge((initial_state as Dictionary).duplicate(true), true)
+	for key: String in ["definition_id", "position_zone", "requested_zone", "visual_state", "contents_type", "size_class"]:
+		world_object[key] = StringName(str(world_object.get(key, "")))
+	world_object["generated_instance_id"] = str(instance.get("instance_id", ""))
+	world_object["generator_version"] = int(instance.get("generator_version", 1))
+	_sync_visual_state()
+
+
 func load_state(saved_state: Dictionary) -> void:
 	if saved_state.is_empty():
 		return
@@ -69,7 +80,8 @@ func load_state(saved_state: Dictionary) -> void:
 	if world_object["requested_zone"] == &"center_wall":
 		world_object["requested_zone"] = &"kitchen_passage"
 	# Актуальный рисунок шкафа показывает посуду; старые сохранения безопасно мигрируют.
-	world_object["requested_zone"] = &"left_wall"
+	if world_object["requested_zone"].is_empty():
+		world_object["requested_zone"] = &"left_wall"
 	world_object["contents_type"] = &"dishes"
 	action_log.clear()
 	var saved_actions: Variant = saved_state.get("action_log", [])
@@ -110,7 +122,7 @@ func advance_burning_until(current_minutes: int, spread_minutes: int) -> Array[D
 
 
 func get_resident_request() -> String:
-	return "Этот проклятый шкаф снова разгуливает по комнате! Остановите его и поставьте у левой стены. Сделайте аккуратно, там хрупкая посуда."
+	return tr("Этот проклятый шкаф снова разгуливает по комнате! Остановите его и поставьте %s. Сделайте аккуратно, там хрупкая посуда.") % tr(_requested_zone_phrase())
 
 
 func get_resident_message() -> String:
@@ -147,7 +159,7 @@ func get_employee_reaction(employee_id: StringName, action_id: StringName, inten
 			&"move_kitchen": "В проход так в проход. Только потом не спрашивайте, почему на кухню приходится ходить через шкаф.",
 		}.get(intent, "")
 	if employee_id == &"boris" and action_id == &"anchor" and world_object["position_zone"] != world_object["requested_zone"]:
-		return "Шкаф стоит не у стены. К воздуху его не прикрутишь — сначала поставьте к левой стене."
+		return "Шкаф стоит не там, где просила хозяйка. Сначала поставьте его %s." % _requested_zone_phrase()
 	if employee_id == &"boris" and action_id == &"repair" and int(world_object["mobility"]) > 0 and not bool(world_object["destroyed"]):
 		return "Ремонтировать здесь нечего: ножки целы, корпус исправен. Шкаф ходит из-за чар, а не из-за поломки."
 	return {
@@ -372,7 +384,7 @@ func get_completion_result() -> Dictionary:
 		summary += tr(" Корпус шкафа обгорел, на нём остались следы потушенного пожара.")
 	if not correct_place:
 		summary += tr(" Шкаф оставлен не там, где просила хозяйка.")
-	var review := "Наконец-то шкаф стоит у левой стены и ведёт себя как приличная мебель. Посуда тоже цела — я уже отвыкла от такой роскоши."
+	var review := tr("Наконец-то шкаф стоит %s и ведёт себя как приличная мебель. Посуда тоже цела — я уже отвыкла от такой роскоши.") % tr(_requested_zone_phrase())
 	if contents_damage > 0:
 		review = "Шкаф больше не гуляет, зато посуда внутри пережила небольшое землетрясение. В следующий раз предупреждайте чашки заранее."
 	elif damage > 0:
@@ -400,6 +412,10 @@ func _completion_consequences(damage: int, contents_damage: int, correct_place: 
 	if consequences.is_empty():
 		consequences.append("Дополнительного ущерба не зафиксировано.")
 	return consequences
+
+
+func _requested_zone_phrase() -> String:
+	return "у левой стены" if world_object["requested_zone"] == &"left_wall" else "у прохода на кухню"
 
 
 func _apply_physical_intent(intent: StringName) -> Dictionary:

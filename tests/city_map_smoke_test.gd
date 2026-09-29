@@ -53,11 +53,11 @@ func _run() -> void:
 	_check(not marker.visible and not selesta_marker.visible, "После вводной заявки день остаётся без новых вызовов")
 	_check(game_state.can_finish_day(), "После крана рабочий день можно завершить")
 	_check(game_state.try_finish_day(), "Завершение дня открывает следующее утро")
-	_check("Активных заявок: 1" in marker.text, "На следующий день открыта заявка со шкафом")
+	_check("Активных заявок: 2" in marker.text, "На следующий день открыты ручная и генеративная заявки со шкафом")
 	marker.pressed.emit()
 	await process_frame
 	var current_job_list := city_map.get_node("HousePanel/JobScroll/JobList")
-	_check(current_job_list.get_child_count() == 1 and "Шкаф" in current_job_list.get_child(0).text, "Список содержит только доступную заявку")
+	_check(current_job_list.get_child_count() == 2 and "Шкаф" in current_job_list.get_child(0).text and "шкаф" in current_job_list.get_child(1).text.to_lower(), "Список содержит обе доступные заявки со шкафом")
 	_check("Активных заявок: 1" in selesta_marker.text, "Адрес показывает заявку с порталом")
 	_check(selesta_marker.visible, "Адрес появляется после открытия заявки")
 	_check("Селест" not in selesta_marker.text, "Второй маркер также подписан только адресом")

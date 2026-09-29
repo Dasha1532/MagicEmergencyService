@@ -1548,6 +1548,48 @@ msgstr "Finally, the wardrobe is against the left wall and behaves like decent f
 msgid "Шкаф наконец стоит на месте. Но зачем было сначала поджигать его? Обгоревший корпус сам себя не восстановит."
 msgstr "The wardrobe is finally staying put. But why did you set it on fire first? That scorched body will not repair itself."
 
+msgid "Шкаф снова разгуливает по квартире"
+msgstr "The wardrobe is roaming the apartment again"
+
+msgid "Беспокойный шкаф"
+msgstr "Restless wardrobe"
+
+msgid "Остановить шкаф и поставить к левой стене"
+msgstr "Stop the wardrobe and place it against the left wall"
+
+msgid "Остановить шкаф и поставить к проходу на кухню"
+msgstr "Stop the wardrobe and place it by the kitchen passage"
+
+msgid "Знакомый зачарованный шкаф снова ожил, загремел посудой и преградил вход. Хозяйка просит аккуратно поставить его к левой стене."
+msgstr "The familiar enchanted wardrobe has come alive again, rattled the dishes, and blocked the entrance. The owner asks that it be placed carefully against the left wall."
+
+msgid "Знакомый зачарованный шкаф снова ожил, загремел посудой и преградил вход. Хозяйка просит аккуратно поставить его к проходу на кухню."
+msgstr "The familiar enchanted wardrobe has come alive again, rattled the dishes, and blocked the entrance. The owner asks that it be placed carefully by the kitchen passage."
+
+msgid "Бытовая магия, тяжёлая мебель"
+msgstr "Household magic, heavy furniture"
+
+msgid "Этот проклятый шкаф снова разгуливает по комнате! Остановите его и поставьте %s. Сделайте аккуратно, там хрупкая посуда."
+msgstr "That cursed wardrobe is roaming the room again! Stop it and place it %s. Be careful: there are fragile dishes inside."
+
+msgid "у левой стены"
+msgstr "against the left wall"
+
+msgid "у прохода на кухню"
+msgstr "by the kitchen passage"
+
+msgid "Наконец-то шкаф стоит %s и ведёт себя как приличная мебель. Посуда тоже цела — я уже отвыкла от такой роскоши."
+msgstr "At last the wardrobe is standing %s and behaving like respectable furniture. The dishes are intact too — I had almost forgotten such luxury."
+
+msgid "К левой стене"
+msgstr "Against the left wall"
+
+msgid "В проход на кухню"
+msgstr "By the kitchen passage"
+
+msgid "(просьба хозяйки)"
+msgstr "(owner's request)"
+
 msgid "НАНЯТЬ: %d МОНЕТ"
 msgstr "HIRE: %d COINS"
 

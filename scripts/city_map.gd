@@ -14,7 +14,7 @@ const COLOR_MUTED := Color(0.70, 0.63, 0.52)
 var HOUSE_DEFINITIONS: Dictionary = {
 	&"ragnar_eleonora": {
 		"address": "Старый квартал, 5",
-		"job_ids": PackedStringArray(["lava_leak", "walking_wardrobe"]),
+		"job_ids": PackedStringArray(["lava_leak", "walking_wardrobe", "generated_wardrobe_1"]),
 	},
 	&"selesta": {
 		"address": "Верхний город, 12",
