@@ -111,6 +111,9 @@ msgstr "The mirror frame is deformed by heat."
 msgid " Хрупкая посуда внутри шкафа повреждена."
 msgstr "The fragile dishes inside the wardrobe are damaged."
 
+msgid " Корпус шкафа обгорел, на нём остались следы потушенного пожара."
+msgstr "The wardrobe body is scorched and still bears traces of the extinguished fire."
+
 msgid " Шкаф оставлен не там, где просила хозяйка."
 msgstr "The closet was not left where the owner asked."
 
@@ -1541,6 +1544,9 @@ msgstr "It's finally getting warmer. But the portal is still open."
 
 msgid "Наконец-то шкаф стоит у левой стены и ведёт себя как приличная мебель. Посуда тоже цела — я уже отвыкла от такой роскоши."
 msgstr "Finally, the wardrobe is against the left wall and behaves like decent furniture. The dishes are also intact - I’m already unaccustomed to such luxury."
+
+msgid "Шкаф наконец стоит на месте. Но зачем было сначала поджигать его? Обгоревший корпус сам себя не восстановит."
+msgstr "The wardrobe is finally staying put. But why did you set it on fire first? That scorched body will not repair itself."
 
 msgid "НАНЯТЬ: %d МОНЕТ"
 msgstr "HIRE: %d COINS"
