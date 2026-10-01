@@ -9,7 +9,9 @@ signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 20
+const SAVE_VERSION: int = 22
+const RESTORATION_PROFILE := preload("res://data/restoration/faucet.tres")
+const RESTORATION_REFUSAL_REVIEW := "Заменить уничтоженный кран отказались. Придётся искать другую службу."
 const LEGACY_SAVE_PATH: String = "user://savegame.json"
 const AUTOSAVE_PATH: String = "user://autosave.json"
 const GENERATOR_HISTORY_PATH: String = "user://generator_history.cfg"
@@ -228,6 +230,7 @@ func get_action_duration(action_id: StringName, intent: StringName = &"") -> int
 var employees: Dictionary = {
 	&"liliya": {
 		"name": "Лилия Морозова",
+		"access_refusal_phrase": "Я просил больше не присылать эту магичку",
 		"role": "Маг-практик",
 		"portrait": "res://assets/portraits/employees/liliya.png",
 		"actor_neutral_pose": "res://assets/characters/employees/liliya/full_body.png",
@@ -257,6 +260,7 @@ var employees: Dictionary = {
 	},
 	&"grog": {
 		"name": "Грог Кувалда",
+		"access_refusal_phrase": "Я просил больше не присылать этого орка",
 		"role": "Орк-такелажник",
 		"portrait": "res://assets/portraits/employees/grog.png",
 		"actor_neutral_pose": "res://assets/characters/employees/grog/full_body.png",
@@ -678,6 +682,7 @@ func advance_day(days: int = 1) -> void:
 	_unlock_escaped_ghost_job_if_due()
 	_unlock_frozen_bath_job_if_due()
 	_publish_due_world_consequences()
+	_publish_due_restoration_jobs()
 	for employee_id: StringName in EMPLOYEE_ORDER:
 		var employee: Dictionary = employees[employee_id]
 		employee["arrival_until"] = 0
@@ -826,6 +831,20 @@ func is_job_available(job_id: StringName) -> bool:
 	return jobs.has(job_id) and bool(jobs[job_id].get("unlocked", false)) and not completed_job_ids.has(String(job_id))
 
 
+func is_employee_banned_for_job(employee_id: StringName, job_id: StringName) -> bool:
+	return get_employee_access_status_for_job(employee_id, job_id) == &"banned"
+
+
+func get_employee_access_status_for_job(employee_id: StringName, job_id: StringName) -> StringName:
+	if not jobs.has(job_id):
+		return &"allowed"
+	var job: Dictionary = jobs[job_id]
+	var generated_instance: Dictionary = job.get("generated_instance", {}) as Dictionary
+	var resident_id := str(generated_instance.get("resident_id", job.get("resident", "")))
+	var relation: Dictionary = world_memory.get_relation(resident_id, String(employee_id))
+	return StringName(str(relation.get("access_status", "allowed")))
+
+
 func get_tutorial_job_id() -> StringName:
 	return tutorial_job_id
 
@@ -853,6 +872,8 @@ func is_employee_returning(employee_id: StringName) -> bool:
 
 
 func can_employee_work_on_job(employee_id: StringName, job_id: StringName) -> bool:
+	if is_employee_banned_for_job(employee_id, job_id):
+		return false
 	if get_employee_job(employee_id) != job_id or not is_job_dispatched(job_id):
 		return false
 	if is_employee_injured(employee_id):
@@ -962,6 +983,7 @@ func advance_time(minutes: int, excluded_job_id: StringName = &"") -> PackedStri
 		var arrival_until := int(employees[employee_id].get("arrival_until", 0))
 		if arrival_until > previous_clock and arrival_until <= time_minutes:
 			employee_arrived = true
+	_process_resident_access()
 	_update_employee_statuses()
 	for job_id: StringName in jobs:
 		if job_id == excluded_job_id or not is_job_available(job_id):
@@ -1095,6 +1117,20 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 	if completed_job_ids.has(String(completed_id)):
 		return false
 	var job: Dictionary = jobs[completed_id]
+	if bool(job.get("restoration", false)) and not bool(result.get("restoration_refused", false)):
+		var repair_state := get_job_repair_state(job_id)
+		var restoration_check: RefCounted = load("res://scripts/repair_simulation.gd").new()
+		restoration_check.initialize_from_job(job)
+		restoration_check.load_state(repair_state)
+		if repair_state.is_empty() or not restoration_check.is_resolved():
+			return false
+		result = result.duplicate(true)
+		result["reputation_change"] = _settle_restoration(job)
+		result["reward_adjustment"] = 0
+		result["compensation_cost"] = 0
+		result["forfeit_payment"] = not _restoration_is_paid(job)
+		result["expense_reimbursement"] = int(SUPPLY_ITEMS[&"replacement_faucet"]["price"]) if _restoration_is_paid(job) else 0
+		job["base_reward"] = int(RESTORATION_PROFILE.base_properties["installation_fee"]) if _restoration_is_paid(job) else 0
 	var base_reward: int = int(job.get("base_reward", 0))
 	var overdue: bool = bool(job.get("overdue", false))
 	var reward_adjustment: int = int(result.get("reward_adjustment", 0)) - (OVERDUE_PAYMENT_PENALTY if overdue else 0)
@@ -1116,6 +1152,17 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 	money += reward
 	var reputation_change: int = int(result.get("reputation_change", 0)) - (1 if overdue else 0)
 	reputation = maxi(0, reputation + reputation_change)
+	var damage_employee_ids := PackedStringArray()
+	var action_events: Variant = result.get("actions", [])
+	if action_events is Array:
+		for action_event: Variant in action_events:
+			if not action_event is Dictionary:
+				continue
+			var action_dictionary: Dictionary = action_event
+			var action_result: Dictionary = action_dictionary.get("result", {}) as Dictionary
+			var responsible_employee_id := str(action_dictionary.get("employee_id", ""))
+			if bool(action_result.get("caused_damage", false)) and not responsible_employee_id.is_empty() and not damage_employee_ids.has(responsible_employee_id):
+				damage_employee_ids.append(responsible_employee_id)
 	completed_job_ids.append(String(completed_id))
 	job["assigned"] = PackedStringArray()
 	job["dispatched"] = false
@@ -1127,12 +1174,16 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 		"job_id": String(completed_id),
 		"title": str(job["title"]),
 		"resident": str(job["resident"]),
+		"resident_id": str((job.get("generated_instance", {}) as Dictionary).get("resident_id", job["resident"])),
+		"anomaly_id": str((job.get("generated_instance", {}) as Dictionary).get("anomaly_id", "")),
+		"object_instance_id": str((job.get("generated_instance", {}) as Dictionary).get("object_instance_id", "")),
+		"object_definition_id": str(job.get("object_definition_id", "")),
 		"reward": reward,
 		"base_reward": base_reward,
 		"reward_adjustment": reward_adjustment,
 		"expense_reimbursement": expense_reimbursement,
 		"payment_forfeited": payment_forfeited,
-		"maximum_payment": reward_adjustment == 0 and compensation == 0,
+		"maximum_payment": reward_adjustment == 0 and compensation == 0 and not payment_forfeited,
 		"compensation": 0,
 		"claim_amount": compensation,
 		"claim_status": "pending" if compensation > 0 else "none",
@@ -1143,6 +1194,12 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 		"completed_day": day,
 		"completed_time": time_minutes,
 		"crew": Array(crew_names),
+		"crew_ids": Array(assigned),
+		"damage_employee_ids": Array(damage_employee_ids),
+		"object_destroyed": bool(result.get("object_destroyed", false)),
+		"restoration": bool(job.get("restoration", false)),
+		"restoration_refused": bool(result.get("restoration_refused", false)),
+		"source_job_id": str(job.get("source_job_id", "")),
 		"summary": summary,
 		"review": str(result.get("review", "")),
 		"consequences": result.get("consequences", []),
@@ -1152,12 +1209,20 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 		"incident_message": str(result.get("incident_message", "")),
 		"report_acknowledged": false,
 	}
-	job_reports.append(completed_report.duplicate(true))
 	if job_repair_states.has(String(completed_id)):
 		world_memory.record_job_state(completed_id, job_repair_states[String(completed_id)], day, time_minutes)
 	var world_result := result.duplicate(true)
 	world_result["relationship_tone"] = "appreciative" if int(completed_report.get("rating", 0)) >= 4 and not overdue and compensation == 0 and not payment_forfeited else "neutral"
 	world_memory.finalize_job(completed_id, world_result, day, time_minutes)
+	var newly_banned_ids: Array[String] = world_memory.evaluate_crew_relations(completed_report)
+	var access_notes := PackedStringArray()
+	for employee_id: String in newly_banned_ids:
+		var banned_employee: Dictionary = employees.get(StringName(employee_id), {}) as Dictionary
+		access_notes.append(tr("Жилец запретил вход в квартиру сотруднику: %s.") % tr(str(banned_employee.get("name", employee_id))))
+	if not access_notes.is_empty():
+		completed_report["summary"] = summary + "\n\n" + "\n".join(access_notes)
+	completed_report["newly_banned_employee_ids"] = newly_banned_ids
+	job_reports.append(completed_report.duplicate(true))
 	var source_deferred_event_id := str(job.get("source_deferred_event_id", ""))
 	if not source_deferred_event_id.is_empty():
 		world_memory.set_event_status(source_deferred_event_id, "resolved", {"resolved_job_id": String(completed_id)})
@@ -1180,6 +1245,35 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 	state_changed.emit()
 	save_autosave()
 	return true
+
+
+func get_resident_greeting(job_id: StringName) -> String:
+	var current_job: Dictionary = jobs.get(job_id, {})
+	var history: Array[Dictionary] = []
+	for report_value: Variant in job_reports:
+		if report_value is Dictionary and str(report_value.get("resident", "")) == str(current_job.get("resident", "")):
+			history.append(report_value)
+	if history.is_empty():
+		return "Здравствуйте. Вот такая у меня неприятность."
+	var previous: Dictionary = history.back()
+	var source_job_id := str(current_job.get("source_job_id", ""))
+	if not source_job_id.is_empty():
+		for report: Dictionary in history:
+			if str(report.get("job_id", "")) == source_job_id:
+				previous = report
+	var damaged := int(previous.get("claim_amount", 0)) > 0 or int(previous.get("reward_adjustment", 0)) < 0
+	if damaged:
+		return "Здравствуйте. Надеюсь, в этот раз обойдётся без повреждений."
+	var successful := int(previous.get("rating", 0)) >= 4 and not bool(previous.get("overdue", false)) and not bool(previous.get("payment_forfeited", false))
+	if not successful:
+		return "Снова здравствуйте. У меня новая неприятность."
+	if bool(current_job.get("consequence", false)):
+		var source_anomaly := str(previous.get("anomaly_id", ""))
+		var current_anomaly := str((current_job.get("generated_instance", {}) as Dictionary).get("anomaly_id", ""))
+		var thanks: Dictionary = {"faucet_freeze": "Спасибо, что в прошлый раз убрали лёд.", "faucet_overheat": "Спасибо, что в прошлый раз охладили кран.", "lava_leak": "Спасибо, что в прошлый раз остановили лаву."}
+		var problems: Dictionary = {"faucet_freeze": "Теперь этот же кран начал покрываться льдом.", "faucet_overheat": "Теперь этот же кран начал сам нагреваться."}
+		return str(thanks.get(source_anomaly, "В прошлый раз вы помогли, спасибо.")) + " " + str(problems.get(current_anomaly, "Теперь с тем же объектом происходит что-то новое — посмотрите."))
+	return "Рад снова вас видеть. В прошлый раз вы здорово помогли."
 
 
 func dismiss_pending_job_report() -> void:
@@ -1747,6 +1841,7 @@ func _save_to_path(path: String) -> Error:
 			"unlocked": bool(jobs[job_id].get("unlocked", false)),
 			"dispatched": bool(jobs[job_id].get("dispatched", false)),
 			"pending_action": jobs[job_id].get("pending_action", {}),
+			"access_messages": jobs[job_id].get("access_messages", []),
 		}
 
 	var employee_progress: Dictionary = {}
@@ -1928,6 +2023,7 @@ func _load_from_path(path: String) -> Error:
 			job["unlocked"] = true
 		elif loaded_job_progress.has(String(job_id)):
 			var progress: Dictionary = loaded_job_progress[String(job_id)]
+			job["access_messages"] = progress.get("access_messages", [])
 			job["time_left"] = maxi(0, int(progress.get("time_left", job["time_left"])))
 			job["overdue"] = bool(progress.get("overdue", false)) or int(job["time_left"]) == 0
 			job["unlocked"] = bool(progress.get("unlocked", job["unlocked"]))
@@ -2075,6 +2171,7 @@ func _load_from_path(path: String) -> Error:
 	if version < 20:
 		_migrate_missing_faucet_consequences()
 	_publish_due_world_consequences()
+	_publish_due_restoration_jobs()
 
 	_complete_finished_training()
 	_update_employee_statuses()
@@ -2106,9 +2203,9 @@ func _publish_generated_tutorial_faucet_job(seed_value: int) -> bool:
 	if generated_jobs.has(String(job_id)):
 		return true
 	if last_generated_faucet_anomaly_id.is_empty():
-		var config := ConfigFile.new()
-		if config.load(GENERATOR_HISTORY_PATH) == OK:
-			last_generated_faucet_anomaly_id = StringName(str(config.get_value("generator", "last_faucet_anomaly_id", "")))
+		var history_reader := ConfigFile.new()
+		if history_reader.load(GENERATOR_HISTORY_PATH) == OK:
+			last_generated_faucet_anomaly_id = StringName(str(history_reader.get_value("generator", "last_faucet_anomaly_id", "")))
 	var excluded := PackedStringArray()
 	if not last_generated_faucet_anomaly_id.is_empty():
 		excluded.append(String(last_generated_faucet_anomaly_id))
@@ -2176,6 +2273,136 @@ func _register_generated_job(instance: Dictionary) -> void:
 	var job: Dictionary = GeneratedJobGeneratorScript.materialize_job(instance)
 	if not job.is_empty():
 		jobs[instance_id] = job
+
+
+func _restoration_source_report(job: Dictionary) -> Dictionary:
+	for report: Dictionary in job_reports:
+		if str(report.get("job_id", "")) == str(job.get("source_job_id", "")):
+			return report
+	return {}
+
+
+func _restoration_is_paid(job: Dictionary) -> bool:
+	return str(_restoration_source_report(job).get("claim_status", "none")) in ["paid", "paid_after_denial"]
+
+
+func get_restoration_payment_text(job_id: StringName) -> String:
+	if not jobs.has(job_id) or not bool(jobs[job_id].get("restoration", false)):
+		return ""
+	if _restoration_is_paid(jobs[job_id]):
+		return "Оплата: %d монет за кран + %d за установку. Замена восстановит потерянную репутацию." % [int(SUPPLY_ITEMS[&"replacement_faucet"]["price"]), int(RESTORATION_PROFILE.base_properties["installation_fee"])]
+	return "Без оплаты. Новый кран — за счёт службы. Замена закроет претензию и восстановит потерянную репутацию."
+
+
+func _settle_restoration(job: Dictionary) -> int:
+	var source := _restoration_source_report(job)
+	if source.is_empty() or bool(source.get("property_restored", false)):
+		return 0
+	var restored := maxi(0, -int(source.get("reputation_change", 0)))
+	source["property_restored"] = true
+	source["restoration_reputation_restored"] = restored
+	source["claim_reputation_penalty"] = 0
+	if not _restoration_is_paid(job):
+		source["claim_status"] = "settled_by_restoration"
+	if str(pending_job_report.get("job_id", "")) == str(source.get("job_id", "")):
+		pending_job_report = source.duplicate(true)
+	return restored
+
+
+func _publish_due_restoration_jobs() -> void:
+	var profile: Dictionary = RESTORATION_PROFILE.base_properties
+	for report: Dictionary in job_reports:
+		if not bool(report.get("object_destroyed", false)) or bool(report.get("restoration", false)) or bool(report.get("property_restored", false)):
+			continue
+		var source_id := str(report.get("job_id", ""))
+		var source_instance: Dictionary = generated_jobs.get(source_id, {}) as Dictionary
+		if str(report.get("object_definition_id", source_instance.get("object_definition_id", ""))) != str(profile["target_definition_id"]):
+			continue
+		if day < int(report.get("completed_day", day)) + int(profile["delay_days"]):
+			continue
+		var instance_id := source_id + "_restoration"
+		if generated_jobs.has(instance_id):
+			continue
+		var initial_state: Dictionary = (profile["initial_state"] as Dictionary).duplicate(true)
+		initial_state["instance_id"] = str(report.get("object_instance_id", source_instance.get("object_instance_id", "old_quarter_5.bathroom.lava_faucet")))
+		var remembered_object: Dictionary = world_memory.objects.get(str(initial_state["instance_id"]), {}) as Dictionary
+		initial_state["incarnation"] = int((remembered_object.get("properties", {}) as Dictionary).get("incarnation", 1))
+		var instance := {
+			"instance_id": instance_id, "restoration": true, "source_job_id": source_id,
+			"resident_id": str(report.get("resident_id", source_instance.get("resident_id", "ragnar"))),
+			"room_id": str(source_instance.get("room_id", "ragnar_bathroom")),
+			"object_definition_id": str(profile["target_definition_id"]),
+			"object_instance_id": initial_state["instance_id"], "simulation_type": "lava_faucet",
+			"scene_path": RESTORATION_PROFILE.scene_path, "initial_state": initial_state,
+			"urgency": "Обычная", "initial_time": int(profile["initial_time"]), "base_reward": 0,
+			"presentation": {"title": RESTORATION_PROFILE.display_name, "card_title": RESTORATION_PROFILE.display_name,
+				"objective": "Установить новый кран", "danger": "Кран уничтожен, нужна замена",
+				"description": "Требуется купить запасной кран и установить его силами Бориса.",
+				"resident_request": "Нужно установить новый кран вместо уничтоженного."},
+		}
+		_register_generated_job(instance)
+		_set_job_unlocked(StringName(instance_id), true)
+
+
+func refuse_restoration_job(job_id: StringName) -> bool:
+	if not is_job_available(job_id) or not bool(jobs[job_id].get("restoration", false)) or not get_pending_job_action(job_id).is_empty():
+		return false
+	var refused_job: Dictionary = jobs[job_id]
+	refused_job["base_reward"] = 0
+	refused_job["overdue"] = false
+	jobs[job_id] = refused_job
+	var result := {"restoration_refused": true, "forfeit_payment": true,
+		"review": RESTORATION_REFUSAL_REVIEW,
+		"reputation_change": -int(RESTORATION_PROFILE.base_properties["refusal_penalty"]),
+		"summary": "Служба отказалась от восстановления имущества. Невыплаченная претензия остаётся открытой."}
+	return complete_job(job_id, result)
+
+
+func _process_resident_access() -> void:
+	for job_id: StringName in jobs:
+		if not is_job_available(job_id) or not is_job_dispatched(job_id):
+			continue
+		var job: Dictionary = jobs[job_id]
+		var kept := PackedStringArray()
+		var messages: Array = job.get("access_messages", [])
+		for employee_id: String in job["assigned"]:
+			var employee: Dictionary = employees[StringName(employee_id)]
+			if int(employee.get("arrival_until", 0)) > time_minutes or not is_employee_banned_for_job(StringName(employee_id), job_id):
+				kept.append(employee_id)
+				continue
+			var phrase := str(employee.get("access_refusal_phrase", "Я просил больше не присылать этого сотрудника"))
+			messages.append({"phrase": phrase, "employee_id": employee_id, "message": "Хозяин не впустил сотрудника: %s. Сотрудник возвращается в офис." % str(employee["name"])})
+			employee["arrival_until"] = 0
+			employee["return_until"] = time_minutes + TRAVEL_TIME_MINUTES
+			employees[StringName(employee_id)] = employee
+		job["assigned"] = kept
+		job["access_messages"] = messages
+		if kept.is_empty():
+			job["dispatched"] = false
+		jobs[job_id] = job
+
+
+func take_access_messages(job_id: StringName) -> PackedStringArray:
+	var messages := PackedStringArray()
+	for event: Dictionary in take_access_events(job_id):
+		messages.append("%s: «%s».\n%s" % [str(jobs[job_id]["resident"]), str(event["phrase"]), str(event["message"])])
+	return messages
+
+
+func take_access_events(job_id: StringName) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
+	if not jobs.has(job_id):
+		return events
+	for value: Variant in jobs[job_id].get("access_messages", []):
+		if value is Dictionary:
+			events.append((value as Dictionary).duplicate(true))
+		else:
+			# Совместимость с сообщениями, сохранёнными до разделения реплики и уведомления.
+			var text_value := str(value)
+			var phrase := text_value.get_slice("\n", 0).trim_prefix(str(jobs[job_id]["resident"]) + ": «").trim_suffix("».")
+			events.append({"phrase": phrase, "message": text_value.get_slice("\n", 1)})
+	jobs[job_id]["access_messages"] = []
+	return events
 
 
 func _publish_due_world_consequences() -> void:

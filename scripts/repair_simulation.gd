@@ -341,6 +341,8 @@ func _pick_random_phrase(options: PackedStringArray) -> String:
 
 
 func apply_action(employee_id: StringName, action_id: StringName, employee_data: Dictionary = {}) -> Dictionary:
+	var damage_before := int(world_object.get("damage", 0))
+	var destruction_before := _is_object_destroyed()
 	var applied: bool = false
 	var message: String = "Это действие не меняет состояние крана."
 	var extra: Dictionary = {}
@@ -415,6 +417,7 @@ func apply_action(employee_id: StringName, action_id: StringName, employee_data:
 		"resolved": is_resolved(),
 	}
 	result.merge(extra, true)
+	result["caused_damage"] = applied and (int(world_object.get("damage", 0)) > damage_before or (not destruction_before and _is_object_destroyed()))
 	action_log.append({
 		"employee_id": String(employee_id),
 		"action_id": String(action_id),
@@ -423,7 +426,15 @@ func apply_action(employee_id: StringName, action_id: StringName, employee_data:
 	return result
 
 
+func _is_object_destroyed() -> bool:
+	return bool(world_object.get("broken", false)) or bool(world_object.get("valve_broken", false)) or bool(world_object.get("destroyed", false)) or _tags().has("melted") or _tags().has("destroyed") or _tags().has("broken")
+
+
 func can_begin_action(action_id: StringName, employee_data: Dictionary = {}) -> bool:
+	if action_id == &"repair" and _is_object_destroyed():
+		return false
+	if action_id == &"turn_valve" and _is_object_destroyed():
+		return false
 	if action_requires_heat_contact(action_id) and _requires_heat_protection() and not _has_contact_heat_protection(employee_data):
 		return false
 	if action_id == &"replace_faucet" and _has_active_replacement_hazard():
@@ -436,7 +447,7 @@ func can_begin_action(action_id: StringName, employee_data: Dictionary = {}) -> 
 
 
 func can_replace_faucet() -> bool:
-	return bool(world_object.get("broken", false)) or _tags().has("melted")
+	return _is_object_destroyed()
 
 
 func _has_active_replacement_hazard() -> bool:
@@ -455,7 +466,7 @@ func action_requires_heat_contact(action_id: StringName) -> bool:
 
 
 func can_employee_start_action(action_id: StringName, employee_data: Dictionary) -> bool:
-	return not (action_requires_heat_contact(action_id) and _requires_heat_protection() and not _has_contact_heat_protection(employee_data))
+	return can_begin_action(action_id, employee_data)
 
 
 func can_install_temperature_regulator() -> bool:
@@ -535,6 +546,7 @@ func _replace_faucet() -> Dictionary:
 			return {"applied": false, "message": "Сначала устраните источник холода и отогрейте кран. После этого Борис сможет приступить к замене."}
 		return {"applied": false, "message": "Сначала устраните активную опасность. После этого Борис сможет приступить к замене."}
 	world_object["broken"] = false
+	world_object["destroyed"] = false
 	world_object["replaced"] = true
 	world_object["incarnation"] = int(world_object.get("incarnation", 1)) + 1
 	world_object["valve_broken"] = false
@@ -555,6 +567,7 @@ func _replace_faucet() -> Dictionary:
 	world_object["scorched"] = false
 	world_object["visual_state"] = &"repaired"
 	_remove_tag("broken")
+	_remove_tag("destroyed")
 	_remove_tag("melted")
 	_add_tag("repaired")
 	return {"applied": true, "message": "Борис снял уничтоженный кран и установил новый. Соединения проверены, вентиль закрыт."}
@@ -671,8 +684,8 @@ func _diagnose_faucet() -> String:
 
 
 func _apply_technical_repair() -> Dictionary:
-	if _tags().has("melted"):
-		return {"applied": false, "message": "Борис осмотрел расплавленный кран: ремонтировать уже нечего, требуется замена."}
+	if _is_object_destroyed():
+		return {"applied": false, "message": "Корпус крана расплавлен. Нужна полная замена, полевой ремонт невозможен." if _tags().has("melted") else "Корпус и вентиль механически сломаны. Обычный ремонт не поможет — требуется полная замена крана."}
 	if _tags().has("lava_flowing"):
 		return {"applied": false, "message": "Борис не стал прикасаться к крану: сначала нужно остановить поток лавы."}
 	if int(world_object["temperature"]) >= OVERHEAT_THRESHOLD:
@@ -688,6 +701,8 @@ func _apply_technical_repair() -> Dictionary:
 
 
 func is_resolved() -> bool:
+	if bool(world_object.get("restoration_required", false)) and (not bool(world_object.get("replaced", false)) or _is_object_destroyed()):
+		return false
 	if bool(world_object.get("broken", false)) or bool(world_object.get("valve_broken", false)):
 		return false
 	if _tags().has("melted"):
@@ -709,6 +724,8 @@ func is_resolved() -> bool:
 
 
 func get_completion_result(source_job_id: StringName = &"lava_leak") -> Dictionary:
+	if bool(world_object.get("restoration_required", false)) and bool(world_object.get("replaced", false)):
+		return {"summary": "Уничтоженный кран заменён новым. Имущество восстановлено.", "reputation_change": 0, "actions": action_log.duplicate(true)}
 	if _tags().has("melted"):
 		var melted_summary := "Кран полностью расплавлен и требует замены. Оплаты не будет; стоимость оборудования предъявлена службе как претензия."
 		if _incident_involved_lava():
@@ -717,6 +734,7 @@ func get_completion_result(source_job_id: StringName = &"lava_leak") -> Dictiona
 			"reward_adjustment": -500,
 			"forfeit_payment": true,
 			"compensation_cost": int(world_object["replacement_value"]),
+			"object_destroyed": true,
 			"reputation_change": -6,
 			"summary": melted_summary,
 			"review": "От крана остался оплавленный ком металла. В следующий раз сразу скажите, что вместо ремонта оказываете услуги по сносу.",

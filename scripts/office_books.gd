@@ -182,6 +182,8 @@ func _render_financial_event(event: Dictionary) -> void:
 			detail_body.text += tr("\nПретензия на %d монет отклонена; списания не было") % claim_amount
 		elif claim_status in ["paid", "paid_after_denial"] and claim_amount > 0:
 			detail_body.text += tr("\nКомпенсация проведена отдельной операцией: %d монет") % claim_amount
+		elif claim_status == "settled_by_restoration":
+			detail_body.text += tr("\nПретензия закрыта восстановлением имущества; денежной выплаты не было.")
 	if bool(event.get("legacy", false)):
 		detail_body.text += tr("\n\nЗапись восстановлена из сохранения предыдущей версии.")
 
@@ -204,6 +206,8 @@ func _render_review(report: Dictionary) -> void:
 
 
 func _review_text(report: Dictionary) -> String:
+	if bool(report.get("restoration_refused", false)):
+		return tr(game_state.RESTORATION_REFUSAL_REVIEW)
 	var stored_review := str(report.get("review", "")).strip_edges()
 	if not stored_review.is_empty():
 		return LocalizationHelperScript.translate_saved_text(stored_review)
@@ -251,6 +255,8 @@ func _render_archive_report(report: Dictionary) -> void:
 	elif claim_status == "paid_after_denial":
 		text += tr("\nКомпенсация: %d монет") % int(report.get("compensation", 0))
 		text += tr("\nРешение по претензии: выплачено после первоначального отказа")
+	elif claim_status == "settled_by_restoration":
+		text += tr("\nПретензия закрыта: имущество восстановлено за счёт службы.")
 	else:
 		text += tr("\nКомпенсация: не требуется")
 	text += tr("\n\nПОСЛЕДСТВИЯ")
@@ -270,6 +276,8 @@ func _report_consequences(report: Dictionary) -> PackedStringArray:
 	if bool(report.get("overdue", false)):
 		result.append(tr("Заявка завершена после истечения срока."))
 	match str(report.get("claim_status", "none")):
+		"settled_by_restoration":
+			result.append(tr("Имущество восстановлено за счёт службы. Претензия закрыта."))
 		"paid":
 			result.append(tr("Претензия жильца удовлетворена: выплачено %d монет.") % int(report.get("compensation", 0)))
 		"paid_after_denial":
@@ -296,6 +304,8 @@ func _report_consequences(report: Dictionary) -> PackedStringArray:
 
 func _claim_status_text(report: Dictionary) -> String:
 	match str(report.get("claim_status", "none")):
+		"settled_by_restoration":
+			return "закрыта восстановлением имущества"
 		"paid":
 			return tr("выплачено: %d") % int(report.get("compensation", 0))
 		"paid_after_denial":

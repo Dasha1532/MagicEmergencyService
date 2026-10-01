@@ -30,6 +30,12 @@ var detail_title: Label
 var detail_body: Label
 var detail_badge: Label
 var detail_more_button: Button
+var restoration_payment_label: Label
+var restoration_refuse_button: Button
+var restoration_refuse_dialog: Control
+var access_notice_dialog: Control
+var access_notice_body: Label
+var restoration_refuse_job_id: StringName = &""
 var detail_expanded_panel: Panel
 var detail_expanded_title: Label
 var detail_expanded_body: Label
@@ -252,6 +258,20 @@ func _build_detail_panel() -> void:
 	detail_more_button.add_theme_font_size_override("font_size", 13)
 	detail_more_button.pressed.connect(_show_expanded_job_details)
 	panel.add_child(detail_more_button)
+	restoration_payment_label = _label("", 16, COLOR_GOLD)
+	restoration_payment_label.position = Vector2(22, 252)
+	restoration_payment_label.size = Vector2(371, 86)
+	restoration_payment_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(restoration_payment_label)
+	restoration_refuse_button = _button("ОТКАЗАТЬСЯ", Vector2(182, 210), Vector2(211, 34))
+	restoration_refuse_button.add_theme_font_size_override("font_size", 13)
+	restoration_refuse_button.pressed.connect(_confirm_restoration_refusal)
+	panel.add_child(restoration_refuse_button)
+	var refusal_ui := _build_notice_overlay("ОТКАЗ ОТ ЗАЯВКИ", "Отказ снизит репутацию на 2. Невыплаченная претензия останется открытой.\n\nЗаявка будет закрыта и не появится повторно.", "ОТКАЗАТЬСЯ", "ВЕРНУТЬСЯ", _refuse_restoration)
+	restoration_refuse_dialog = refusal_ui["overlay"]
+	var access_ui := _build_notice_overlay("ЖИЛЕЦ НЕ ВПУСТИЛ СОТРУДНИКА", "", "ПОНЯТНО", "", Callable())
+	access_notice_dialog = access_ui["overlay"]
+	access_notice_body = access_ui["body"]
 
 	assignment_label = _label("", 16, COLOR_GOLD)
 	assignment_label.position = Vector2(22, 258)
@@ -296,6 +316,49 @@ func _build_detail_panel() -> void:
 	var close_details_button := _button("СКРЫТЬ  ▴", Vector2(22, 384), Vector2(371, 52))
 	close_details_button.pressed.connect(func() -> void: detail_expanded_panel.visible = false)
 	detail_expanded_panel.add_child(close_details_button)
+
+
+func _build_notice_overlay(title_text: String, body_text: String, confirm_text: String, cancel_text: String, on_confirm: Callable) -> Dictionary:
+	var overlay := Control.new()
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.visible = false
+	overlay.z_index = 220
+	add_child(overlay)
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.015, 0.01, 0.008, 0.76)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_child(shade)
+	var panel := _panel(Vector2(410, 260), Vector2(780, 380), 14)
+	overlay.add_child(panel)
+	var title := _label(title_text, 24, COLOR_GOLD)
+	title.position = Vector2(38, 34)
+	title.size = Vector2(704, 42)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(title)
+	var body := _label(body_text, 18, COLOR_PARCHMENT)
+	body.position = Vector2(60, 100)
+	body.size = Vector2(660, 150)
+	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	body.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(body)
+	var confirm_button := _button(confirm_text, Vector2(235, 278) if cancel_text.is_empty() else Vector2(60, 278), Vector2(310, 62))
+	confirm_button.pressed.connect(func() -> void:
+		overlay.visible = false
+		if on_confirm.is_valid():
+			on_confirm.call()
+	)
+	panel.add_child(confirm_button)
+	if not cancel_text.is_empty():
+		var cancel_button := _button(cancel_text, Vector2(410, 278), Vector2(310, 62))
+		cancel_button.pressed.connect(func() -> void: overlay.visible = false)
+		panel.add_child(cancel_button)
+	return {"overlay": overlay, "body": body}
+
+
+func _refuse_restoration() -> void:
+	game_state.refuse_restoration_job(restoration_refuse_job_id)
 
 
 func _build_employee_panel() -> void:
@@ -1626,6 +1689,15 @@ func _refresh() -> void:
 	_refresh_job_report()
 	_refresh_demo_completion()
 	_refresh_dismissal()
+	var access_messages := PackedStringArray()
+	if not auto_wait_running:
+		for job_id: StringName in game_state.jobs:
+			access_messages.append_array(game_state.take_access_messages(job_id))
+	if not access_messages.is_empty():
+		access_notice_body.text = "\n\n".join(access_messages)
+		access_notice_dialog.visible = true
+		access_notice_dialog.move_to_front()
+		game_state.set_clock_paused(true)
 
 
 func _refresh_finish_day_button() -> void:
@@ -2057,7 +2129,7 @@ func _rebuild_jobs() -> void:
 		var assigned: PackedStringArray = job["assigned"]
 		var crew_text := tr("Бригада не назначена") if assigned.is_empty() else tr("Назначено: %d") % assigned.size()
 		var deadline_text := tr("ПРОСРОЧЕНО") if bool(job.get("overdue", false)) else tr("осталось %d мин.") % int(job["time_left"])
-		var is_linked := bool(job.get("consequence", false))
+		var is_linked := bool(job.get("consequence", false)) or bool(job.get("restoration", false))
 		var status_text := tr(str(job["urgency"]))
 		var card_text := "%s\n%s\n%s, %s\n%s" % [tr(str(job["title"])), tr(str(job["address"])), status_text, deadline_text, crew_text]
 		if is_linked:
@@ -2102,10 +2174,13 @@ func _rebuild_employees() -> void:
 		var on_site: bool = dispatched and game_state.can_employee_work_on_job(employee_id, assigned_job)
 		var in_transit: bool = dispatched and not on_site
 		var returning: bool = game_state.is_employee_returning(employee_id)
+		var access_status: StringName = game_state.get_employee_access_status_for_job(employee_id, selected_job_id)
+		var banned: bool = access_status == &"banned"
+		var warned: bool = access_status == &"warned"
 		var card := _button("", Vector2.ZERO, Vector2(390, 225))
 		var is_training: bool = game_state.is_employee_training(employee_id)
 		card.disabled = is_training or dispatched or returning
-		card.tooltip_text = employee["status"] if in_transit or returning else ("Сотрудник находится на объекте" if on_site else ("Сотрудник заканчивает обучение на следующий день" if is_training else "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение"))
+		card.tooltip_text = "Жилец запретил этому сотруднику входить в квартиру" if banned else ("Жилец предупреждал этого сотрудника после повреждения имущества" if warned else (employee["status"] if in_transit or returning else ("Сотрудник находится на объекте" if on_site else ("Сотрудник заканчивает обучение на следующий день" if is_training else "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение"))))
 		card.add_theme_stylebox_override("normal", _style(COLOR_SELECTED if selected else COLOR_CARD, COLOR_GOLD if selected else COLOR_BRASS, 3 if selected else 2, 9))
 		card.pressed.connect(_toggle_employee.bind(employee_id))
 		employee_list.add_child(card)
@@ -2147,7 +2222,7 @@ func _rebuild_employees() -> void:
 		card.add_child(method_label)
 
 		var status_color := COLOR_MUTED if in_transit or returning else (COLOR_GOLD if selected else COLOR_MUTED)
-		var status_text: String = _employee_card_status(employee, pending_selected, selected, on_site, in_transit, returning)
+		var status_text: String = _employee_card_status(employee_id, employee, pending_selected, selected, on_site, in_transit, returning)
 		var status_label := _label(status_text, 12, status_color)
 		status_label.position = Vector2(180, 168)
 		status_label.size = Vector2(198, 44)
@@ -2157,7 +2232,12 @@ func _rebuild_employees() -> void:
 		card.add_child(status_label)
 
 
-func _employee_card_status(employee: Dictionary, pending_selected: bool, selected: bool, on_site: bool, in_transit: bool, returning: bool) -> String:
+func _employee_card_status(employee_id: StringName, employee: Dictionary, pending_selected: bool, selected: bool, on_site: bool, in_transit: bool, returning: bool) -> String:
+	var access_status: StringName = game_state.get_employee_access_status_for_job(employee_id, selected_job_id)
+	if access_status == &"banned":
+		return "Запрещён вход жильцом"
+	if access_status == &"warned":
+		return "Предупреждение жильца"
 	if pending_selected:
 		return "Выбран для отправки"
 	if returning:
@@ -2179,6 +2259,8 @@ func _translated_strings(values: PackedStringArray) -> PackedStringArray:
 
 
 func _refresh_details() -> void:
+	restoration_payment_label.visible = false
+	restoration_refuse_button.visible = false
 	if detail_expanded_panel != null:
 		detail_expanded_panel.visible = false
 	if selected_job_id.is_empty() or not game_state.is_job_available(selected_job_id):
@@ -2194,14 +2276,22 @@ func _refresh_details() -> void:
 		return
 	var job: Dictionary = game_state.jobs[selected_job_id]
 	var assigned: PackedStringArray = job["assigned"]
-	var is_linked := bool(job.get("consequence", false))
+	var is_linked := bool(job.get("consequence", false)) or bool(job.get("restoration", false))
+	var restoration := bool(job.get("restoration", false))
 	detail_title.text = tr(str(job["title"]))
 	detail_badge.visible = is_linked
-	detail_body.position.y = 106 if is_linked else 94
-	detail_body.size.y = 92 if is_linked else 104
-	detail_body.text = tr("%s\nОпасность: %s") % [tr(str(job["address"])), tr(str(job["danger"]))]
+	detail_badge.text = "ПОВТОРНЫЙ ВЫЗОВ"
+	detail_body.position.y = 106 if is_linked or restoration else 94
+	detail_body.size.y = 92 if is_linked or restoration else 104
+	detail_body.text = "%s\n%s" % [tr(str(job["address"])), _job_condition_text(job)]
 	detail_more_button.visible = true
 	detail_more_button.tooltip_text = tr(str(job["description"]))
+	restoration_payment_label.visible = restoration
+	restoration_payment_label.text = game_state.get_restoration_payment_text(selected_job_id)
+	restoration_refuse_button.visible = restoration
+	restoration_refuse_button.disabled = not game_state.get_pending_job_action(selected_job_id).is_empty()
+	assignment_label.position.y = 342 if restoration else 258
+	assignment_label.size.y = 38 if restoration else 90
 
 	if assigned.is_empty():
 		assignment_label.text = "Бригада: не назначена"
@@ -2242,15 +2332,30 @@ func _short_job_description(full_text: String) -> String:
 	return shortened.strip_edges() + "…"
 
 
+func _job_condition_text(job: Dictionary) -> String:
+	if bool(job.get("restoration", false)):
+		return tr("Состояние: требуется полная замена")
+	return tr("Опасность: %s") % tr(str(job.get("danger", "")))
+
+
 func _show_expanded_job_details() -> void:
 	if selected_job_id.is_empty() or not game_state.is_job_available(selected_job_id):
 		return
 	var job: Dictionary = game_state.jobs[selected_job_id]
-	var linked_note := "Связь: по этому объекту служба уже выезжала ранее.\n\n" if bool(job.get("consequence", false)) else ""
+	var linked_note := "Связь: по этому объекту служба уже выезжала ранее.\n\n" if bool(job.get("consequence", false)) or bool(job.get("restoration", false)) else ""
 	detail_expanded_title.text = tr(str(job["title"]))
-	detail_expanded_body.text = "%s%s\nЖилец: %s\nОпасность: %s\n\n%s" % [linked_note, tr(str(job["address"])), tr(str(job["resident"])), tr(str(job["danger"])), tr(str(job["description"]))]
+	detail_expanded_body.text = "%s%s\nЖилец: %s\n%s\n\n%s" % [linked_note, tr(str(job["address"])), tr(str(job["resident"])), _job_condition_text(job), tr(str(job["description"]))]
 	detail_expanded_panel.visible = true
+	if bool(job.get("restoration", false)):
+		detail_expanded_body.text += "\n\n" + game_state.get_restoration_payment_text(selected_job_id)
 	detail_expanded_panel.move_to_front()
+
+
+func _confirm_restoration_refusal() -> void:
+	restoration_refuse_job_id = selected_job_id
+	game_state.set_clock_paused(true)
+	restoration_refuse_dialog.visible = true
+	restoration_refuse_dialog.move_to_front()
 
 
 func _crew_has_ability(assigned: PackedStringArray, ability_id: StringName) -> bool:
@@ -2341,11 +2446,14 @@ func _start_auto_wait() -> void:
 	while game_state.time_minutes < arrival_time:
 		game_state.advance_time(1)
 		await get_tree().create_timer(0.055).timeout
-	auto_wait_running = false
 	game_state.set_clock_paused(true)
 	var repair_scene: String = game_state.get_job_repair_scene(job_id)
 	if game_state.has_employee_on_site(job_id) and game_state.begin_job(job_id) and not repair_scene.is_empty():
 		get_tree().change_scene_to_file(repair_scene)
+		auto_wait_running = false
+	else:
+		auto_wait_running = false
+		_refresh()
 
 
 func _recall_crew() -> void:

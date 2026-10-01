@@ -181,6 +181,9 @@ func get_employee_reaction(employee_id: StringName, action_id: StringName, inten
 
 
 func apply_action(employee_id: StringName, action_id: StringName, intent: StringName = &"") -> Dictionary:
+	var damage_before := int(world_object.get("damage", 0))
+	var contents_damage_before := int(world_object.get("contents_damage", 0))
+	var destroyed_before := bool(world_object.get("destroyed", false))
 	var action_summary: String = "Это действие не изменило состояние шкафа."
 	var applied: bool = false
 	if bool(world_object["destroyed"]):
@@ -256,8 +259,14 @@ func apply_action(employee_id: StringName, action_id: StringName, intent: String
 	if applied:
 		_sync_visual_state()
 	var message: String = _compose_result_message(action_summary, action_id, intent) if applied else action_summary
-
-	return _record_result(employee_id, action_id, intent, applied, message)
+	var caused_damage := applied and (
+		int(world_object.get("damage", 0)) > damage_before
+		or int(world_object.get("contents_damage", 0)) > contents_damage_before
+		or (not destroyed_before and bool(world_object.get("destroyed", false)))
+	)
+	if bool(world_object.get("burning", false)) and str(world_object.get("fire_origin_employee_id", "")).is_empty():
+		world_object["fire_origin_employee_id"] = String(employee_id)
+	return _record_result(employee_id, action_id, intent, applied, message, caused_damage)
 
 
 func can_begin_action(action_id: StringName) -> bool:
@@ -283,6 +292,7 @@ func advance_burning() -> Dictionary:
 			"changed": true,
 			"message": tr("Пламя распространяется по шкафу: очагов уже %d.") % int(world_object["fire_spots"]),
 			"resolved": false,
+			"caused_damage": true,
 		}
 		_record_environment_result(spread_result)
 		return spread_result
@@ -300,6 +310,8 @@ func advance_burning() -> Dictionary:
 		"changed": true,
 		"message": "Шкаф полностью сгорел. От мебели и хрупкой посуды осталась куча пепла.",
 		"resolved": true,
+		"caused_damage": true,
+		"object_destroyed": true,
 		"audio_cues": PackedStringArray(["play_heavy_impact", "play_breaking_wood"]),
 	}
 	_record_environment_result(destroyed_result)
@@ -308,20 +320,21 @@ func advance_burning() -> Dictionary:
 
 func _record_environment_result(result: Dictionary) -> void:
 	action_log.append({
-		"employee_id": "",
+		"employee_id": str(world_object.get("fire_origin_employee_id", "")),
 		"action_id": "fire_spread",
 		"intent": "",
 		"result": result.duplicate(true),
 	})
 
 
-func _record_result(employee_id: StringName, action_id: StringName, intent: StringName, applied: bool, message: String) -> Dictionary:
+func _record_result(employee_id: StringName, action_id: StringName, intent: StringName, applied: bool, message: String, caused_damage: bool = false) -> Dictionary:
 	var result := {
 		"applied": applied,
 		"message": message,
 		"visual_state": world_object["visual_state"],
 		"position_zone": world_object["position_zone"],
 		"resolved": is_resolved(),
+		"caused_damage": caused_damage,
 	}
 	action_log.append({
 		"employee_id": String(employee_id),
@@ -362,6 +375,7 @@ func get_completion_result() -> Dictionary:
 			"reward_adjustment": -420,
 			"forfeit_payment": true,
 			"compensation_cost": compensation,
+			"object_destroyed": true,
 			"reputation_change": -8,
 			"summary": tr("Шкаф и его содержимое уничтожены огнём. Оплата отменена, назначена компенсация %d монет.") % compensation,
 			"review": "Я просила усмирить зачарованный шкаф, а не устроить погребальный костёр для всей моей посуды! В следующий раз я лучше вызову экзорциста.",

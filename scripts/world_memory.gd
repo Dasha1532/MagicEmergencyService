@@ -73,6 +73,7 @@ var deferred_events: Array[Dictionary] = []
 var job_contexts: Dictionary = {}
 var _job_event_counts: Dictionary = {}
 var _next_event_serial: int = 1
+var resident_relations: Dictionary = {}
 
 
 func reset() -> void:
@@ -83,6 +84,7 @@ func reset() -> void:
 	job_contexts.clear()
 	_job_event_counts.clear()
 	_next_event_serial = 1
+	resident_relations.clear()
 	_ensure_default_objects()
 
 
@@ -101,6 +103,11 @@ func load_data(data: Dictionary) -> void:
 	var loaded_contexts: Variant = data.get("job_contexts", {})
 	if loaded_contexts is Dictionary:
 		job_contexts = (loaded_contexts as Dictionary).duplicate(true)
+
+	var loaded_relations: Variant = data.get("resident_relations", {})
+	if loaded_relations is Dictionary:
+		resident_relations = (loaded_relations as Dictionary).duplicate(true)
+
 	_ensure_default_objects()
 	_rebuild_job_event_counts()
 
@@ -113,6 +120,7 @@ func to_data() -> Dictionary:
 		"significant_events": significant_events.duplicate(true),
 		"deferred_events": deferred_events.duplicate(true),
 		"job_contexts": job_contexts.duplicate(true),
+		"resident_relations": resident_relations.duplicate(true),
 		"next_event_serial": _next_event_serial,
 	}
 
@@ -542,3 +550,102 @@ func _trim(target: Array[Dictionary], limit: int) -> void:
 
 func _rebuild_job_event_counts() -> void:
 	_job_event_counts.clear()
+
+
+func get_or_create_relation(resident_id: String, employee_id: String) -> Dictionary:
+	if not resident_relations.has(resident_id):
+		resident_relations[resident_id] = {}
+	var resident_dict: Dictionary = resident_relations[resident_id]
+	if not resident_dict.has(employee_id):
+		resident_dict[employee_id] = {
+			"professional_trust": 0,
+			"personal_affinity": 0,
+			"romantic_interest": 0,
+			"access_status": "allowed",
+			"preference_weight": 0,
+			"memories": []
+		}
+	return resident_dict[employee_id]
+
+
+func get_relation(resident_id: String, employee_id: String) -> Dictionary:
+	var resident_dict: Dictionary = resident_relations.get(resident_id, {}) as Dictionary
+	return (resident_dict.get(employee_id, {"access_status": "allowed"}) as Dictionary).duplicate(true)
+
+
+func evaluate_crew_relations(report: Dictionary) -> Array[String]:
+	var newly_banned_ids: Array[String] = []
+	var resident_id: String = str(report.get("resident_id", report.get("resident", "")))
+	if resident_id.is_empty():
+		return newly_banned_ids
+
+	var claim_amount: int = int(report.get("claim_amount", 0))
+	var rating: int = int(report.get("rating", 3))
+	var overdue: bool = bool(report.get("overdue", false))
+	var damage_employee_ids: Array[String] = []
+	var report_damage_ids: Variant = report.get("damage_employee_ids", [])
+	if report_damage_ids is Array or report_damage_ids is PackedStringArray:
+		for employee_id: Variant in report_damage_ids:
+			if not str(employee_id).is_empty() and not damage_employee_ids.has(str(employee_id)):
+				damage_employee_ids.append(str(employee_id))
+	var destroyed_with_claim := bool(report.get("object_destroyed", false)) and claim_amount > 0
+	var involved_employee_ids: Array[String] = damage_employee_ids.duplicate()
+	if damage_employee_ids.is_empty() and not destroyed_with_claim and rating >= 4 and not overdue and not bool(report.get("payment_forfeited", false)) and claim_amount == 0:
+		var crew_ids: Variant = report.get("crew_ids", [])
+		if crew_ids is Array or crew_ids is PackedStringArray:
+			for employee_id: Variant in crew_ids:
+				involved_employee_ids.append(str(employee_id))
+	if involved_employee_ids.is_empty():
+		return newly_banned_ids
+
+	for emp_id: String in involved_employee_ids:
+		var relation: Dictionary = get_or_create_relation(resident_id, emp_id)
+		var previous_access_status := str(relation.get("access_status", "allowed"))
+		var memories: Array = relation["memories"]
+
+		if destroyed_with_claim:
+			relation["professional_trust"] = mini(int(relation.get("professional_trust", 0)) - 30, -30)
+			relation["personal_affinity"] = int(relation.get("personal_affinity", 0)) - 10
+			memories.append({
+				"event": "destroyed_property",
+				"day": report.get("completed_day", 1),
+				"job_id": str(report.get("job_id", "")),
+				"claim_amount": claim_amount,
+			})
+			relation["access_status"] = "banned"
+		elif not damage_employee_ids.is_empty():
+			relation["professional_trust"] = int(relation.get("professional_trust", 0)) - 15
+			relation["personal_affinity"] = int(relation.get("personal_affinity", 0)) - 5
+			memories.append({
+				"event": "caused_damage",
+				"day": report.get("completed_day", 1),
+				"job_id": str(report.get("job_id", "")),
+			})
+			if int(relation["professional_trust"]) <= -30:
+				relation["access_status"] = "banned"
+			elif str(relation.get("access_status", "allowed")) != "banned":
+				relation["access_status"] = "warned"
+		elif rating >= 4 and not overdue and not bool(report.get("payment_forfeited", false)):
+			relation["professional_trust"] = int(relation.get("professional_trust", 0)) + 10
+			relation["personal_affinity"] = int(relation.get("personal_affinity", 0)) + 2
+			memories.append({
+				"event": "good_repair",
+				"day": report.get("completed_day", 1),
+				"job_id": str(report.get("job_id", "")),
+			})
+			if int(relation["professional_trust"]) >= 20:
+				relation["preference_weight"] = int(relation.get("preference_weight", 0)) + 1
+			if str(relation.get("access_status", "allowed")) == "warned" and int(relation["professional_trust"]) >= 0:
+				relation["access_status"] = "allowed"
+
+		_trim_memories(memories, 20)
+		relation["memories"] = memories
+		resident_relations[resident_id][emp_id] = relation
+		if previous_access_status != "banned" and str(relation.get("access_status", "allowed")) == "banned":
+			newly_banned_ids.append(emp_id)
+	return newly_banned_ids
+
+
+func _trim_memories(memories: Array, limit: int) -> void:
+	while memories.size() > limit:
+		memories.pop_front()

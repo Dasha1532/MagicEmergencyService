@@ -174,6 +174,7 @@ static func generate_faucet_consequence(event: Dictionary, available_abilities: 
 		"presentation": presentation,
 		"simulation_type": &"lava_faucet",
 		"source_deferred_event_id": event_id,
+		"source_job_id": str(event.get("source_job_id", "")),
 		"cause_chain_id": str(event.get("cause_chain_id", "")),
 	}
 	var plans := find_safe_plans(instance, available_abilities)
@@ -272,6 +273,8 @@ static func materialize_job(instance: Dictionary) -> Dictionary:
 		"generated": true,
 		"consequence": not str(instance.get("source_deferred_event_id", "")).is_empty(),
 		"source_deferred_event_id": str(instance.get("source_deferred_event_id", "")),
+		"source_job_id": str(instance.get("source_job_id", "")),
+		"restoration": bool(instance.get("restoration", false)),
 		"object_definition_id": StringName(str(instance.get("object_definition_id", ""))),
 		"resident_request": str(presentation.get("resident_request", "")),
 		"unresolved_message": str(presentation.get("unresolved_message", "")),

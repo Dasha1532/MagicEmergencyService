@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"faucet_restoration"
+display_name = "Замена уничтоженного крана"
+scene_path = "res://scenes/RepairHouse.tscn"
+base_properties = {"target_definition_id": "lava_faucet", "supply_item_id": "replacement_faucet", "installation_fee": 100, "refusal_penalty": 2, "delay_days": 1, "initial_time": 240, "initial_state": {"restoration_required": true, "broken": true, "valve_broken": true, "valve_operable": false, "replaced": false, "temperature": 2, "magic_level": 0, "pressure": 0, "cold_source_active": false, "heat_source_active": false, "lava_source_active": false, "frozen": false, "frozen_lava_flow": false, "flow_content": "water", "incident_flow_content": "water", "visual_state": "melted", "tags": ["faucet", "melted"]}}

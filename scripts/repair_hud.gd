@@ -41,6 +41,11 @@ var task_started_at: int = 0
 var task_ends_at: int = 0
 var task_callback: Callable
 var employee_buttons: Dictionary = {}
+var access_dialogues_ready: bool = false
+var access_sequence: Array[Dictionary] = []
+var access_sequence_active: bool = false
+var access_notice: Control
+var access_notice_text: Label
 var employee_detail_labels: Dictionary = {}
 var shown_employee_reactions: Dictionary = {}
 @onready var game_state: Node = get_node("/root/GameState")
@@ -59,6 +64,7 @@ func _ready() -> void:
 	_build_return_button()
 	_build_complete_button()
 	_build_employee_reaction_panel()
+	_build_access_notice()
 	_build_task_progress()
 	game_state.state_changed.connect(_refresh_job_time)
 	game_state.state_changed.connect(_refresh_employee_states)
@@ -289,9 +295,91 @@ func _add_employee_button(employee_id: StringName) -> void:
 
 func _refresh_employee_states() -> void:
 	for employee_key: Variant in employee_buttons.keys():
+		var assigned: PackedStringArray = game_state.jobs.get(game_state.active_job_id, {}).get("assigned", PackedStringArray())
+		employee_buttons[employee_key].visible = assigned.has(String(employee_key))
 		_update_employee_card(StringName(employee_key))
+	if access_dialogues_ready:
+		_show_access_messages()
 	if selected_employee_id.is_empty() or not game_state.can_employee_work_on_job(selected_employee_id, game_state.active_job_id):
 		_select_first_employee()
+
+
+func enable_access_dialogues() -> bool:
+	access_dialogues_ready = true
+	return _show_access_messages()
+
+
+func _show_access_messages() -> bool:
+	var events: Array[Dictionary] = game_state.take_access_events(game_state.active_job_id)
+	if events.is_empty():
+		return false
+	for event: Dictionary in events:
+		access_sequence.append({"kind": "resident", "text": str(event["phrase"])})
+		access_sequence.append({"kind": "notice", "text": str(event["message"])})
+	access_sequence.append({"kind": "resident", "text": game_state.get_resident_greeting(game_state.active_job_id)})
+	if not access_sequence_active:
+		access_sequence_active = true
+		_advance_access_sequence()
+	return true
+
+
+func _advance_access_sequence() -> void:
+	access_notice.visible = false
+	if access_sequence.is_empty():
+		access_sequence_active = false
+		employee_panel.visible = work_ui_visible
+		dialogue_finished.emit()
+		return
+	var step: Dictionary = access_sequence.pop_front()
+	if str(step["kind"]) == "resident":
+		show_resident_dialogue(str(step["text"]))
+	else:
+		employee_reaction_panel.visible = false
+		employee_panel.visible = false
+		access_notice_text.text = str(step["text"])
+		access_notice.visible = true
+		access_notice.move_to_front()
+		game_state.set_clock_paused(true)
+
+
+func _build_access_notice() -> void:
+	access_notice = Control.new()
+	access_notice.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	access_notice.visible = false
+	access_notice.z_index = 220
+	add_child(access_notice)
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.015, 0.01, 0.008, 0.76)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	access_notice.add_child(shade)
+	var panel := Panel.new()
+	panel.position = Vector2(410, 260)
+	panel.size = Vector2(780, 380)
+	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 14))
+	access_notice.add_child(panel)
+	var title := _label("ЖИЛЕЦ НЕ ВПУСТИЛ СОТРУДНИКА", 24, COLOR_GOLD)
+	title.position = Vector2(38, 34)
+	title.size = Vector2(704, 42)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.add_child(title)
+	access_notice_text = _label("", 18, COLOR_PARCHMENT)
+	access_notice_text.position = Vector2(60, 100)
+	access_notice_text.size = Vector2(660, 150)
+	access_notice_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	access_notice_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	access_notice_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	panel.add_child(access_notice_text)
+	var button := Button.new()
+	button.text = "ПОНЯТНО"
+	button.position = Vector2(235, 278)
+	button.size = Vector2(310, 62)
+	button.add_theme_font_size_override("font_size", 18)
+	button.add_theme_color_override("font_color", COLOR_GOLD)
+	button.add_theme_stylebox_override("normal", _style(COLOR_PANEL, COLOR_BRASS, 2, 9))
+	button.add_theme_stylebox_override("hover", _style(COLOR_SELECTED, COLOR_GOLD, 2, 9))
+	button.pressed.connect(_advance_access_sequence)
+	panel.add_child(button)
 
 
 func _update_employee_card(employee_id: StringName) -> void:
@@ -484,6 +572,11 @@ func show_system_message(message: String, is_warning: bool = false) -> void:
 
 
 func clear_employee_reaction() -> void:
+	if access_sequence_active:
+		employee_reaction_label.text = ""
+		employee_reaction_panel.visible = false
+		_advance_access_sequence()
+		return
 	if not queued_dialogues.is_empty():
 		var next_dialogue: Dictionary = queued_dialogues.pop_front()
 		_display_dialogue(str(next_dialogue["speaker"]), str(next_dialogue["message"]), bool(next_dialogue["warning"]), next_dialogue.get("portrait") as Texture2D)

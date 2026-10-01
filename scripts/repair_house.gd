@@ -89,6 +89,7 @@ func _on_long_action_finished(employee_id: StringName) -> void:
 
 
 func _open_bathroom() -> void:
+	repair_hud.access_dialogues_ready = false
 	bathroom_hotspot.disabled = true
 	bathroom_hotspot.visible = false
 	problem_room_marker.visible = false
@@ -119,7 +120,11 @@ func _open_bathroom() -> void:
 	if not bool(simulation.world_object.get("resident_intro_seen", false)):
 		simulation.world_object["resident_intro_seen"] = true
 		game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
-		repair_hud.show_resident_dialogue(simulation.get_resident_request())
+		if not repair_hud.enable_access_dialogues():
+			repair_hud.show_resident_dialogue(game_state.get_resident_greeting(game_state.active_job_id))
+	else:
+		repair_hud.enable_access_dialogues()
+	repair_hud.call("_refresh_employee_states")
 
 
 func _show_house_overview(animated: bool = true) -> void:
