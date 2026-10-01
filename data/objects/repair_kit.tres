@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"repair_kit"
+display_name = "Служебный ремонтный набор"
+tags = PackedStringArray("equipment", "tools", "container", "movable")
+base_properties = {"anchored": false, "damage": 0, "durability": 7, "magic_level": 0, "mass": 3, "movable": true, "replacement_value": 180, "temperature": 2}
+supported_effects = PackedStringArray("packed", "in_use")
+scene_path = "res://scenes/ui/OfficeDashboard.tscn"
+visual_states = {&"packed": "res://assets/objects/repair_kit/toolbox.png"}
+hidden_states = PackedStringArray("in_use")

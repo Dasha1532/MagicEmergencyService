@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"protective_cloth"
+display_name = "Защитное полотно"
+tags = PackedStringArray("equipment", "fabric", "movable", "magic_resistant", "cover")
+base_properties = {"anchored": false, "damage": 0, "durability": 3, "magic_level": 1, "mass": 1, "movable": true, "replacement_value": 50, "temperature": 2}
+supported_effects = PackedStringArray("packed", "installed", "heat_damaged")
+scene_path = "res://scenes/PortalMirrorHouse.tscn"
+visual_states = {&"heat_damaged": "res://assets/objects/portal_mirror/covered_heat_damaged.png", &"installed": "res://assets/objects/portal_mirror/covered.png", &"packed": "res://assets/objects/protective_cloth/folded.png"}

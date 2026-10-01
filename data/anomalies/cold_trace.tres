@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GenerativeAnomalyDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/anomaly_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"cold_trace"
+display_name = "Остаточный холодный след"
+required_tags = PackedStringArray("plumbing", "water_contact", "freezable")
+forbidden_tags = PackedStringArray("destroyed")
+initial_effects = PackedStringArray("frozen")
+objective_ids = PackedStringArray("remove_cold_trace", "remove_ice")
+visual_effects = PackedStringArray("frozen")
+weight = 4

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GenerativeAnomalyDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/anomaly_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"escaped_spirit"
+display_name = "Сбежавшее привидение"
+required_tags = PackedStringArray("incorporeal", "portal_linked")
+initial_effects = PackedStringArray("calm")
+objective_ids = PackedStringArray("contain_spirit")
+visual_effects = PackedStringArray("calm", "angry")
+weight = 4

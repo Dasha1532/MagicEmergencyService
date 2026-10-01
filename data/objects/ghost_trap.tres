@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"ghost_trap"
+display_name = "Ловушка для привидений"
+tags = PackedStringArray("equipment", "container", "magic_conductor", "movable")
+base_properties = {"anchored": false, "damage": 0, "durability": 5, "magic_level": 2, "mass": 2, "movable": true, "replacement_value": 250, "temperature": 2}
+supported_effects = PackedStringArray("packed", "installed", "occupied")
+scene_path = "res://scenes/GhostMirrorRoom.tscn"
+visual_states = {&"empty": "res://assets/objects/ghost_trap/empty.png", &"occupied": "res://assets/objects/ghost_trap/occupied.png"}
+hidden_states = PackedStringArray("packed")

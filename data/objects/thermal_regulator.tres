@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" format=3 uid="uid://co8nshig4731b"]
+
+[ext_resource type="Script" uid="uid://bj1hd4uslofrl" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"thermal_regulator"
+display_name = "Рунический терморегулятор"
+tags = PackedStringArray("equipment", "metal", "movable", "temperature_control", "magic_conductor")
+base_properties = {
+"anchored": false,
+"damage": 0,
+"durability": 6,
+"flow_content_after_stabilization": &"water",
+"forbidden_target_properties": PackedStringArray("broken", "destroyed"),
+"forbidden_target_tags": PackedStringArray("broken", "melted", "destroyed"),
+"magic_level": 3,
+"mass": 2,
+"maximum_safe_temperature": 9,
+"minimum_safe_temperature": 0,
+"movable": true,
+"neutralizes_source_properties": PackedStringArray("cold_source_active", "heat_source_active", "lava_source_active"),
+"replacement_value": 280,
+"stabilized_temperature": 2,
+"stabilizes_state_properties": PackedStringArray("frozen", "valve_frozen", "flow_blocked"),
+"temperature": 2
+}
+supported_effects = PackedStringArray("packed", "installed", "active")
+scene_path = "res://scenes/FrozenBathRoom.tscn"
+visual_states = {
+&"installed": "res://assets/objects/frozen_bath/faucet_regulated.png",
+&"packed": "res://assets/objects/frozen_bath/regulator.png"
+}
+hidden_states = PackedStringArray("active")

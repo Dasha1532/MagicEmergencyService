@@ -28,6 +28,11 @@ var reputation_label: Label
 var day_label: Label
 var detail_title: Label
 var detail_body: Label
+var detail_badge: Label
+var detail_more_button: Button
+var detail_expanded_panel: Panel
+var detail_expanded_title: Label
+var detail_expanded_body: Label
 var assignment_label: Label
 var warning_label: Label
 var depart_button: Button
@@ -79,8 +84,10 @@ var section_dialog: Panel
 var section_title: Label
 var section_body: Label
 var job_report_layer: Control
+var job_report_panel: Panel
 var job_report_title: Label
-var job_report_body: Label
+var job_report_body: RichTextLabel
+var job_report_close_button: Button
 var claim_layer: Control
 var claim_title: Label
 var claim_body: Label
@@ -229,16 +236,26 @@ func _build_detail_panel() -> void:
 	detail_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	panel.add_child(detail_title)
 
-	detail_body = _label("", 17, COLOR_PARCHMENT)
+	detail_badge = _label("ПОВТОРНЫЙ ВЫЗОВ", 13, COLOR_GOLD)
+	detail_badge.position = Vector2(22, 80)
+	detail_badge.size = Vector2(220, 24)
+	detail_badge.visible = false
+	panel.add_child(detail_badge)
+
+	detail_body = _label("", 16, COLOR_PARCHMENT)
 	detail_body.position = Vector2(22, 94)
-	detail_body.size = Vector2(371, 200)
+	detail_body.size = Vector2(371, 104)
 	detail_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail_body.clip_contents = true
 	panel.add_child(detail_body)
 
+	detail_more_button = _button("ПОДРОБНЕЕ  ▾", Vector2(22, 210), Vector2(142, 34))
+	detail_more_button.add_theme_font_size_override("font_size", 13)
+	detail_more_button.pressed.connect(_show_expanded_job_details)
+	panel.add_child(detail_more_button)
+
 	assignment_label = _label("", 16, COLOR_GOLD)
-	assignment_label.position = Vector2(22, 300)
-	assignment_label.size = Vector2(371, 44)
+	assignment_label.position = Vector2(22, 258)
+	assignment_label.size = Vector2(371, 90)
 	assignment_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	panel.add_child(assignment_label)
 
@@ -262,6 +279,23 @@ func _build_detail_panel() -> void:
 	cancel_dispatch_button.visible = false
 	cancel_dispatch_button.pressed.connect(_cancel_pending_dispatch)
 	panel.add_child(cancel_dispatch_button)
+
+	detail_expanded_panel = _panel(Vector2(1163, 112), Vector2(415, 455), 12)
+	detail_expanded_panel.z_index = 40
+	detail_expanded_panel.visible = false
+	dashboard_layer.add_child(detail_expanded_panel)
+	detail_expanded_title = _label("ПОДРОБНОСТИ ЗАЯВКИ", 20, COLOR_GOLD)
+	detail_expanded_title.position = Vector2(22, 18)
+	detail_expanded_title.size = Vector2(371, 36)
+	detail_expanded_panel.add_child(detail_expanded_title)
+	detail_expanded_body = _label("", 16, COLOR_PARCHMENT)
+	detail_expanded_body.position = Vector2(22, 64)
+	detail_expanded_body.size = Vector2(371, 310)
+	detail_expanded_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail_expanded_panel.add_child(detail_expanded_body)
+	var close_details_button := _button("СКРЫТЬ  ▴", Vector2(22, 384), Vector2(371, 52))
+	close_details_button.pressed.connect(func() -> void: detail_expanded_panel.visible = false)
+	detail_expanded_panel.add_child(close_details_button)
 
 
 func _build_employee_panel() -> void:
@@ -457,7 +491,7 @@ func _cat_phrase_for_click(click_number: int) -> String:
 
 func _cat_contextual_phrases() -> PackedStringArray:
 	var phrases := PackedStringArray()
-	if game_state.completed_job_ids.has("walking_wardrobe"):
+	if game_state.completed_job_ids.has("walking_wardrobe") or game_state.completed_job_ids.has("generated_wardrobe_1"):
 		phrases.append("Шкаф ходил подозрительно. Как собака.")
 	if game_state.completed_job_ids.has("portal_mirror") or game_state.completed_job_ids.has("escaped_ghost"):
 		phrases.append("Привидение в банке? Главное, чтобы не тунец.")
@@ -725,7 +759,7 @@ func _build_supply_shop() -> void:
 	supply_catalog_list.custom_minimum_size = Vector2(350, 0)
 	supply_catalog_list.add_theme_constant_override("separation", 10)
 	catalog_scroll.add_child(supply_catalog_list)
-	_add_supply_catalog_section("СНАРЯЖЕНИЕ", [&"ghost_trap", &"thermal_regulator", &"protective_cloth"])
+	_add_supply_catalog_section("СНАРЯЖЕНИЕ", [&"ghost_trap", &"thermal_regulator", &"protective_cloth", &"heat_gloves", &"replacement_faucet"])
 	_add_supply_catalog_section("МАГИЧЕСКИЕ КУРСЫ", [&"animation_kit", &"freeze_grimoire", &"heat_grimoire", &"telekinesis_grimoire", &"antimagic_grimoire"])
 
 	var catalog_hint := _label("Книги открывают курсы. Расходные материалы списываются на объектах.", 13, COLOR_MUTED)
@@ -962,22 +996,26 @@ func _build_job_report_dialog() -> void:
 	shade.color = Color(0.015, 0.01, 0.008, 0.72)
 	job_report_layer.add_child(shade)
 
-	var panel := _panel(Vector2(410, 165), Vector2(780, 570), 14)
-	job_report_layer.add_child(panel)
+	job_report_panel = _panel(Vector2(330, 80), Vector2(940, 740), 14)
+	job_report_layer.add_child(job_report_panel)
 	job_report_title = _label("АКТ ВЫПОЛНЕННЫХ РАБОТ", 27, COLOR_GOLD)
-	job_report_title.position = Vector2(42, 34)
-	job_report_title.size = Vector2(696, 48)
+	job_report_title.position = Vector2(42, 30)
+	job_report_title.size = Vector2(856, 48)
 	job_report_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	panel.add_child(job_report_title)
-	job_report_body = _label("", 18, COLOR_PARCHMENT)
-	job_report_body.position = Vector2(66, 108)
-	job_report_body.size = Vector2(648, 310)
+	job_report_panel.add_child(job_report_title)
+	job_report_body = RichTextLabel.new()
+	job_report_body.position = Vector2(60, 98)
+	job_report_body.size = Vector2(820, 500)
+	job_report_body.add_theme_font_size_override("normal_font_size", 18)
+	job_report_body.add_theme_color_override("default_color", COLOR_PARCHMENT)
 	job_report_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	job_report_body.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	panel.add_child(job_report_body)
-	var close_button := _button("ПРИНЯТЬ ОТЧЁТ", Vector2(210, 480), Vector2(360, 62))
-	close_button.pressed.connect(_dismiss_job_report)
-	panel.add_child(close_button)
+	job_report_body.scroll_active = true
+	job_report_body.scroll_following = false
+	job_report_body.fit_content = false
+	job_report_panel.add_child(job_report_body)
+	job_report_close_button = _button("ПРИНЯТЬ ОТЧЁТ", Vector2(290, 646), Vector2(360, 62))
+	job_report_close_button.pressed.connect(_dismiss_job_report)
+	job_report_panel.add_child(job_report_close_button)
 
 
 func _build_claim_dialog() -> void:
@@ -1342,12 +1380,27 @@ func _refresh_equipment_storage() -> void:
 			str(game_state.SUPPLY_ITEMS[&"ghost_trap"]["icon"]),
 			"Переносная ловушка для безопасного захвата бестелесных существ."
 		)
-	if game_state.has_supply_item(&"thermal_regulator"):
+	if game_state.has_supply_item(&"thermal_regulator") or _has_installed_thermal_regulator():
 		_add_equipment_card(
 			str(game_state.SUPPLY_ITEMS[&"thermal_regulator"]["name"]),
 			_equipment_status(&"thermal_regulator"),
 			str(game_state.SUPPLY_ITEMS[&"thermal_regulator"]["icon"]),
 			"Стабилизирует магическую температуру воды после установки на объекте."
+		)
+	if game_state.has_supply_item(&"heat_gloves"):
+		var gloves_card := _add_equipment_card(
+			str(game_state.SUPPLY_ITEMS[&"heat_gloves"]["name"]),
+			_equipment_status(&"heat_gloves"),
+			str(game_state.SUPPLY_ITEMS[&"heat_gloves"]["icon"]),
+			"Многоразовая защита рук при кратковременном контакте с раскалёнными объектами."
+		)
+		_add_equipment_assignment_controls(gloves_card, &"heat_gloves")
+	if game_state.has_supply_item(&"replacement_faucet"):
+		_add_equipment_card(
+			str(game_state.SUPPLY_ITEMS[&"replacement_faucet"]["name"]),
+			_equipment_status(&"replacement_faucet"),
+			str(game_state.SUPPLY_ITEMS[&"replacement_faucet"]["icon"]),
+			"Запасное оборудование для замены сломанного или расплавленного крана."
 		)
 	var portal_state: Dictionary = game_state.get_job_repair_state(&"portal_mirror")
 	var portal_object: Variant = portal_state.get("world_object", {})
@@ -1361,7 +1414,7 @@ func _refresh_equipment_storage() -> void:
 		)
 
 
-func _add_equipment_card(item_name: String, status_text: String, icon_path: String, description: String) -> void:
+func _add_equipment_card(item_name: String, status_text: String, icon_path: String, description: String) -> Panel:
 	var card := Panel.new()
 	card.custom_minimum_size = Vector2(395, 500)
 	card.add_theme_stylebox_override("panel", _style(COLOR_CARD, COLOR_BRASS, 2, 12))
@@ -1397,9 +1450,41 @@ func _add_equipment_card(item_name: String, status_text: String, icon_path: Stri
 	body.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	body.clip_text = true
 	card.add_child(body)
+	return card
+
+
+func _add_equipment_assignment_controls(card: Panel, item_id: StringName) -> void:
+	var eligible_ids := PackedStringArray(game_state.SUPPLY_ITEMS[item_id].get("eligible_employee_ids", []))
+	if eligible_ids.is_empty():
+		return
+	var body := card.get_child(card.get_child_count() - 1) as Label
+	body.position.y = 392
+	body.size.y = 38
+	var button_width := 337.0 / float(eligible_ids.size())
+	for index: int in eligible_ids.size():
+		var employee_id := StringName(eligible_ids[index])
+		if not game_state.employees.has(employee_id):
+			continue
+		var equipped: bool = bool(game_state.is_supply_equipped_by(item_id, employee_id))
+		var employee_name := str(game_state.employees[employee_id]["name"])
+		var caption := "СНЯТЬ С %s" % employee_name.to_upper() if equipped else "ЭКИПИРОВАТЬ: %s" % employee_name.to_upper()
+		var assign_button := _button(caption, Vector2(29 + button_width * index, 444), Vector2(button_width - 8, 38))
+		assign_button.add_theme_font_size_override("font_size", 13)
+		assign_button.pressed.connect(_toggle_equipment_assignment.bind(item_id, employee_id))
+		card.add_child(assign_button)
+
+
+func _toggle_equipment_assignment(item_id: StringName, employee_id: StringName) -> void:
+	if game_state.is_supply_equipped_by(item_id, employee_id):
+		game_state.unequip_supply_item(item_id)
+	else:
+		game_state.equip_supply_item(item_id, employee_id)
 
 
 func _equipment_status(item_id: StringName) -> String:
+	var equipped_employee: StringName = StringName(game_state.get_equipped_employee(item_id))
+	if not equipped_employee.is_empty() and game_state.employees.has(equipped_employee):
+		return "ЭКИПИРОВАНО: %s" % str(game_state.employees[equipped_employee]["name"]).to_upper()
 	var job_id: StringName = &"frozen_bath"
 	if item_id == &"ghost_trap":
 		job_id = &"escaped_ghost"
@@ -1418,6 +1503,12 @@ func _equipment_status(item_id: StringName) -> String:
 			return "УСТАНОВЛЕНО НА ЗЕРКАЛЕ"
 		elif item_id == &"thermal_regulator" and bool((active_object as Dictionary).get("regulator_installed", false)):
 			return "УСТАНОВЛЕН: СТАРЫЙ КВАРТАЛ, 5"
+	if item_id == &"thermal_regulator":
+		for faucet_job_id: StringName in game_state.jobs:
+			var faucet_state: Dictionary = game_state.get_job_repair_state(faucet_job_id)
+			var faucet_object: Variant = faucet_state.get("world_object", {})
+			if faucet_object is Dictionary and bool((faucet_object as Dictionary).get("regulator_installed", false)):
+				return "УСТАНОВЛЕН: %s" % str((game_state.jobs[faucet_job_id] as Dictionary).get("address", "объект"))
 	for report_value: Variant in game_state.job_reports:
 		if not report_value is Dictionary:
 			continue
@@ -1428,9 +1519,21 @@ func _equipment_status(item_id: StringName) -> String:
 					var action_result: Variant = (action_value as Dictionary).get("result", {})
 					if action_result is Dictionary and bool((action_result as Dictionary).get("applied", false)):
 						return "ЗАНЯТА: ПРИВИДЕНИЕ В ЛОВУШКЕ"
-		elif item_id == &"thermal_regulator" and str(report.get("job_id", "")) == "frozen_bath" and int(report.get("expense_reimbursement", 0)) > 0:
-			return "УСТАНОВЛЕН: СТАРЫЙ КВАРТАЛ, 5"
+		elif item_id == &"thermal_regulator" and int(report.get("expense_reimbursement", 0)) > 0:
+			return "УСТАНОВЛЕН: %s" % str(report.get("address", "объект"))
 	return "НА СКЛАДЕ, ГОТОВО К ВЫЕЗДУ"
+
+
+func _has_installed_thermal_regulator() -> bool:
+	for faucet_job_id: StringName in game_state.jobs:
+		var repair_state: Dictionary = game_state.get_job_repair_state(faucet_job_id)
+		var object_state: Variant = repair_state.get("world_object", {})
+		if object_state is Dictionary and bool((object_state as Dictionary).get("regulator_installed", false)):
+			return true
+	for report_value: Variant in game_state.job_reports:
+		if report_value is Dictionary and int((report_value as Dictionary).get("expense_reimbursement", 0)) > 0:
+			return true
+	return false
 
 
 func _build_city_map() -> void:
@@ -1513,6 +1616,7 @@ func _refresh() -> void:
 	_rebuild_jobs()
 	_rebuild_employees()
 	_refresh_details()
+	_refresh_finish_day_button()
 	if personnel_layer != null:
 		_refresh_personnel()
 	if supply_layer != null:
@@ -1522,6 +1626,13 @@ func _refresh() -> void:
 	_refresh_job_report()
 	_refresh_demo_completion()
 	_refresh_dismissal()
+
+
+func _refresh_finish_day_button() -> void:
+	if finish_day_button == null:
+		return
+	finish_day_button.disabled = not game_state.can_finish_day()
+	finish_day_button.tooltip_text = "Сначала завершите доступные заявки." if finish_day_button.disabled else "Перейти к следующему рабочему дню."
 
 
 func _refresh_demo_completion() -> void:
@@ -1578,19 +1689,43 @@ func _refresh_job_report() -> void:
 	var crew: Array = report.get("crew", [])
 	var crew_text: String = ", ".join(_translated_strings(PackedStringArray(crew))) if not crew.is_empty() else tr("бригада не указана")
 	var compensation: int = int(report.get("compensation", 0))
-	var finance_text: String = tr("Оплата: %d монет") % int(report.get("reward", 0))
+	var total_reward := int(report.get("reward", 0))
+	var expense_reimbursement := int(report.get("expense_reimbursement", 0))
+	var work_payment := maxi(0, total_reward - expense_reimbursement)
+	var finance_text: String = tr("Оплата за выполнение заявки: %d монет") % work_payment
+	if bool(report.get("maximum_payment", false)):
+		finance_text += tr(" — максимальная сумма")
 	var reputation_change := int(report.get("reputation_change", 0))
 	finance_text += tr("\nИзменение репутации: %s") % ("+%d" % reputation_change if reputation_change > 0 else str(reputation_change))
-	var expense_reimbursement := int(report.get("expense_reimbursement", 0))
 	if expense_reimbursement > 0:
-		finance_text += tr("\nВключено возмещение снаряжения: %d монет") % expense_reimbursement
+		finance_text += tr("\nВозмещение стоимости снаряжения: %d монет") % expense_reimbursement
+		finance_text += tr("\nИтого начислено: %d монет") % total_reward
 	if bool(report.get("maximum_payment", false)):
-		finance_text += tr(" — максимальная по заявке\nОценка выполнения: отлично")
+		finance_text += tr("\nОценка выполнения: отлично")
 	if compensation > 0:
 		finance_text += tr("\nКомпенсация жильцу: %d монет\nИзменение средств службы: %d монет") % [compensation, int(report.get("net_change", -compensation))]
 	elif int(report.get("claim_amount", 0)) > 0:
 		finance_text += tr("\nПретензия жильца: %d монет\nРешение потребуется после принятия акта") % int(report.get("claim_amount", 0))
 	job_report_body.text = tr("%s\n\nЗаказчик: %s\nБригада: %s\n\n%s\n\n%s") % [tr(str(report.get("title", "Заявка"))), tr(str(report.get("resident", ""))), crew_text, finance_text, LocalizationHelperScript.translate_saved_text(report.get("summary", ""))]
+	call_deferred("_fit_job_report_dialog_to_content")
+
+
+func _fit_job_report_dialog_to_content() -> void:
+	if job_report_panel == null or job_report_body == null or job_report_close_button == null:
+		return
+	var viewport_size := get_viewport_rect().size
+	var maximum_panel_height := minf(780.0, viewport_size.y - 48.0)
+	var minimum_body_height := 210.0
+	var maximum_body_height := maximum_panel_height - 240.0
+	var content_height := ceilf(job_report_body.get_content_height()) + 20.0
+	var body_height := clampf(content_height, minimum_body_height, maximum_body_height)
+	var panel_height := body_height + 240.0
+	job_report_panel.size = Vector2(940.0, panel_height)
+	job_report_panel.position = Vector2((viewport_size.x - job_report_panel.size.x) * 0.5, (viewport_size.y - panel_height) * 0.5)
+	job_report_body.size = Vector2(820.0, body_height)
+	job_report_close_button.position = Vector2(290.0, panel_height - 94.0)
+	job_report_body.scroll_active = content_height > body_height
+	job_report_body.scroll_to_line(0)
 
 
 func _dismiss_job_report() -> void:
@@ -1779,7 +1914,14 @@ func _refresh_supply_shop() -> void:
 	supply_detail_description.text = tr(str(item["description"]))
 	var training_id := StringName(str(item.get("training_id", "")))
 	if training_id.is_empty():
-		supply_delivery_note.text = tr("После использования стоимость полотна включается в оплату заявки. Если полотно удастся снять и вернуть на склад, его можно будет использовать снова.") if bool(item.get("consumable", false)) else tr("После покупки снаряжение поступит в собственность службы и станет доступно на подходящих заявках.")
+		if selected_supply_item_id == &"protective_cloth":
+			supply_delivery_note.text = tr("После использования стоимость полотна включается в оплату заявки. Если полотно удастся снять и вернуть на склад, его можно будет использовать снова.")
+		elif selected_supply_item_id == &"replacement_faucet":
+			supply_delivery_note.text = tr("После установки запасной кран расходуется. Новый кран можно установить только после устранения активной магической опасности.")
+		elif selected_supply_item_id == &"heat_gloves":
+			supply_delivery_note.text = tr("После покупки рукавицы появятся на складе. Там их нужно экипировать на совместимого сотрудника.")
+		else:
+			supply_delivery_note.text = tr("После покупки снаряжение поступит в собственность службы и станет доступно на подходящих заявках.")
 	else:
 		supply_delivery_note.text = tr("После покупки книга откроет курс «%s». Выберите её в каталоге, затем откройте личное дело совместимого сотрудника.") % tr(str(game_state.TRAINING_DEFINITIONS[training_id]["name"]))
 	if owned:
@@ -1871,9 +2013,6 @@ func _refresh_personnel() -> void:
 				personnel_training_button.text = "КУРС УЖЕ ПРОЙДЕН"
 			_:
 				personnel_training_button.text = "ОБУЧЕНИЕ НЕДОСТУПНО"
-	if finish_day_button != null:
-		finish_day_button.disabled = not game_state.can_finish_day()
-		finish_day_button.tooltip_text = "Сначала завершите доступные заявки." if finish_day_button.disabled else "Перейти к следующему рабочему дню."
 
 
 func _training_state_text(training_state: StringName, employee: Dictionary) -> String:
@@ -1918,16 +2057,36 @@ func _rebuild_jobs() -> void:
 		var assigned: PackedStringArray = job["assigned"]
 		var crew_text := tr("Бригада не назначена") if assigned.is_empty() else tr("Назначено: %d") % assigned.size()
 		var deadline_text := tr("ПРОСРОЧЕНО") if bool(job.get("overdue", false)) else tr("осталось %d мин.") % int(job["time_left"])
+		var is_linked := bool(job.get("consequence", false))
+		var status_text := tr(str(job["urgency"]))
+		var card_text := "%s\n%s\n%s, %s\n%s" % [tr(str(job["title"])), tr(str(job["address"])), status_text, deadline_text, crew_text]
+		if is_linked:
+			card_text = "\n" + card_text
 		var button := _button(
-			"%s\n%s\n%s, %s\n%s" % [tr(str(job["title"])), tr(str(job["address"])), tr(str(job["urgency"])), deadline_text, crew_text],
+			card_text,
 			Vector2.ZERO,
-			Vector2(379, 150)
+			Vector2(379, 150 if is_linked else 136)
 		)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.add_theme_font_size_override("font_size", 16)
 		button.add_theme_stylebox_override("normal", _style(COLOR_SELECTED if job_id == selected_job_id else COLOR_CARD, COLOR_GOLD if job_id == selected_job_id else COLOR_BRASS, 3 if job_id == selected_job_id else 2, 9))
 		button.pressed.connect(_select_job.bind(job_id))
 		job_list.add_child(button)
+		if is_linked:
+			var linked_stripe := ColorRect.new()
+			linked_stripe.color = Color(0.48, 0.38, 0.82, 0.95)
+			linked_stripe.position = Vector2(4, 8)
+			linked_stripe.size = Vector2(6, 134)
+			linked_stripe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			button.add_child(linked_stripe)
+			var linked_badge := _label("↻  ПОВТОРНАЯ", 12, Color(0.96, 0.91, 1.0))
+			linked_badge.position = Vector2(26, 8)
+			linked_badge.size = Vector2(132, 28)
+			linked_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			linked_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			linked_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			linked_badge.add_theme_stylebox_override("normal", _style(Color(0.20, 0.14, 0.34, 0.96), Color(0.58, 0.46, 0.90), 1, 6))
+			button.add_child(linked_badge)
 
 
 func _rebuild_employees() -> void:
@@ -2020,9 +2179,13 @@ func _translated_strings(values: PackedStringArray) -> PackedStringArray:
 
 
 func _refresh_details() -> void:
+	if detail_expanded_panel != null:
+		detail_expanded_panel.visible = false
 	if selected_job_id.is_empty() or not game_state.is_job_available(selected_job_id):
 		detail_title.text = "Все доступные заявки выполнены"
 		detail_body.text = "Новые вызовы появятся на следующем этапе игрового цикла."
+		detail_badge.visible = false
+		detail_more_button.visible = false
 		assignment_label.text = ""
 		warning_label.text = ""
 		depart_button.disabled = true
@@ -2031,16 +2194,27 @@ func _refresh_details() -> void:
 		return
 	var job: Dictionary = game_state.jobs[selected_job_id]
 	var assigned: PackedStringArray = job["assigned"]
+	var is_linked := bool(job.get("consequence", false))
 	detail_title.text = tr(str(job["title"]))
-	detail_body.text = tr("%s\nЖилец: %s\nОпасность: %s\n%s") % [tr(str(job["address"])), tr(str(job["resident"])), tr(str(job["danger"])), tr(str(job["description"]))]
+	detail_badge.visible = is_linked
+	detail_body.position.y = 106 if is_linked else 94
+	detail_body.size.y = 92 if is_linked else 104
+	detail_body.text = tr("%s\nОпасность: %s") % [tr(str(job["address"])), tr(str(job["danger"]))]
+	detail_more_button.visible = true
+	detail_more_button.tooltip_text = tr(str(job["description"]))
 
 	if assigned.is_empty():
 		assignment_label.text = "Бригада: не назначена"
+		assignment_label.tooltip_text = ""
 	else:
 		var names := PackedStringArray()
+		var full_names := PackedStringArray()
 		for employee_id: String in assigned:
-			names.append(tr(str(game_state.employees[StringName(employee_id)]["name"])))
-		assignment_label.text = tr("Бригада:\n%s") % ", ".join(names)
+			var full_name := tr(str(game_state.employees[StringName(employee_id)]["name"]))
+			full_names.append(full_name)
+			names.append(full_name.get_slice(" ", 0))
+		assignment_label.text = "Бригада: %s" % ", ".join(names)
+		assignment_label.tooltip_text = ", ".join(full_names)
 
 	warning_label.text = ""
 	var dispatched: bool = game_state.is_job_dispatched(selected_job_id)
@@ -2055,6 +2229,28 @@ func _refresh_details() -> void:
 	recall_button.visible = dispatched and not confirming_extra_employees and not can_cancel_trip
 	recall_button.disabled = not dispatched
 	cancel_dispatch_button.visible = can_cancel_trip
+
+
+func _short_job_description(full_text: String) -> String:
+	const LIMIT := 105
+	if full_text.length() <= LIMIT:
+		return full_text
+	var shortened := full_text.substr(0, LIMIT)
+	var last_space := shortened.rfind(" ")
+	if last_space > 70:
+		shortened = shortened.substr(0, last_space)
+	return shortened.strip_edges() + "…"
+
+
+func _show_expanded_job_details() -> void:
+	if selected_job_id.is_empty() or not game_state.is_job_available(selected_job_id):
+		return
+	var job: Dictionary = game_state.jobs[selected_job_id]
+	var linked_note := "Связь: по этому объекту служба уже выезжала ранее.\n\n" if bool(job.get("consequence", false)) else ""
+	detail_expanded_title.text = tr(str(job["title"]))
+	detail_expanded_body.text = "%s%s\nЖилец: %s\nОпасность: %s\n\n%s" % [linked_note, tr(str(job["address"])), tr(str(job["resident"])), tr(str(job["danger"])), tr(str(job["description"]))]
+	detail_expanded_panel.visible = true
+	detail_expanded_panel.move_to_front()
 
 
 func _crew_has_ability(assigned: PackedStringArray, ability_id: StringName) -> bool:

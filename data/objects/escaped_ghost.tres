@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"escaped_ghost"
+display_name = "Привидение"
+tags = PackedStringArray("spirit", "incorporeal", "magic_conductor", "portal_linked")
+base_properties = {"anchored": false, "damage": 0, "durability": 0, "magic_level": 7, "mass": 0, "movable": true, "replacement_value": 0, "temperature": null}
+supported_effects = PackedStringArray("calm", "angry", "captured", "expelled")
+scene_path = "res://scenes/GhostMirrorRoom.tscn"
+visual_states = {&"angry": "res://assets/objects/escaped_ghost/angry.png", &"calm": "res://assets/objects/escaped_ghost/calm.png"}
+hidden_states = PackedStringArray("captured", "expelled")

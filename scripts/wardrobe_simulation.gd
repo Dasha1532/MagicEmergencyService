@@ -11,6 +11,7 @@ const ZONE_NAMES: Dictionary = {
 }
 
 var world_object: Dictionary = {
+	"instance_id": &"old_quarter_5.hall.wardrobe",
 	"definition_id": &"walking_wardrobe",
 	"mass": 8,
 	"durability": 7,
@@ -59,7 +60,7 @@ func initialize_generated(instance: Dictionary) -> void:
 	var initial_state: Variant = instance.get("initial_state", {})
 	if initial_state is Dictionary:
 		world_object.merge((initial_state as Dictionary).duplicate(true), true)
-	for key: String in ["definition_id", "position_zone", "requested_zone", "visual_state", "contents_type", "size_class"]:
+	for key: String in ["definition_id", "generated_anomaly_id", "position_zone", "requested_zone", "visual_state", "contents_type", "size_class"]:
 		world_object[key] = StringName(str(world_object.get(key, "")))
 	world_object["generated_instance_id"] = str(instance.get("instance_id", ""))
 	world_object["generator_version"] = int(instance.get("generator_version", 1))
@@ -72,7 +73,7 @@ func load_state(saved_state: Dictionary) -> void:
 	var saved_object: Variant = saved_state.get("world_object", {})
 	if saved_object is Dictionary:
 		world_object.merge((saved_object as Dictionary).duplicate(true), true)
-	for key: String in ["definition_id", "position_zone", "requested_zone", "visual_state", "contents_type", "size_class"]:
+	for key: String in ["definition_id", "generated_anomaly_id", "position_zone", "requested_zone", "visual_state", "contents_type", "size_class"]:
 		world_object[key] = StringName(str(world_object.get(key, "")))
 	# Совместимость с сохранениями раннего прототипа, где проход назывался center_wall.
 	if world_object["position_zone"] == &"center_wall":
@@ -122,6 +123,9 @@ func advance_burning_until(current_minutes: int, spread_minutes: int) -> Array[D
 
 
 func get_resident_request() -> String:
+	var generated_request := str(world_object.get("generated_resident_request", ""))
+	if not generated_request.is_empty():
+		return generated_request
 	return tr("Этот проклятый шкаф снова разгуливает по комнате! Остановите его и поставьте %s. Сделайте аккуратно, там хрупкая посуда.") % tr(_requested_zone_phrase())
 
 
@@ -331,6 +335,18 @@ func _record_result(employee_id: StringName, action_id: StringName, intent: Stri
 func is_resolved() -> bool:
 	if bool(world_object["destroyed"]):
 		return true
+	var generated_resolution: Dictionary = world_object.get("generated_resolution", {}) as Dictionary
+	if not generated_resolution.is_empty():
+		for property_name: String in generated_resolution.get("required_false", PackedStringArray()):
+			if bool(world_object.get(property_name, false)):
+				return false
+		for property_name: String in generated_resolution.get("required_true", PackedStringArray()):
+			if not bool(world_object.get(property_name, false)):
+				return false
+		var alternatives: PackedStringArray = generated_resolution.get("one_of", PackedStringArray())
+		if not alternatives.is_empty() and not _matches_any_resolution_condition(alternatives):
+			return false
+		return true
 	if bool(world_object["held"]):
 		return false
 	var cannot_walk: bool = int(world_object["mobility"]) <= 0
@@ -350,6 +366,16 @@ func get_completion_result() -> Dictionary:
 			"summary": tr("Шкаф и его содержимое уничтожены огнём. Оплата отменена, назначена компенсация %d монет.") % compensation,
 			"review": "Я просила усмирить зачарованный шкаф, а не устроить погребальный костёр для всей моей посуды! В следующий раз я лучше вызову экзорциста.",
 			"consequences": ["Шкаф уничтожен огнём.", "Хрупкая посуда внутри уничтожена.", "Хозяйка предъявила претензию на стоимость мебели и содержимого."],
+			"actions": action_log.duplicate(true),
+		}
+	var generated_completion: Dictionary = world_object.get("generated_completion", {}) as Dictionary
+	if not generated_completion.is_empty() and is_resolved():
+		return {
+			"reward_adjustment": 0,
+			"reputation_change": 1,
+			"summary": str(generated_completion.get("summary", "Работа выполнена.")),
+			"review": str(generated_completion.get("review", "")),
+			"consequences": (generated_completion.get("consequences", []) as Array).duplicate(true),
 			"actions": action_log.duplicate(true),
 		}
 	var damage := int(world_object["damage"])
@@ -539,6 +565,24 @@ func _sync_visual_state() -> void:
 		world_object["visual_state"] = &"walking"
 	else:
 		world_object["visual_state"] = &"idle"
+
+
+func _matches_any_resolution_condition(conditions: PackedStringArray) -> bool:
+	for condition: String in conditions:
+		match condition:
+			"magic_removed":
+				if int(world_object.get("magic_level", 0)) <= 0:
+					return true
+			"entrance_clear":
+				if StringName(str(world_object.get("position_zone", ""))) != &"entrance":
+					return true
+			"mobility_lost":
+				if int(world_object.get("mobility", 0)) <= 0:
+					return true
+			"anchored":
+				if bool(world_object.get("anchored", false)):
+					return true
+	return false
 
 
 func _release_held_wardrobe() -> void:

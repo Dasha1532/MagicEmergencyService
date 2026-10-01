@@ -30,7 +30,9 @@ func _ready() -> void:
 
 
 func sync_from_state(object_state: Dictionary) -> void:
-	var frost_active: bool = bool(object_state.get("frozen", false))
+	# У объектов с отдельным замороженным ассетом иней не дублируется поверх него.
+	var broken_with_cold := bool(object_state.get("broken", false)) and (bool(object_state.get("frozen", false)) or bool(object_state.get("cold_leak", false)) or bool(object_state.get("cold_source_active", false)))
+	var frost_active: bool = broken_with_cold or (bool(object_state.get("frozen", false)) and not bool(object_state.get("uses_frozen_visual", false)))
 	var fire_active: bool = bool(object_state.get("burning", false))
 	var destroyed: bool = bool(object_state.get("destroyed", false))
 	var soot_active: bool = bool(object_state.get("scorched", false)) and not destroyed

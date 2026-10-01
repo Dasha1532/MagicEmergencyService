@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"drain_gargoyle"
+display_name = "Водосточная горгулья"
+tags = PackedStringArray("drain", "stone", "heavy", "anchored", "animatable", "cloggable", "drainage", "freezable")
+base_properties = {"anchored": true, "damage": 0, "durability": 8, "magic_level": 3, "mass": 9, "movable": false, "replacement_value": 760, "temperature": 2}
+supported_effects = PackedStringArray("dormant", "awake", "clogged", "flooding", "frozen", "damaged")
+scene_path = "res://scenes/GargoyleAttic.tscn"
+visual_states = {&"awake": "res://assets/objects/drain_gargoyle/awakened.png", &"damaged": "res://assets/objects/drain_gargoyle/damaged.png", &"damaged_clean": "res://assets/objects/drain_gargoyle/damaged_clean.png", &"dormant": "res://assets/objects/drain_gargoyle/dormant.png", &"dormant_clean": "res://assets/objects/drain_gargoyle/dormant_clean.png", &"flooding": "res://assets/effects/gargoyle_attic/flooding.png", &"frozen": "res://assets/objects/drain_gargoyle/frozen.png", &"frozen_flooding": "res://assets/effects/gargoyle_attic/frozen_flooding.png"}

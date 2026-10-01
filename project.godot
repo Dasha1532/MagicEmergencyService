@@ -35,8 +35,8 @@ theme/default_font_multichannel_signed_distance_field=true
 
 [internationalization]
 
-locale/fallback="ru"
 locale/translations=PackedStringArray("res://localization/en.po")
+locale/fallback="ru"
 
 [rendering]
 

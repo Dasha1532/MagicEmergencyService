@@ -31,6 +31,18 @@ func _initialize() -> void:
 	melted_faucet.apply_action(&"liliya", &"heat")
 	melted_faucet.apply_action(&"liliya", &"heat")
 	_check("услуги по сносу" in str(melted_faucet.get_completion_result().get("review", "")), "Рагнар осуждает уничтожение крана без положительной оговорки")
+	var phrase_source: RefCounted = RepairSimulationScript.new()
+	var previous_force_phrase := ""
+	var seen_force_phrases: Dictionary = {}
+	for phrase_attempt: int in range(12):
+		var force_phrase: String = phrase_source.get_employee_reaction(&"grog", &"normal_force")
+		_check(force_phrase != previous_force_phrase, "Реплика Грога не повторяется два раза подряд")
+		seen_force_phrases[force_phrase] = true
+		previous_force_phrase = force_phrase
+	_check(seen_force_phrases.size() > 1, "Реплики Грога выбираются из пула, а не закреплены за порядком действий")
+	var restored_phrase_source: RefCounted = RepairSimulationScript.new()
+	restored_phrase_source.load_state(phrase_source.get_state())
+	_check(restored_phrase_source.get_employee_reaction(&"grog", &"normal_force") != previous_force_phrase, "Защита от повтора сохраняется после загрузки")
 
 	var wardrobe: RefCounted = WardrobeSimulationScript.new()
 	var left_line: String = wardrobe.get_employee_reaction(&"grog", &"physical_move", &"move_left")

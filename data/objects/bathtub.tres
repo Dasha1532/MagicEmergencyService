@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"bathtub"
+display_name = "Ванна"
+tags = PackedStringArray("plumbing", "ceramic", "anchored", "water_contact", "freezable", "fragile")
+base_properties = {"anchored": true, "damage": 0, "durability": 6, "magic_level": 0, "mass": 9, "movable": false, "replacement_value": 480, "temperature": 2}
+supported_effects = PackedStringArray("frozen", "ice_removed", "damaged", "destroyed")
+scene_path = "res://scenes/FrozenBathRoom.tscn"
+visual_states = {&"damaged": "res://assets/objects/frozen_bath/bath_broken.png", &"damaged_empty": "res://assets/objects/frozen_bath/bath_broken_empty.png", &"frozen": "res://assets/objects/frozen_bath/bath_frozen.png"}
+visual_overlays = {&"extra_frost": "res://assets/effects/status/frost.png"}

@@ -5,6 +5,7 @@ signal action_finished
 
 @onready var neutral_pose: TextureRect = $NeutralPose
 @onready var work_pose: TextureRect = $WorkPose
+@onready var heat_protected_work_pose: TextureRect = $HeatProtectedWorkPose
 @onready var walk_pose: TextureRect = $WalkPose
 @onready var walk_pose_alt: TextureRect = $WalkPoseAlt
 @onready var hold_pose: TextureRect = $HoldPose
@@ -57,6 +58,8 @@ func configure_employee(new_employee_id: StringName, employee_data: Dictionary) 
 	action_origin_from_data = bool(employee_data.get("actor_action_origin_from_data", false))
 	neutral_pose.texture = load(neutral_path)
 	work_pose.texture = load(work_path)
+	var protected_work_path := str(employee_data.get("actor_heat_protected_work_pose", ""))
+	heat_protected_work_pose.texture = load(protected_work_path) as Texture2D if not protected_work_path.is_empty() else null
 	var walk_path := str(employee_data.get("actor_walk_pose", ""))
 	var walk_alt_path := str(employee_data.get("actor_walk_pose_alt", ""))
 	walk_pose_faces_right = bool(employee_data.get("actor_walk_pose_faces_right", false))
@@ -69,6 +72,7 @@ func configure_employee(new_employee_id: StringName, employee_data: Dictionary) 
 	work_pose.offset_top = neutral_pose.offset_top
 	work_pose.offset_right = neutral_pose.offset_right
 	work_pose.offset_bottom = neutral_pose.offset_bottom
+	_copy_pose_layout(neutral_pose, heat_protected_work_pose)
 	_copy_pose_layout(neutral_pose, walk_pose)
 	_copy_pose_layout(neutral_pose, walk_pose_alt)
 	_copy_pose_layout(neutral_pose, hold_pose)
@@ -94,6 +98,8 @@ func _reset_pose_visibility() -> void:
 	neutral_pose.modulate = Color.WHITE
 	work_pose.visible = false
 	work_pose.modulate = Color(1, 1, 1, 0)
+	heat_protected_work_pose.visible = false
+	heat_protected_work_pose.modulate = Color(1, 1, 1, 0)
 	walk_pose.visible = false
 	walk_pose.modulate = Color.WHITE
 	walk_pose.position = walk_pose_base_position
@@ -152,12 +158,14 @@ func play_action(
 		var selected_pose: TextureRect = work_pose
 		if physical_pose == &"hold" and hold_pose.texture != null:
 			selected_pose = hold_pose
+		elif physical_pose == &"heat_protected" and heat_protected_work_pose.texture != null:
+			selected_pose = heat_protected_work_pose
 		elif physical_pose == &"neutral":
 			selected_pose = neutral_pose
-		if employee_id == &"boris" and action_id == &"repair":
+		if employee_id == &"boris" and action_id in [&"repair", &"replace_faucet", &"install_thermal_regulator"]:
 			_play_audio_cue(&"play_boris_repair")
 		await _show_action_pose(selected_pose)
-		await get_tree().create_timer(0.38).timeout
+		await get_tree().create_timer(0.06 if action_id == &"turn_valve" else 0.38).timeout
 		action_impact.emit(action_id)
 		await get_tree().create_timer(0.16).timeout
 		if stay_near_target:
@@ -180,7 +188,7 @@ func play_action(
 
 
 func _show_action_pose(pose: TextureRect) -> void:
-	for item: TextureRect in [neutral_pose, work_pose, walk_pose, walk_pose_alt, hold_pose]:
+	for item: TextureRect in [neutral_pose, work_pose, heat_protected_work_pose, walk_pose, walk_pose_alt, hold_pose]:
 		if item != pose:
 			item.visible = false
 	pose.visible = true
@@ -214,7 +222,7 @@ func _show_persistent_pose_now() -> void:
 func _show_work_pose_now() -> void:
 	if idle_tween != null:
 		idle_tween.pause()
-	for item: TextureRect in [neutral_pose, walk_pose, walk_pose_alt, hold_pose]:
+	for item: TextureRect in [neutral_pose, heat_protected_work_pose, walk_pose, walk_pose_alt, hold_pose]:
 		item.visible = false
 	work_pose.visible = true
 	work_pose.modulate = Color.WHITE
@@ -223,7 +231,7 @@ func _show_work_pose_now() -> void:
 func _show_hold_pose_now() -> void:
 	if idle_tween != null:
 		idle_tween.pause()
-	for item: TextureRect in [neutral_pose, work_pose, walk_pose, walk_pose_alt]:
+	for item: TextureRect in [neutral_pose, work_pose, heat_protected_work_pose, walk_pose, walk_pose_alt]:
 		item.visible = false
 	hold_pose.visible = true
 	hold_pose.modulate = Color.WHITE
@@ -236,6 +244,7 @@ func _walk_to(target_position: Vector2) -> void:
 	_play_audio_cue(&"play_steps")
 	neutral_pose.visible = false
 	work_pose.visible = false
+	heat_protected_work_pose.visible = false
 	hold_pose.visible = false
 	walk_pose.visible = true
 	walk_pose_alt.visible = false

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"wardrobe"
+display_name = "Шкаф"
+tags = PackedStringArray("furniture", "wooden", "flammable", "freezable", "heavy", "container", "fragile_contents", "movable", "animatable", "large")
+base_properties = {"anchored": false, "contents_value": 180, "damage": 0, "durability": 7, "magic_level": 0, "mass": 8, "mobility": 5, "movable": true, "movement_force": 0, "noise": 0, "replacement_value": 520, "temperature": 2}
+supported_effects = PackedStringArray("animated", "moving", "frozen", "burning", "scorched", "damaged", "destroyed")
+scene_path = "res://scenes/WardrobeRoom.tscn"
+visual_states = {&"damaged": "res://assets/objects/walking_wardrobe/broken_legs.png", &"destroyed": "res://assets/objects/walking_wardrobe/ash_pile.png", &"idle": "res://assets/objects/walking_wardrobe/idle.png", &"walking": "res://assets/objects/walking_wardrobe/walking.png"}
+visual_overlays = {&"burning": "res://assets/effects/status/fire.png", &"frozen": "res://assets/effects/status/frost.png", &"scorched": "res://assets/effects/status/soot.png"}

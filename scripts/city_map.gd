@@ -14,7 +14,7 @@ const COLOR_MUTED := Color(0.70, 0.63, 0.52)
 var HOUSE_DEFINITIONS: Dictionary = {
 	&"ragnar_eleonora": {
 		"address": "Старый квартал, 5",
-		"job_ids": PackedStringArray(["lava_leak", "walking_wardrobe", "generated_wardrobe_1"]),
+		"job_ids": PackedStringArray(["lava_leak", "generated_faucet_tutorial_1", "walking_wardrobe", "generated_wardrobe_1"]),
 	},
 	&"selesta": {
 		"address": "Верхний город, 12",
@@ -36,6 +36,7 @@ var HOUSE_DEFINITIONS: Dictionary = {
 @onready var job_list: VBoxContainer = $HousePanel/JobScroll/JobList
 
 var selected_house_id: StringName = &""
+var last_wardrobe_diagnostic_signature := ""
 
 
 func _ready() -> void:
@@ -128,6 +129,11 @@ func _active_job_ids(definition: Dictionary) -> PackedStringArray:
 	for job_id_string: String in definition["job_ids"]:
 		if game_state.is_job_available(StringName(job_id_string)):
 			result.append(job_id_string)
+	if definition == HOUSE_DEFINITIONS[&"ragnar_eleonora"]:
+		var signature := "%d:%s" % [game_state.day, ",".join(result)]
+		if signature != last_wardrobe_diagnostic_signature:
+			last_wardrobe_diagnostic_signature = signature
+			game_state.print_wardrobe_diagnostic("city_map_visible_jobs", result)
 	return result
 
 

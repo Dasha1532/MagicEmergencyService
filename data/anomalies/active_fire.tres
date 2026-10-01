@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="GenerativeAnomalyDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/anomaly_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"active_fire"
+display_name = "Самовозгорание"
+generator_enabled = true
+compatible_object_ids = PackedStringArray("wardrobe")
+required_tags = PackedStringArray("flammable")
+forbidden_tags = PackedStringArray("destroyed")
+initial_effects = PackedStringArray("burning", "scorched")
+objective_ids = PackedStringArray("extinguish_fire")
+initial_state = {"burning": true, "fire_spots": 1, "magic_level": 0, "movement_force": 0, "moving": false, "noise": 0, "position_zone": "$requested_zone", "scorched": true, "temperature": 7}
+resolution = {"required_false": PackedStringArray("burning")}
+solution_plans = [{"abilities": PackedStringArray("freeze"), "family": &"freeze_extinguish"}]
+visual_effects = PackedStringArray("burning", "scorched")
+presentation = {"card_title": "Горящий шкаф", "danger": "Открытый огонь, хрупкое содержимое", "description": "Шкаф госпожи Элеоноры внезапно вспыхнул без видимой причины. Огонь уже охватил древесину и продолжает распространяться.", "objective": "Потушить шкаф, пока огонь не уничтожил мебель и посуду", "resident_request": "Шкаф сам загорелся! Потушите его скорее, пока от мебели и посуды ничего не осталось!", "title": "Шкаф загорелся сам по себе"}
+completion = {"consequences": ["Пожар потушен.", "На древесине остались следы копоти."], "review": "Спасибо, что приехали вовремя. Шкаф цел, посуда цела, а копоть я переживу.", "summary": "Пожар на шкафу потушен до того, как огонь успел уничтожить мебель и посуду."}
+weight = 8

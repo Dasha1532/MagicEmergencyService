@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"portal_mirror"
+display_name = "Портальное зеркало"
+tags = PackedStringArray("mirror", "glass", "fragile", "anchored", "portal_capable", "magic_conductor", "freezable")
+base_properties = {"anchored": true, "damage": 0, "durability": 3, "magic_level": 0, "mass": 6, "movable": false, "replacement_value": 680, "temperature": 2}
+supported_effects = PackedStringArray("portal_open", "cold_aura", "covered", "heat_damaged", "closed", "destroyed")
+scene_path = "res://scenes/PortalMirrorHouse.tscn"
+visual_states = {&"closed": "res://assets/objects/portal_mirror/closed.png", &"closed_heat_damaged": "res://assets/objects/portal_mirror/closed_heat_damaged.png", &"covered": "res://assets/objects/portal_mirror/covered.png", &"covered_heat_damaged": "res://assets/objects/portal_mirror/covered_heat_damaged.png", &"destroyed": "res://assets/objects/portal_mirror/destroyed.png", &"heat_damaged": "res://assets/objects/portal_mirror/heat_damaged.png", &"open": "res://assets/objects/portal_mirror/open.png"}

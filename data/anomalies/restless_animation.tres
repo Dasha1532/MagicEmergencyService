@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="GenerativeAnomalyDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/anomaly_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"restless_animation"
+display_name = "Беспокойное оживление"
+generator_enabled = true
+compatible_object_ids = PackedStringArray("wardrobe")
+required_tags = PackedStringArray("movable", "animatable")
+forbidden_tags = PackedStringArray("destroyed")
+initial_effects = PackedStringArray("animated", "moving")
+objective_ids = PackedStringArray("stop_uncontrolled_motion", "clear_requested_zone")
+initial_state = {"anchored": false, "magic_level": [4, 7], "movement_force": [4, 6], "moving": true, "noise": [6, 8], "position_zone": "kitchen_passage"}
+resolution = {"one_of": PackedStringArray("magic_removed", "entrance_clear", "mobility_lost", "anchored"), "required_false": PackedStringArray("moving", "burning", "held")}
+solution_plans = [{"abilities": PackedStringArray("physical_move", "repair"), "family": &"relocate_anchor"}, {"abilities": PackedStringArray("physical_move", "antimagic"), "family": &"relocate_antimagic"}, {"abilities": PackedStringArray("telekinesis", "repair"), "family": &"telekinesis_anchor"}, {"abilities": PackedStringArray("telekinesis", "antimagic"), "family": &"telekinesis_antimagic"}]
+visual_effects = PackedStringArray("moving")
+presentation = {"card_title": "Беспокойный шкаф", "danger": "Бытовая магия, тяжёлая мебель", "description": "Зачарованный шкаф ожил, загремел посудой и встал в проходе на кухню. Хозяйка просит убрать его {destination}.", "objective": "Остановить шкаф и убрать {destination}", "resident_request": "Шкаф сам добрался до кухонного прохода и мешает пройти. Остановите его и уберите {destination}. Только аккуратно: внутри хрупкая посуда.", "title": "Шкаф перекрыл проход на кухню"}
+weight = 10

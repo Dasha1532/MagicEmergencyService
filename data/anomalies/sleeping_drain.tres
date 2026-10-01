@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GenerativeAnomalyDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/anomaly_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"sleeping_drain"
+display_name = "Магический сон водостока"
+required_tags = PackedStringArray("animatable", "cloggable", "drainage")
+forbidden_tags = PackedStringArray("damaged")
+initial_effects = PackedStringArray("dormant", "clogged", "flooding")
+objective_ids = PackedStringArray("restore_drainage")
+visual_effects = PackedStringArray("dormant", "flooding")
+weight = 5

@@ -37,15 +37,17 @@ var tutorial_overlay: CanvasLayer
 
 
 func _ready() -> void:
-	if game_state.active_job_id != &"lava_leak":
+	if not game_state.is_faucet_job(game_state.active_job_id):
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 		return
 	simulation = RepairSimulationScript.new()
+	simulation.initialize_from_job(game_state.jobs[game_state.active_job_id])
 	simulation.load_state(game_state.get_job_repair_state(game_state.active_job_id))
 	_configure_buttons()
 	bathroom_hotspot.pressed.connect(_open_bathroom)
 	back_to_house_button.pressed.connect(_show_house_overview)
 	tool_bar.tool_selected.connect(_on_tool_selected)
+	tool_bar.intent_selected.connect(_on_context_intent_selected)
 	repair_hud.employee_selected.connect(_on_employee_selected)
 	repair_hud.completion_requested.connect(_attempt_complete_job)
 	repair_hud.long_action_started.connect(_on_long_action_started)
@@ -63,11 +65,17 @@ func _ready() -> void:
 	tutorial_overlay.configure(&"repair", self)
 	add_child(tutorial_overlay)
 	call_deferred("_open_bathroom")
-	_set_lava_audio(_is_lava_flowing())
+	_set_flow_audio()
 
 
 func _exit_tree() -> void:
-	_set_lava_audio(false)
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager == null:
+		return
+	if audio_manager.has_method(&"set_lava_flow_playing"):
+		audio_manager.call(&"set_lava_flow_playing", false)
+	if audio_manager.has_method(&"set_running_water_playing"):
+		audio_manager.call(&"set_running_water_playing", false)
 
 
 func _on_long_action_started(employee_id: StringName) -> void:
@@ -194,12 +202,35 @@ func _apply_selected_action() -> void:
 	if selected_employee_id.is_empty():
 		_show_feedback("Сначала выберите сотрудника из бригады.", true)
 		return
-	tool_bar.show_for_object("Кран", _faucet_target_global(), {}, [], PackedStringArray(["animate"]))
+	var contextual_actions: Array[Dictionary] = []
+	var hidden_actions := PackedStringArray(["animate"])
+	var employee: Dictionary = game_state.get_employee_with_equipment(selected_employee_id)
+	if selected_employee_id == &"grog":
+		hidden_actions.append("physical_move")
+		contextual_actions.append({"id": &"turn_valve", "label": "Повернуть вентиль"})
+		contextual_actions.append({"id": &"normal_force", "label": "Обычная сила"})
+		contextual_actions.append({"id": &"brute_force", "label": "Грубая сила"})
+	elif selected_employee_id == &"boris":
+		if simulation.can_employee_start_action(&"turn_valve", employee):
+			contextual_actions.append({"id": &"turn_valve", "label": "Повернуть вентиль"})
+		if not simulation.can_employee_start_action(&"repair", employee):
+			hidden_actions.append("repair")
+		if game_state.has_supply_item(&"thermal_regulator") and simulation.can_install_temperature_regulator() and simulation.can_employee_start_action(&"install_thermal_regulator", employee):
+			contextual_actions.append({"id": &"install_thermal_regulator", "label": "Установить терморегулятор"})
+		if simulation.can_replace_faucet() and game_state.has_supply_item(&"replacement_faucet") and simulation.can_employee_start_action(&"replace_faucet", employee):
+			contextual_actions.append({"id": &"replace_faucet", "label": "Заменить кран"})
+	tool_bar.show_for_object("Кран", _faucet_target_global(), {}, contextual_actions, hidden_actions)
+
+
+func _on_context_intent_selected(intent_id: StringName) -> void:
+	selected_tool_id = intent_id
+	_request_selected_action()
 
 
 func _request_selected_action() -> void:
-	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
-	var contextual: String = simulation.get_employee_reaction(selected_employee_id, selected_tool_id)
+	_sync_available_equipment()
+	var employee: Dictionary = game_state.get_employee_with_equipment(selected_employee_id)
+	var contextual: String = simulation.get_employee_reaction(selected_employee_id, selected_tool_id, employee)
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, selected_tool_id, simulation.world_object, &"", contextual)
 	if not reaction.is_empty() and repair_hud.show_employee_reaction(selected_employee_id, reaction):
 		pending_dialogue_action = selected_tool_id
@@ -221,19 +252,20 @@ func _begin_selected_action() -> void:
 	if selected_tool_id.is_empty():
 		_show_feedback("У выбранного сотрудника нет подходящего действия для этого объекта.", true)
 		return
-	if not simulation.can_begin_action(selected_tool_id):
+	var employee: Dictionary = game_state.get_employee_with_equipment(selected_employee_id)
+	if not simulation.can_begin_action(selected_tool_id, employee):
 		_resolve_action(selected_tool_id)
 		return
 	if employee_actor.visible:
 		action_in_progress = true
 		lava_faucet.set_interaction_enabled(false)
-		if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical":
+		if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical" and game_state.get_action_duration(selected_tool_id) > 1:
 			_schedule_action(selected_tool_id)
 		employee_actor.play_action(
 			selected_tool_id,
 			_faucet_target_global(),
 			physical_approach.position,
-			&"neutral" if selected_tool_id == &"diagnose" else &"work"
+			_action_pose_for_selected_tool()
 		)
 		return
 	_resolve_action(selected_tool_id)
@@ -242,11 +274,11 @@ func _begin_selected_action() -> void:
 func _configure_employee_actor() -> bool:
 	if selected_employee_id.is_empty() or not game_state.employees.has(selected_employee_id):
 		return false
-	return employee_actor.configure_employee(selected_employee_id, game_state.employees[selected_employee_id])
+	return employee_actor.configure_employee(selected_employee_id, game_state.get_employee_with_equipment(selected_employee_id))
 
 
 func _on_employee_action_impact(action_id: StringName) -> void:
-	if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"magic":
+	if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"magic" or not repair_hud.is_timed_action_active():
 		_resolve_action(action_id)
 
 
@@ -256,27 +288,28 @@ func _on_employee_action_finished() -> void:
 
 
 func _resolve_action(action_id: StringName) -> void:
+	_sync_available_equipment()
 	var previous_damage: int = int(simulation.world_object.get("damage", 0))
-	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id)
+	var employee: Dictionary = game_state.get_employee_with_equipment(selected_employee_id)
+	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, employee)
+	var consumed_item_id := StringName(str(result.get("consume_item_id", "")))
+	if bool(result.get("applied", false)) and not consumed_item_id.is_empty():
+		game_state.consume_supply_item(consumed_item_id)
+	if bool(result.get("injured", false)):
+		game_state.injure_employee(selected_employee_id, 1)
 	if bool(result.get("applied", false)) and action_id == &"physical_move":
 		_play_audio_cue(&"play_heavy_impact")
-	var visual_state: StringName = result.get("visual_state", &"emergency")
-	if visual_state == &"repaired":
-		lava_faucet.show_repaired_state()
-	elif visual_state == &"overheated":
-		lava_faucet.show_overheated_state(_is_lava_flowing())
-	elif visual_state == &"melted":
-		lava_faucet.show_melted_state(_is_lava_flowing())
-	else:
-		lava_faucet.show_emergency_state(_is_lava_flowing())
+	lava_faucet.sync_from_state(simulation.world_object)
 	lava_faucet.set_damage_visible(_has_damage())
 	faucet_status_effects.call("sync_from_state", simulation.world_object)
-	_set_lava_audio(_is_lava_flowing())
+	_set_flow_audio()
 	_update_resident_reaction()
 	var resident_message: String = simulation.get_resident_reaction()
 	var caused_damage: bool = int(simulation.world_object.get("damage", 0)) > previous_damage
 	if action_id == &"diagnose":
 		repair_hud.show_dialogue("РЕЗУЛЬТАТ ОСМОТРА", str(result["message"]))
+	elif not str(result.get("employee_result", "")).is_empty():
+		repair_hud.show_employee_reaction(selected_employee_id, str(result["employee_result"]))
 	elif caused_damage and not resident_message.is_empty():
 		repair_hud.show_resident_dialogue(resident_message)
 	elif not bool(result["applied"]) and action_had_intro:
@@ -301,10 +334,16 @@ func _show_failed_action(result: Dictionary) -> void:
 		_show_feedback(message, true)
 
 
-func _set_lava_audio(enabled: bool) -> void:
+func _set_flow_audio() -> void:
 	var audio_manager := get_node_or_null("/root/AudioManager")
-	if audio_manager != null and audio_manager.has_method(&"set_lava_flow_playing"):
-		audio_manager.call(&"set_lava_flow_playing", enabled)
+	if audio_manager == null:
+		return
+	if audio_manager.has_method(&"set_lava_flow_playing"):
+		audio_manager.call(&"set_lava_flow_playing", _is_lava_flowing())
+	if audio_manager.has_method(&"set_running_water_playing"):
+		var valve_open := StringName(str(simulation.world_object.get("valve_position", "closed"))) != &"closed"
+		var water_flowing := valve_open and StringName(str(simulation.world_object.get("flow_content", "none"))) == &"water" and not bool(simulation.world_object.get("flow_blocked", false))
+		audio_manager.call(&"set_running_water_playing", water_flowing)
 
 
 func _play_audio_cue(method: StringName) -> void:
@@ -332,34 +371,29 @@ func _faucet_target_global() -> Vector2:
 
 func _attempt_complete_job() -> void:
 	if not simulation.is_resolved():
-		if _is_lava_flowing():
-			_show_feedback("Работу нельзя завершить: лава всё ещё течёт.", true)
-		else:
-			_show_feedback("Работу нельзя завершить: кран находится в опасном состоянии.", true)
+		_show_feedback(simulation.get_unresolved_message(), true)
 		return
-	if game_state.complete_active_job(simulation.get_completion_result()):
+	if game_state.complete_active_job(simulation.get_completion_result(game_state.active_job_id)):
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 
 func _restore_repair_state() -> void:
 	var visual_state: StringName = simulation.world_object.get("visual_state", &"emergency")
+	lava_faucet.sync_from_state(simulation.world_object)
 	if visual_state == &"repaired":
-		lava_faucet.show_repaired_state()
 		_show_feedback("Кран исправен. Работу можно завершить.")
 	elif visual_state == &"overheated":
-		lava_faucet.show_overheated_state(_is_lava_flowing())
 		if _is_lava_flowing():
 			_show_feedback("Кран перегрет. Остановите поток лавы перед завершением работы.", true)
 		else:
 			_show_feedback("Кран перегрет и деформируется, но остановленная лава не возобновилась.", true)
 	elif visual_state == &"melted":
-		lava_faucet.show_melted_state(_is_lava_flowing())
 		_show_feedback("Кран расплавлен и полностью сломан. Спёкшийся металл перекрыл поток лавы; это конечный исход заявки.", true)
 	else:
-		lava_faucet.show_emergency_state(_is_lava_flowing())
 		_show_feedback("Выберите действие сотрудника и примените его к аварийному крану.")
 	lava_faucet.set_damage_visible(_has_damage())
 	faucet_status_effects.call("sync_from_state", simulation.world_object)
+	_set_flow_audio()
 	_update_resident_reaction()
 	repair_hud.set_completion_ready(simulation.is_resolved())
 
@@ -375,6 +409,25 @@ func _has_damage() -> bool:
 func _is_lava_flowing() -> bool:
 	var tags: PackedStringArray = PackedStringArray(simulation.world_object.get("tags", PackedStringArray()))
 	return tags.has("lava_flowing")
+
+
+func _sync_available_equipment() -> void:
+	if simulation == null:
+		return
+	simulation.world_object["heat_gloves_available"] = game_state.is_supply_equipped_by(&"heat_gloves", selected_employee_id)
+	simulation.world_object["replacement_faucet_available"] = game_state.has_supply_item(&"replacement_faucet")
+	simulation.world_object["thermal_regulator_available"] = game_state.has_supply_item(&"thermal_regulator")
+
+
+func _action_pose_for_selected_tool() -> StringName:
+	if selected_tool_id == &"diagnose":
+		return &"neutral"
+	if selected_employee_id == &"boris" and game_state.is_supply_equipped_by(&"heat_gloves", &"boris"):
+		var tags := PackedStringArray(simulation.world_object.get("tags", PackedStringArray()))
+		var is_hot := tags.has("overheated") or tags.has("melted") or int(simulation.world_object.get("temperature", 0)) >= 10
+		if is_hot and selected_tool_id in [&"turn_valve", &"repair", &"replace_faucet"]:
+			return &"heat_protected"
+	return &"work"
 
 
 func _show_feedback(message: String, is_warning: bool = false) -> void:

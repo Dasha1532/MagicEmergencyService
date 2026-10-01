@@ -2,15 +2,17 @@ extends Node
 
 const WardrobeSimulationScript := preload("res://scripts/wardrobe_simulation.gd")
 const GeneratedJobGeneratorScript := preload("res://scripts/generated_job_generator.gd")
+const WorldMemoryScript := preload("res://scripts/world_memory.gd")
 
 signal state_changed
 signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 15
+const SAVE_VERSION: int = 20
 const LEGACY_SAVE_PATH: String = "user://savegame.json"
 const AUTOSAVE_PATH: String = "user://autosave.json"
+const GENERATOR_HISTORY_PATH: String = "user://generator_history.cfg"
 const SAVE_SLOT_COUNT: int = 5
 const TRAVEL_TIME_MINUTES: int = 15
 const WARDROBE_FIRE_DURATION_MINUTES: int = 15
@@ -25,6 +27,7 @@ const DISMISSAL_DEBT_THRESHOLD: int = -800
 const REAL_SECONDS_PER_GAME_MINUTE: float = 3.0
 const DEMO_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle", "escaped_ghost", "frozen_bath"]
 const DEMO_CORE_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle"]
+const HIDDEN_LEGACY_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle", "escaped_ghost", "frozen_bath"]
 const SUPPLY_ITEMS: Dictionary = {
 	&"animation_kit": {
 		"name": "Практическое оживление бытовых предметов",
@@ -47,6 +50,7 @@ const SUPPLY_ITEMS: Dictionary = {
 		"name": "Рунический терморегулятор", "catalog_name": "Рунический терморегулятор", "category": "Полевое снаряжение", "price": 280,
 		"icon": "res://assets/objects/frozen_bath/regulator.png",
 		"description": "Переносной регулятор с рунами тепла и холода. Стабилизирует магическую температуру крана после установки.",
+		"solution_capability": "thermal_regulator",
 	},
 	&"protective_cloth": {
 		"name": "Защитное полотно",
@@ -55,6 +59,26 @@ const SUPPLY_ITEMS: Dictionary = {
 		"price": 50,
 		"icon": "res://assets/objects/protective_cloth/folded.png",
 		"description": "Плотная ткань с защитными рунами и латунными зажимами. Позволяет временно изолировать активный магический объект.",
+		"consumable": true,
+	},
+	&"heat_gloves": {
+		"name": "Термостойкие рукавицы",
+		"catalog_name": "Термостойкие рукавицы",
+		"category": "Многоразовое снаряжение",
+		"price": 120,
+		"icon": "res://assets/objects/equipment/heat_gloves.png",
+		"description": "Защищают руки при кратковременном контакте с раскалёнными объектами. После покупки назначаются сотруднику на складе и не расходуются.",
+		"reusable": true,
+		"protects_from": ["contact_heat"],
+		"eligible_employee_ids": ["boris"],
+	},
+	&"replacement_faucet": {
+		"name": "Запасной магический кран",
+		"catalog_name": "Запасной кран",
+		"category": "Запасное оборудование",
+		"price": 250,
+		"icon": "res://assets/objects/lava_faucet/faucet_normal.png",
+		"description": "Новый кран для замены механически сломанного или расплавленного оборудования. Устанавливается Борисом и расходуется при замене.",
 		"consumable": true,
 	},
 	&"freeze_grimoire": {
@@ -120,7 +144,9 @@ var money: int = 600
 var reputation: int = 37
 var selected_job_id: StringName = &"lava_leak"
 var active_job_id: StringName = &""
+var tutorial_job_id: StringName = &"lava_leak"
 var owned_supply_items: PackedStringArray = PackedStringArray()
+var equipped_supply_items: Dictionary = {}
 var completed_job_ids: PackedStringArray = PackedStringArray()
 var job_reports: Array = []
 var pending_job_report: Dictionary = {}
@@ -134,6 +160,9 @@ var tutorial_state: Dictionary = {}
 var campaign_seed: int = 0
 var next_generated_job_index: int = 0
 var generated_jobs: Dictionary = {}
+var world_memory: RefCounted = WorldMemoryScript.new()
+var last_generated_anomaly_id: StringName = &""
+var last_generated_faucet_anomaly_id: StringName = &""
 var clock_paused: bool = true
 var clock_speed: int = 1
 var _clock_accumulator: float = 0.0
@@ -175,6 +204,14 @@ func get_action_duration(action_id: StringName, intent: StringName = &"") -> int
 			return 2
 		&"repair":
 			return 6
+		&"replace_faucet":
+			return 6
+		&"install_thermal_regulator":
+			return 3
+		&"normal_force", &"brute_force":
+			return 3
+		&"turn_valve":
+			return 1
 		&"anchor":
 			return 6
 		&"antimagic":
@@ -233,11 +270,13 @@ var employees: Dictionary = {
 		"status": "Свободен",
 		"idle_status": "Свободен",
 		"abilities": PackedStringArray(["physical_move"]),
+		"protections": PackedStringArray(["contact_heat"]),
+		"can_open_hazardous_valves": true,
 		"training_categories": PackedStringArray(["physical"]),
 		"max_special_abilities": 2,
 		"core_actions": "Удержание и силовая работа",
 		"description": "Такелажник для случаев, когда аварийный объект нужно удержать, передвинуть или убедительно поставить на место.",
-		"strength": "Сильная сторона: сила и устойчивость",
+		"strength": "Сильная сторона: сила, устойчивость и штатная защита рук от жара",
 		"weakness": "Ограничение: тонкая магия — не его участок",
 		"traits": "Надёжен, терпелив, бережёт казённый инструмент",
 		"available": true,
@@ -250,6 +289,7 @@ var employees: Dictionary = {
 		"actor_walk_pose": "res://assets/characters/employees/boris/walk_pose_1.png",
 		"actor_walk_pose_alt": "res://assets/characters/employees/boris/walk_pose_2.png",
 		"actor_work_pose": "res://assets/characters/employees/boris/work_pose.png",
+		"actor_heat_protected_work_pose": "res://assets/characters/employees/boris/heat_gloves_work_pose.png",
 		"actor_action_style": &"physical",
 		"status": "Свободен",
 		"idle_status": "Свободен",
@@ -361,6 +401,10 @@ var jobs: Dictionary = {
 		"danger": "Лава, высокая температура",
 		"base_reward": 500,
 		"repair_scene": "res://scenes/RepairHouse.tscn",
+		"object_definition_id": &"lava_faucet",
+		"simulation_type": &"lava_faucet",
+		"tutorial_eligible": false,
+		"tutorial_required_ability_sets": [PackedStringArray(["freeze"])],
 		"assigned": PackedStringArray(),
 	},
 	&"walking_wardrobe": {
@@ -469,6 +513,8 @@ func assign_employee(employee_id: StringName, job_id: StringName) -> void:
 		return
 	if not employees[employee_id]["available"]:
 		return
+	if is_employee_injured(employee_id):
+		return
 	if is_employee_returning(employee_id):
 		return
 	if is_employee_training(employee_id):
@@ -537,11 +583,71 @@ func has_supply_item(item_id: StringName) -> bool:
 	return owned_supply_items.has(String(item_id))
 
 
+func equip_supply_item(item_id: StringName, employee_id: StringName) -> bool:
+	if not has_supply_item(item_id) or not employees.has(employee_id):
+		return false
+	var eligible_ids := PackedStringArray(SUPPLY_ITEMS[item_id].get("eligible_employee_ids", []))
+	if not eligible_ids.has(String(employee_id)):
+		return false
+	equipped_supply_items[String(item_id)] = String(employee_id)
+	state_changed.emit()
+	save_autosave()
+	return true
+
+
+func unequip_supply_item(item_id: StringName) -> bool:
+	if not equipped_supply_items.has(String(item_id)):
+		return false
+	equipped_supply_items.erase(String(item_id))
+	state_changed.emit()
+	save_autosave()
+	return true
+
+
+func get_equipped_employee(item_id: StringName) -> StringName:
+	return StringName(str(equipped_supply_items.get(String(item_id), "")))
+
+
+func is_supply_equipped_by(item_id: StringName, employee_id: StringName) -> bool:
+	return get_equipped_employee(item_id) == employee_id
+
+
+func get_employee_with_equipment(employee_id: StringName) -> Dictionary:
+	var result: Dictionary = (employees.get(employee_id, {}) as Dictionary).duplicate(true)
+	var protections := PackedStringArray(result.get("protections", PackedStringArray()))
+	for item_id_value: Variant in equipped_supply_items:
+		var item_id := StringName(str(item_id_value))
+		if get_equipped_employee(item_id) != employee_id or not SUPPLY_ITEMS.has(item_id):
+			continue
+		for protection_value: Variant in SUPPLY_ITEMS[item_id].get("protects_from", []):
+			var protection := str(protection_value)
+			if not protections.has(protection):
+				protections.append(protection)
+	result["protections"] = protections
+	return result
+
+
+func injure_employee(employee_id: StringName, recovery_days: int = 1) -> void:
+	if not employees.has(employee_id):
+		return
+	var employee: Dictionary = employees[employee_id]
+	employee["injured_until_day"] = maxi(int(employee.get("injured_until_day", 0)), day + maxi(1, recovery_days))
+	employee["status"] = "Лечит ожоги до следующего дня"
+	employees[employee_id] = employee
+	state_changed.emit()
+	save_autosave()
+
+
+func is_employee_injured(employee_id: StringName) -> bool:
+	return employees.has(employee_id) and day < int(employees[employee_id].get("injured_until_day", 0))
+
+
 func consume_supply_item(item_id: StringName) -> bool:
 	var item_index := owned_supply_items.find(String(item_id))
 	if item_index < 0:
 		return false
 	owned_supply_items.remove_at(item_index)
+	equipped_supply_items.erase(String(item_id))
 	state_changed.emit()
 	return true
 
@@ -566,11 +672,12 @@ func advance_day(days: int = 1) -> void:
 		return
 	day += days
 	time_minutes = 9 * 60
-	if completed_job_ids.has("lava_leak"):
+	if is_tutorial_job_completed():
 		_update_parallel_job_unlocks()
 	_unlock_gargoyle_job_if_due()
 	_unlock_escaped_ghost_job_if_due()
 	_unlock_frozen_bath_job_if_due()
+	_publish_due_world_consequences()
 	for employee_id: StringName in EMPLOYEE_ORDER:
 		var employee: Dictionary = employees[employee_id]
 		employee["arrival_until"] = 0
@@ -712,7 +819,29 @@ func get_active_job_repair_scene() -> String:
 
 
 func is_job_available(job_id: StringName) -> bool:
+	# Старые сценарные заявки сохранены для совместимости сохранений и тестовых сцен,
+	# но больше не участвуют в генеративном цикле и не показываются игроку.
+	if HIDDEN_LEGACY_JOB_IDS.has(String(job_id)):
+		return false
 	return jobs.has(job_id) and bool(jobs[job_id].get("unlocked", false)) and not completed_job_ids.has(String(job_id))
+
+
+func get_tutorial_job_id() -> StringName:
+	return tutorial_job_id
+
+
+func is_tutorial_job(job_id: StringName) -> bool:
+	return not tutorial_job_id.is_empty() and job_id == tutorial_job_id
+
+
+func is_tutorial_job_completed() -> bool:
+	return not tutorial_job_id.is_empty() and completed_job_ids.has(String(tutorial_job_id))
+
+
+func is_faucet_job(job_id: StringName) -> bool:
+	if not jobs.has(job_id):
+		return false
+	return StringName(str((jobs[job_id] as Dictionary).get("simulation_type", ""))) == &"lava_faucet"
 
 
 func is_job_dispatched(job_id: StringName) -> bool:
@@ -725,6 +854,8 @@ func is_employee_returning(employee_id: StringName) -> bool:
 
 func can_employee_work_on_job(employee_id: StringName, job_id: StringName) -> bool:
 	if get_employee_job(employee_id) != job_id or not is_job_dispatched(job_id):
+		return false
+	if is_employee_injured(employee_id):
 		return false
 	return int(employees[employee_id].get("arrival_until", 0)) <= time_minutes
 
@@ -889,7 +1020,13 @@ func get_job_repair_state(job_id: StringName) -> Dictionary:
 func set_job_repair_state(job_id: StringName, repair_state: Dictionary) -> void:
 	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
 		return
+	var job: Dictionary = jobs[job_id]
+	var generated_instance: Dictionary = job.get("generated_instance", {}) as Dictionary
+	var initial_properties: Dictionary = generated_instance.get("initial_state", {}) as Dictionary
+	var object_instance_id := str(generated_instance.get("object_instance_id", ""))
+	world_memory.ensure_job_context(job_id, initial_properties, object_instance_id, generated_instance)
 	job_repair_states[String(job_id)] = repair_state.duplicate(true)
+	world_memory.record_job_state(job_id, repair_state, day, time_minutes)
 	state_changed.emit()
 
 
@@ -1016,6 +1153,16 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 		"report_acknowledged": false,
 	}
 	job_reports.append(completed_report.duplicate(true))
+	if job_repair_states.has(String(completed_id)):
+		world_memory.record_job_state(completed_id, job_repair_states[String(completed_id)], day, time_minutes)
+	var world_result := result.duplicate(true)
+	world_result["relationship_tone"] = "appreciative" if int(completed_report.get("rating", 0)) >= 4 and not overdue and compensation == 0 and not payment_forfeited else "neutral"
+	world_memory.finalize_job(completed_id, world_result, day, time_minutes)
+	var source_deferred_event_id := str(job.get("source_deferred_event_id", ""))
+	if not source_deferred_event_id.is_empty():
+		world_memory.set_event_status(source_deferred_event_id, "resolved", {"resolved_job_id": String(completed_id)})
+	if completed_id in [&"frozen_bath", &"escaped_ghost"]:
+		world_memory.set_consequence_status(completed_id, "resolved")
 	if pending_job_report.is_empty():
 		pending_job_report = completed_report.duplicate(true)
 	_record_financial_event(&"job", reward, str(job["title"]), {
@@ -1063,6 +1210,12 @@ func is_demo_complete() -> bool:
 
 func get_demo_required_job_ids() -> PackedStringArray:
 	var required := DEMO_CORE_JOB_IDS.duplicate()
+	var first_job_index := required.find("lava_leak")
+	if first_job_index >= 0 and not tutorial_job_id.is_empty():
+		required[first_job_index] = String(tutorial_job_id)
+	var wardrobe_index := required.find("walking_wardrobe")
+	if wardrobe_index >= 0 and jobs.has(GeneratedJobGeneratorScript.JOB_ID):
+		required[wardrobe_index] = String(GeneratedJobGeneratorScript.JOB_ID)
 	for report_value: Variant in job_reports:
 		if not report_value is Dictionary:
 			continue
@@ -1480,9 +1633,11 @@ func start_new_game() -> void:
 	time_minutes = 9 * 60
 	money = 600
 	reputation = 37
-	selected_job_id = &"lava_leak"
+	selected_job_id = &""
 	active_job_id = &""
+	tutorial_job_id = &""
 	owned_supply_items = PackedStringArray()
+	equipped_supply_items = {}
 	completed_job_ids = PackedStringArray()
 	job_reports = []
 	pending_job_report = {}
@@ -1492,6 +1647,7 @@ func start_new_game() -> void:
 	dismissal_video_seen = false
 	financial_ledger = [_financial_event(&"opening_balance", money, "Начальные средства службы")]
 	job_repair_states = {}
+	world_memory.reset()
 	campaign_seed = int(Time.get_unix_time_from_system()) ^ randi()
 	next_generated_job_index = 0
 	generated_jobs = {}
@@ -1505,7 +1661,7 @@ func start_new_game() -> void:
 		job["assigned"] = PackedStringArray()
 		job["time_left"] = int(job.get("initial_time", job.get("time_left", 0)))
 		job["overdue"] = false
-		job["unlocked"] = job_id == &"lava_leak"
+		job["unlocked"] = false
 		job["dispatched"] = false
 		job["pending_action"] = {}
 		jobs[job_id] = job
@@ -1516,6 +1672,13 @@ func start_new_game() -> void:
 	_reset_employee(&"nika", false, PackedStringArray(["telekinesis"]), "Не нанята")
 	_reset_employee(&"felix", false, PackedStringArray(["antimagic"]), "Не нанят")
 	_publish_generated_wardrobe_job(campaign_seed)
+	_set_job_unlocked(GeneratedJobGeneratorScript.JOB_ID, false)
+	_publish_generated_tutorial_faucet_job(campaign_seed ^ 0x5F3759DF)
+	tutorial_job_id = _choose_tutorial_job_id()
+	selected_job_id = tutorial_job_id
+	_set_job_unlocked(tutorial_job_id, true)
+	_disable_manual_wardrobe_job()
+	print_wardrobe_diagnostic("start_new_game")
 
 	_update_employee_statuses()
 	state_changed.emit()
@@ -1607,7 +1770,9 @@ func _save_to_path(path: String) -> Error:
 		"reputation": reputation,
 		"selected_job_id": String(selected_job_id),
 		"active_job_id": String(active_job_id),
+		"tutorial_job_id": String(tutorial_job_id),
 		"owned_supply_items": Array(owned_supply_items),
+		"equipped_supply_items": equipped_supply_items.duplicate(true),
 		"completed_job_ids": Array(completed_job_ids),
 		"job_reports": job_reports,
 		"pending_job_report": pending_job_report,
@@ -1621,6 +1786,7 @@ func _save_to_path(path: String) -> Error:
 		"campaign_seed": campaign_seed,
 		"next_generated_job_index": next_generated_job_index,
 		"generated_jobs": generated_jobs,
+		"world_memory": world_memory.to_data(),
 		"job_assignments": job_assignments,
 		"job_progress": job_progress,
 		"employee_progress": employee_progress,
@@ -1632,6 +1798,7 @@ func _save_to_path(path: String) -> Error:
 	if file == null:
 		return FileAccess.get_open_error()
 	file.store_string(JSON.stringify(save_data, "\t"))
+	file.close()
 	return OK
 
 
@@ -1675,8 +1842,10 @@ func _load_from_path(path: String) -> Error:
 	if file == null:
 		return FileAccess.get_open_error()
 
+	var save_text := file.get_as_text()
+	file.close()
 	var json := JSON.new()
-	var parse_error := json.parse(file.get_as_text())
+	var parse_error := json.parse(save_text)
 	if parse_error != OK or typeof(json.data) != TYPE_DICTIONARY:
 		return ERR_PARSE_ERROR
 
@@ -1684,6 +1853,9 @@ func _load_from_path(path: String) -> Error:
 	var version := int(save_data.get("version", 0))
 	if version <= 0 or version > SAVE_VERSION:
 		return ERR_FILE_UNRECOGNIZED
+	var loaded_world_memory: Variant = save_data.get("world_memory", {})
+	var world_memory_data: Dictionary = loaded_world_memory as Dictionary if loaded_world_memory is Dictionary else {}
+	world_memory.load_data(world_memory_data)
 	_remove_generated_job_entries()
 	generated_jobs = {}
 	campaign_seed = int(save_data.get("campaign_seed", 0))
@@ -1694,6 +1866,9 @@ func _load_from_path(path: String) -> Error:
 			var instance_value: Variant = (loaded_generated_jobs as Dictionary)[generated_id_value]
 			if instance_value is Dictionary:
 				_register_generated_job((instance_value as Dictionary).duplicate(true))
+	tutorial_job_id = StringName(str(save_data.get("tutorial_job_id", "lava_leak")))
+	if not jobs.has(tutorial_job_id):
+		tutorial_job_id = &"lava_leak"
 
 	day = maxi(1, int(save_data.get("day", day)))
 	time_minutes = maxi(0, int(save_data.get("time_minutes", time_minutes)))
@@ -1707,8 +1882,8 @@ func _load_from_path(path: String) -> Error:
 	clock_speed = int(save_data.get("clock_speed", 1))
 	_clock_accumulator = 0.0
 
-	var loaded_selected := StringName(save_data.get("selected_job_id", "lava_leak"))
-	selected_job_id = loaded_selected if jobs.has(loaded_selected) else &"lava_leak"
+	var loaded_selected := StringName(save_data.get("selected_job_id", String(tutorial_job_id)))
+	selected_job_id = loaded_selected if jobs.has(loaded_selected) else tutorial_job_id
 	var loaded_active := StringName(save_data.get("active_job_id", ""))
 	active_job_id = loaded_active if jobs.has(loaded_active) else &""
 	if not active_job_id.is_empty() and get_active_job_repair_scene().is_empty():
@@ -1720,6 +1895,16 @@ func _load_from_path(path: String) -> Error:
 		var item_id := StringName(str(loaded_item_id))
 		if SUPPLY_ITEMS.has(item_id) and not owned_supply_items.has(String(item_id)):
 			owned_supply_items.append(String(item_id))
+	equipped_supply_items = {}
+	var loaded_equipment: Variant = save_data.get("equipped_supply_items", {})
+	if loaded_equipment is Dictionary:
+		for item_id_value: Variant in loaded_equipment:
+			var item_id := StringName(str(item_id_value))
+			var employee_id := StringName(str((loaded_equipment as Dictionary)[item_id_value]))
+			if has_supply_item(item_id) and employees.has(employee_id):
+				var eligible_ids := PackedStringArray(SUPPLY_ITEMS[item_id].get("eligible_employee_ids", []))
+				if eligible_ids.has(String(employee_id)):
+					equipped_supply_items[String(item_id)] = String(employee_id)
 
 	completed_job_ids = PackedStringArray()
 	var loaded_completed_jobs: Array = save_data.get("completed_job_ids", [])
@@ -1735,7 +1920,7 @@ func _load_from_path(path: String) -> Error:
 		var job: Dictionary = jobs[job_id]
 		job["time_left"] = int(job.get("initial_time", job.get("time_left", 0)))
 		job["overdue"] = false
-		job["unlocked"] = job_id == &"lava_leak"
+		job["unlocked"] = job_id == tutorial_job_id
 		job["dispatched"] = false
 		job["pending_action"] = {}
 		if version < 6:
@@ -1765,14 +1950,17 @@ func _load_from_path(path: String) -> Error:
 		if loaded_report is Dictionary:
 			var report: Dictionary = loaded_report
 			_migrate_claim_fields(report)
+			_sanitize_internal_faucet_check_text(report)
 			if not report.has("reputation_change") and bool(report.get("maximum_payment", false)) and not bool(report.get("overdue", false)):
 				report["reputation_change"] = 1
 				report["rating"] = 5
 				migrated_reputation_bonus += 1
 			job_reports.append(report.duplicate(true))
+	if version < 19:
+		_migrate_legacy_follow_ups_to_world_memory()
 	if migrated_reputation_bonus > 0:
 		reputation += migrated_reputation_bonus
-	if completed_job_ids.has("lava_leak"):
+	if is_tutorial_job_completed():
 		_update_parallel_job_unlocks()
 	_unlock_gargoyle_job_if_due()
 	_unlock_escaped_ghost_job_if_due()
@@ -1783,6 +1971,7 @@ func _load_from_path(path: String) -> Error:
 	if loaded_pending_report is Dictionary:
 		var pending_report: Dictionary = loaded_pending_report
 		_migrate_claim_fields(pending_report)
+		_sanitize_internal_faucet_check_text(pending_report)
 		pending_job_report = pending_report.duplicate(true) if _is_valid_pending_report(pending_report) else {}
 	else:
 		pending_job_report = {}
@@ -1801,7 +1990,12 @@ func _load_from_path(path: String) -> Error:
 			var loaded_state: Variant = loaded_repair_states[loaded_job_id]
 			if jobs.has(repair_job_id) and not completed_job_ids.has(String(repair_job_id)) and loaded_state is Dictionary:
 				var loaded_state_dictionary: Dictionary = loaded_state
+				var loaded_job: Dictionary = jobs[repair_job_id]
+				var loaded_instance: Dictionary = loaded_job.get("generated_instance", {}) as Dictionary
+				world_memory.ensure_job_context(repair_job_id, loaded_instance.get("initial_state", {}) as Dictionary, str(loaded_instance.get("object_instance_id", "")), loaded_instance)
 				job_repair_states[String(repair_job_id)] = loaded_state_dictionary.duplicate(true)
+				if version < 19:
+					world_memory.record_job_state(repair_job_id, loaded_state_dictionary, day, time_minutes)
 
 	var loaded_tutorial: Variant = save_data.get("tutorial_state", {})
 	if loaded_tutorial is Dictionary and not (loaded_tutorial as Dictionary).is_empty():
@@ -1875,8 +2069,12 @@ func _load_from_path(path: String) -> Error:
 		if campaign_seed == 0:
 			campaign_seed = hash([day, time_minutes, money, completed_job_ids])
 		_publish_generated_wardrobe_job(campaign_seed)
-		if completed_job_ids.has("lava_leak"):
+		if is_tutorial_job_completed():
 			_update_parallel_job_unlocks()
+	_disable_manual_wardrobe_job()
+	if version < 20:
+		_migrate_missing_faucet_consequences()
+	_publish_due_world_consequences()
 
 	_complete_finished_training()
 	_update_employee_statuses()
@@ -1888,12 +2086,86 @@ func _load_from_path(path: String) -> Error:
 func _publish_generated_wardrobe_job(seed_value: int) -> bool:
 	if generated_jobs.has(String(GeneratedJobGeneratorScript.JOB_ID)):
 		return true
-	var instance: Dictionary = GeneratedJobGeneratorScript.generate(seed_value, _available_ability_ids())
+	if last_generated_anomaly_id.is_empty():
+		last_generated_anomaly_id = _load_last_generated_anomaly()
+	var excluded := PackedStringArray()
+	if not last_generated_anomaly_id.is_empty():
+		excluded.append(String(last_generated_anomaly_id))
+	var instance: Dictionary = GeneratedJobGeneratorScript.generate(seed_value, _available_ability_ids(), excluded, world_memory.generator_context())
 	if instance.is_empty():
 		return false
+	last_generated_anomaly_id = StringName(str(instance.get("anomaly_id", "")))
+	_save_last_generated_anomaly(last_generated_anomaly_id)
 	_register_generated_job(instance)
 	next_generated_job_index += 1
 	return true
+
+
+func _publish_generated_tutorial_faucet_job(seed_value: int) -> bool:
+	var job_id := GeneratedJobGeneratorScript.TUTORIAL_FAUCET_JOB_ID
+	if generated_jobs.has(String(job_id)):
+		return true
+	if last_generated_faucet_anomaly_id.is_empty():
+		var config := ConfigFile.new()
+		if config.load(GENERATOR_HISTORY_PATH) == OK:
+			last_generated_faucet_anomaly_id = StringName(str(config.get_value("generator", "last_faucet_anomaly_id", "")))
+	var excluded := PackedStringArray()
+	if not last_generated_faucet_anomaly_id.is_empty():
+		excluded.append(String(last_generated_faucet_anomaly_id))
+	var instance: Dictionary = GeneratedJobGeneratorScript.generate_tutorial_faucet(seed_value, _available_ability_ids(), excluded, world_memory.generator_context())
+	if instance.is_empty():
+		return false
+	last_generated_faucet_anomaly_id = StringName(str(instance.get("anomaly_id", "")))
+	var config := ConfigFile.new()
+	config.set_value("generator", "last_faucet_anomaly_id", String(last_generated_faucet_anomaly_id))
+	config.save(GENERATOR_HISTORY_PATH)
+	_register_generated_job(instance)
+	next_generated_job_index += 1
+	return true
+
+
+func _choose_tutorial_job_id() -> StringName:
+	var candidates: Array[StringName] = []
+	var abilities := _available_ability_ids()
+	for job_id: StringName in jobs:
+		var job: Dictionary = jobs[job_id]
+		if not bool(job.get("tutorial_eligible", false)):
+			continue
+		var required_sets: Array = job.get("tutorial_required_ability_sets", []) as Array
+		var resolvable := required_sets.is_empty()
+		for required_value: Variant in required_sets:
+			var required := PackedStringArray(required_value)
+			var has_all := true
+			for ability: String in required:
+				if not abilities.has(ability):
+					has_all = false
+					break
+			if has_all:
+				resolvable = true
+				break
+		if resolvable:
+			candidates.append(job_id)
+	if candidates.is_empty():
+		return &"lava_leak" if jobs.has(&"lava_leak") else &""
+	candidates.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = campaign_seed
+	return candidates[rng.randi_range(0, candidates.size() - 1)]
+
+
+func _load_last_generated_anomaly() -> StringName:
+	var config := ConfigFile.new()
+	if config.load(GENERATOR_HISTORY_PATH) != OK:
+		return &""
+	return StringName(str(config.get_value("generator", "last_anomaly_id", "")))
+
+
+func _save_last_generated_anomaly(anomaly_id: StringName) -> void:
+	if anomaly_id.is_empty():
+		return
+	var config := ConfigFile.new()
+	config.set_value("generator", "last_anomaly_id", String(anomaly_id))
+	config.save(GENERATOR_HISTORY_PATH)
 
 
 func _register_generated_job(instance: Dictionary) -> void:
@@ -1904,6 +2176,75 @@ func _register_generated_job(instance: Dictionary) -> void:
 	var job: Dictionary = GeneratedJobGeneratorScript.materialize_job(instance)
 	if not job.is_empty():
 		jobs[instance_id] = job
+
+
+func _publish_due_world_consequences() -> void:
+	var due: Array[Dictionary] = world_memory.due_consequences(day, time_minutes)
+	if due.is_empty():
+		return
+	# На этом этапе публикуется одно самое приоритетное системное последствие в день.
+	var event: Dictionary = due[0]
+	var instance := GeneratedJobGeneratorScript.generate_faucet_consequence(event, _available_ability_ids(), world_memory.generator_context())
+	if instance.is_empty():
+		return
+	var instance_id := StringName(str(instance.get("instance_id", "")))
+	if generated_jobs.has(String(instance_id)):
+		return
+	_register_generated_job(instance)
+	_set_job_unlocked(instance_id, true)
+	world_memory.set_event_status(str(event.get("event_id", "")), "claimed", {"generated_job_id": String(instance_id)})
+	next_generated_job_index += 1
+
+
+func _migrate_missing_faucet_consequences() -> void:
+	if world_memory.has_consequence(&"faucet_overheat"):
+		return
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		var job_id := StringName(str(report.get("job_id", "")))
+		var instance: Dictionary = generated_jobs.get(String(job_id), {}) as Dictionary
+		if StringName(str(instance.get("object_definition_id", ""))) != &"lava_faucet":
+			continue
+		var initial_state: Dictionary = instance.get("initial_state", {}) as Dictionary
+		if not bool(initial_state.get("frozen", false)):
+			continue
+		var has_heat := false
+		var invalidated := false
+		for action_value: Variant in report.get("actions", []):
+			if not action_value is Dictionary:
+				continue
+			var action_id := StringName(str((action_value as Dictionary).get("action_id", "")))
+			if action_id == &"heat":
+				has_heat = true
+			elif action_id in [&"replace_faucet", &"install_thermal_regulator"]:
+				invalidated = true
+		if not has_heat or invalidated:
+			continue
+		var completed_day := int(report.get("completed_day", 1))
+		world_memory.queue_consequence(
+			&"thermal_instability", &"faucet_overheat", "old_quarter_5.bathroom.lava_faucet", job_id,
+			completed_day + 1, 540, 80, {
+				"anomaly_id": "faucet_overheat",
+				"source_incarnation": int(initial_state.get("incarnation", 1)),
+				"migrated_from_save": true,
+			}, "chain.%s.thermal_instability" % String(job_id), "legacy_unknown", 1
+		)
+		return
+
+
+func _sanitize_internal_faucet_check_text(report: Dictionary) -> void:
+	var summary := str(report.get("summary", ""))
+	summary = summary.replace("Кран автоматически проверен: механизм исправен, температура безопасна.", "Кран исправен, температура безопасна.")
+	summary = summary.replace(" и прошёл автоматическую проверку исправности", "")
+	summary = summary.replace("Проверка подтвердила, что кран исправен и подаёт обычную воду.", "Из крана снова течёт обычная вода.")
+	report["summary"] = summary
+	var cleaned_consequences: Array = []
+	for consequence: Variant in report.get("consequences", []):
+		if str(consequence) != "Автоматическая проверка исправности пройдена.":
+			cleaned_consequences.append(consequence)
+	report["consequences"] = cleaned_consequences
 
 
 func _remove_generated_job_entries() -> void:
@@ -1925,6 +2266,21 @@ func _available_ability_ids() -> PackedStringArray:
 			var ability := str(ability_value)
 			if not result.has(ability):
 				result.append(ability)
+	for item_id_string: String in owned_supply_items:
+		var item_id := StringName(item_id_string)
+		if not SUPPLY_ITEMS.has(item_id):
+			continue
+		var capability := str((SUPPLY_ITEMS[item_id] as Dictionary).get("solution_capability", ""))
+		if not capability.is_empty() and not result.has(capability):
+			result.append(capability)
+	for item_id_value: Variant in equipped_supply_items:
+		var equipped_item_id := StringName(str(item_id_value))
+		if not SUPPLY_ITEMS.has(equipped_item_id):
+			continue
+		for protection_value: Variant in (SUPPLY_ITEMS[equipped_item_id] as Dictionary).get("protects_from", []):
+			var protection := str(protection_value)
+			if not result.has(protection):
+				result.append(protection)
 	return result
 
 
@@ -2030,12 +2386,54 @@ func _remove_employee_from_all_jobs(employee_id: StringName) -> void:
 
 
 func _update_parallel_job_unlocks() -> void:
-	var source_day := _job_completed_day(&"lava_leak")
+	var source_day := _job_completed_day(tutorial_job_id)
 	var jobs_are_due := source_day > 0 and day > source_day
-	_set_job_unlocked(&"walking_wardrobe", jobs_are_due)
+	_set_job_unlocked(&"walking_wardrobe", false)
 	_set_job_unlocked(GeneratedJobGeneratorScript.JOB_ID, jobs_are_due)
 	var frozen_bath_delays_portal := _has_follow_up(&"frozen_bath") and day <= source_day + 1
 	_set_job_unlocked(&"portal_mirror", jobs_are_due and not frozen_bath_delays_portal)
+	print_wardrobe_diagnostic("update_parallel_job_unlocks")
+
+
+func _disable_manual_wardrobe_job() -> void:
+	var manual_job_id := &"walking_wardrobe"
+	if jobs.has(manual_job_id):
+		var job: Dictionary = jobs[manual_job_id]
+		job["unlocked"] = false
+		job["assigned"] = PackedStringArray()
+		job["dispatched"] = false
+		job["pending_action"] = {}
+		jobs[manual_job_id] = job
+	job_repair_states.erase(String(manual_job_id))
+	if active_job_id == manual_job_id:
+		active_job_id = &""
+	if selected_job_id == manual_job_id or not is_job_available(selected_job_id):
+		selected_job_id = _first_available_job_id()
+
+
+func print_wardrobe_diagnostic(context: String, visible_ids: PackedStringArray = PackedStringArray()) -> void:
+	if not OS.is_debug_build():
+		return
+	var entries: Array[Dictionary] = []
+	for job_id: StringName in [&"walking_wardrobe", GeneratedJobGeneratorScript.JOB_ID]:
+		var job: Dictionary = jobs.get(job_id, {})
+		entries.append({
+			"id": String(job_id),
+			"exists": not job.is_empty(),
+			"unlocked_flag": bool(job.get("unlocked", false)),
+			"available": is_job_available(job_id),
+			"completed": completed_job_ids.has(String(job_id)),
+			"generated": bool(job.get("generated", false)),
+			"title": str(job.get("title", "")),
+			"anomaly_id": str((job.get("generated_instance", {}) as Dictionary).get("anomaly_id", "")),
+		})
+	print("[WARDROBE_DIAGNOSTIC] ", JSON.stringify({
+		"context": context,
+		"day": day,
+		"money": money,
+		"visible_ids": Array(visible_ids),
+		"entries": entries,
+	}))
 
 
 func _set_job_unlocked(job_id: StringName, unlocked: bool) -> void:
@@ -2047,23 +2445,13 @@ func _set_job_unlocked(job_id: StringName, unlocked: bool) -> void:
 
 
 func _has_follow_up(follow_up_id: StringName) -> bool:
-	for report_value: Variant in job_reports:
-		if not report_value is Dictionary:
-			continue
-		var follow_up: Variant = (report_value as Dictionary).get("follow_up", {})
-		if follow_up is Dictionary and StringName(str((follow_up as Dictionary).get("type", ""))) == follow_up_id:
-			return true
-	return false
+	_migrate_legacy_follow_ups_to_world_memory()
+	return world_memory.has_consequence(follow_up_id)
 
 
 func get_follow_up_data(follow_up_id: StringName) -> Dictionary:
-	for report_value: Variant in job_reports:
-		if not report_value is Dictionary:
-			continue
-		var follow_up: Variant = (report_value as Dictionary).get("follow_up", {})
-		if follow_up is Dictionary and StringName(str((follow_up as Dictionary).get("type", ""))) == follow_up_id:
-			return (follow_up as Dictionary).duplicate(true)
-	return {}
+	_migrate_legacy_follow_ups_to_world_memory()
+	return world_memory.consequence_payload(follow_up_id)
 
 
 func _unlock_gargoyle_job() -> void:
@@ -2071,7 +2459,7 @@ func _unlock_gargoyle_job() -> void:
 
 
 func _unlock_gargoyle_job_if_due() -> void:
-	if not completed_job_ids.has("walking_wardrobe"):
+	if not completed_job_ids.has(String(GeneratedJobGeneratorScript.JOB_ID)):
 		return
 	var portal_is_due := completed_job_ids.has("portal_mirror")
 	if jobs.has(&"portal_mirror"):
@@ -2090,39 +2478,48 @@ func _set_gargoyle_job_unlocked(unlocked: bool) -> void:
 
 
 func _unlock_escaped_ghost_job_if_due() -> void:
-	var source_day := 0
-	for report_value: Variant in job_reports:
-		if not report_value is Dictionary:
-			continue
-		var report: Dictionary = report_value
-		var follow_up: Variant = report.get("follow_up", {})
-		if follow_up is Dictionary and str((follow_up as Dictionary).get("type", "")) == "escaped_ghost":
-			source_day = int(report.get("completed_day", 0))
-			break
+	_migrate_legacy_follow_ups_to_world_memory()
+	var source_day: int = int(world_memory.consequence_due_day(&"escaped_ghost")) - 1
 	var job_id := &"escaped_ghost"
 	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
 		return
 	var job: Dictionary = jobs[job_id]
 	job["unlocked"] = source_day > 0 and day > source_day
 	jobs[job_id] = job
+	if bool(job["unlocked"]):
+		world_memory.set_consequence_status(&"escaped_ghost", "claimed")
 
 
 func _unlock_frozen_bath_job_if_due() -> void:
-	var source_day := 0
-	for report_value: Variant in job_reports:
-		if not report_value is Dictionary:
-			continue
-		var report: Dictionary = report_value
-		var follow_up: Variant = report.get("follow_up", {})
-		if follow_up is Dictionary and str((follow_up as Dictionary).get("type", "")) == "frozen_bath":
-			source_day = int(report.get("completed_day", 0))
-			break
+	_migrate_legacy_follow_ups_to_world_memory()
+	var source_day: int = int(world_memory.consequence_due_day(&"frozen_bath")) - 1
 	var job_id := &"frozen_bath"
 	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
 		return
 	var job: Dictionary = jobs[job_id]
 	job["unlocked"] = source_day > 0 and day > source_day
 	jobs[job_id] = job
+	if bool(job["unlocked"]):
+		world_memory.set_consequence_status(&"frozen_bath", "claimed")
+
+
+func _migrate_legacy_follow_ups_to_world_memory() -> void:
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		var follow_up: Variant = report.get("follow_up", {})
+		if not follow_up is Dictionary or (follow_up as Dictionary).is_empty():
+			continue
+		var event_type := StringName(str((follow_up as Dictionary).get("type", "")))
+		if event_type not in [&"frozen_bath", &"escaped_ghost"]:
+			continue
+		var source_job_id := StringName(str(report.get("job_id", "")))
+		world_memory.queue_consequence(
+			&"legacy_follow_up", event_type, world_memory.instance_id_for_job(source_job_id), source_job_id,
+			int(report.get("completed_day", 1)) + 1, int(report.get("completed_time", 0)), 50,
+			follow_up as Dictionary, "chain.%s" % String(source_job_id), "legacy_unknown", 1
+		)
 
 
 func _job_completed_day(job_id: StringName) -> int:
@@ -2145,6 +2542,10 @@ func _update_employee_statuses() -> void:
 	for employee_id: StringName in EMPLOYEE_ORDER:
 		var employee: Dictionary = employees[employee_id]
 		if not employee["available"]:
+			continue
+		if is_employee_injured(employee_id):
+			employee["status"] = "Лечит ожоги до следующего дня"
+			employees[employee_id] = employee
 			continue
 		var training_id := StringName(str(employee.get("training_id", "")))
 		if not training_id.is_empty() and TRAINING_DEFINITIONS.has(training_id):

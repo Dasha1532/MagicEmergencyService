@@ -22,7 +22,7 @@ func _run() -> void:
 	var marker := city_map.get_node("MapArea/HouseMarkers/RagnarAndEleonora") as Button
 	var selesta_marker := city_map.get_node("MapArea/HouseMarkers/Selesta") as Button
 	var gargoyle_marker := city_map.get_node("MapArea/HouseMarkers/GargoyleAttic") as Button
-	_check("Активных заявок: 1" in marker.text, "Стартовая заявка показана по адресу")
+	_check("Активных заявок: 1" in marker.text, "В первый обучающий день показана только заявка с лавовым краном")
 	_check("Старый квартал, 5" in marker.text, "Маркер подписан адресом")
 	_check("Рагнар" not in marker.text and "Элеонор" not in marker.text, "Маркер не присваивает дом жильцам")
 	_check(not selesta_marker.visible, "Адрес без доступных заявок скрыт")
@@ -30,34 +30,37 @@ func _run() -> void:
 	_check("Бригада не назначена" in marker.text, "Показан статус без бригады")
 
 	var selection := {"job_id": &""}
+	var tutorial_job_id: StringName = game_state.get_tutorial_job_id()
 	city_map.job_selected.connect(func(job_id: StringName) -> void: selection["job_id"] = job_id)
 	marker.pressed.emit()
 	await process_frame
 	var first_job_button := city_map.get_node("HousePanel/JobScroll/JobList").get_child(0) as Button
 	first_job_button.pressed.emit()
-	_check(selection["job_id"] == &"lava_leak", "Заявка выбирается из списка дома")
+	_check(selection["job_id"] == tutorial_job_id, "Учебная заявка выбирается из списка дома")
 
-	game_state.assign_employee(&"liliya", &"lava_leak")
-	game_state.begin_job(&"lava_leak")
+	game_state.assign_employee(&"liliya", tutorial_job_id)
+	game_state.begin_job(tutorial_job_id)
 	_check("Сотрудники в пути" in marker.text, "Маркер обновлён при отправке")
 	game_state.advance_time(game_state.TRAVEL_TIME_MINUTES)
 	_check("Сотрудники на объекте" in marker.text, "Маркер обновлён при прибытии")
-	game_state.start_job_action(&"lava_leak", &"liliya", &"freeze", &"", 2)
+	var tutorial_anomaly := str((game_state.jobs[tutorial_job_id].get("generated_instance", {}) as Dictionary).get("anomaly_id", "lava_leak"))
+	var tutorial_action := &"heat" if tutorial_anomaly == "faucet_freeze" else &"freeze"
+	game_state.start_job_action(tutorial_job_id, &"liliya", tutorial_action, &"", 2)
 	_check("Работа выполняется" in marker.text, "Маркер обновлён при начале работы")
 	game_state.advance_time(2)
 	_check("Сотрудники на объекте" in marker.text, "Маркер обновлён после окончания работы")
-	game_state.clear_pending_job_action(&"lava_leak")
+	game_state.clear_pending_job_action(tutorial_job_id)
 	game_state.advance_time(100)
 	_check("Срок истёк" in marker.text, "Маркер обновлён при просрочке")
 	game_state.complete_active_job()
-	_check(not marker.visible and not selesta_marker.visible, "После вводной заявки день остаётся без новых вызовов")
+	_check(not marker.visible and not selesta_marker.visible, "После вводной заявки первый день не показывает новые вызовы")
 	_check(game_state.can_finish_day(), "После крана рабочий день можно завершить")
 	_check(game_state.try_finish_day(), "Завершение дня открывает следующее утро")
-	_check("Активных заявок: 2" in marker.text, "На следующий день открыты ручная и генеративная заявки со шкафом")
+	_check("Активных заявок: 1" in marker.text, "На следующий день остаётся одна генеративная заявка со шкафом")
 	marker.pressed.emit()
 	await process_frame
 	var current_job_list := city_map.get_node("HousePanel/JobScroll/JobList")
-	_check(current_job_list.get_child_count() == 2 and "Шкаф" in current_job_list.get_child(0).text and "шкаф" in current_job_list.get_child(1).text.to_lower(), "Список содержит обе доступные заявки со шкафом")
+	_check(current_job_list.get_child_count() == 1 and "шкаф" in current_job_list.get_child(0).text.to_lower(), "Список не дублирует заявку на один шкаф")
 	_check("Активных заявок: 1" in selesta_marker.text, "Адрес показывает заявку с порталом")
 	_check(selesta_marker.visible, "Адрес появляется после открытия заявки")
 	_check("Селест" not in selesta_marker.text, "Второй маркер также подписан только адресом")
@@ -66,7 +69,7 @@ func _run() -> void:
 	_check("Сотрудники в пути" in selesta_marker.text, "Второй дом обновлён при отправке")
 	game_state.cancel_job_arrivals(&"portal_mirror")
 	_check("Бригада не назначена" in selesta_marker.text, "Второй дом обновлён при отмене отправки")
-	game_state.completed_job_ids.append("walking_wardrobe")
+	game_state.completed_job_ids.append("generated_wardrobe_1")
 	game_state.completed_job_ids.append("portal_mirror")
 	game_state.advance_day()
 	_check(gargoyle_marker.visible and "Горгуль" not in gargoyle_marker.text, "На третий день карта показывает новый адрес без имени объекта")

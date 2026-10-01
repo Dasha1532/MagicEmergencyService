@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"lava_faucet"
+display_name = "Лавовый кран"
+tags = PackedStringArray("plumbing", "metal", "anchored", "pressurized", "heat_source", "freezable")
+base_properties = {"anchored": true, "broken": false, "damage": 0, "durability": 5, "flow_blocked": false, "flow_content": &"water", "heat_contact_actions": PackedStringArray("turn_valve", "repair", "replace_faucet", "install_thermal_regulator"), "magic_level": 0, "mass": 8, "movable": false, "replacement_value": 350, "temperature": 9, "valve_broken": false, "valve_operable": true, "valve_position": &"closed"}
+supported_effects = PackedStringArray("lava_flowing", "water_flowing", "frozen", "overheated", "melted", "broken", "scorched", "damaged")
+scene_path = "res://scenes/RepairHouse.tscn"
+visual_states = {&"broken": "res://assets/objects/lava_faucet/faucet_broken.png", &"damaged": "res://assets/objects/lava_faucet/faucet_damaged.png", &"frozen": "res://assets/objects/frozen_bath/faucet_frozen.png", &"lava_flowing": "res://assets/objects/lava_faucet/lava_stream.png", &"melted": "res://assets/objects/lava_faucet/faucet_melted.png", &"normal": "res://assets/objects/lava_faucet/faucet_normal.png", &"water_flowing": "res://assets/objects/lava_faucet/water_stream.png"}
+visual_overlays = {&"scorched": "res://assets/effects/status/soot.png"}
+procedural_states = PackedStringArray("overheated")

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="GenerativeAnomalyDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/anomaly_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"lava_leak"
+display_name = "Лавовая течь"
+generator_enabled = true
+tutorial_eligible = true
+compatible_object_ids = PackedStringArray("lava_faucet")
+required_tags = PackedStringArray("plumbing", "pressurized", "heat_source")
+forbidden_tags = PackedStringArray("destroyed")
+initial_effects = PackedStringArray("lava_flowing")
+objective_ids = PackedStringArray("stop_flow")
+initial_state = {"cold_source_active": false, "damage": 0, "flow_blocked": false, "flow_content": &"lava", "frozen": false, "generated_anomaly_id": &"lava_leak", "heat_source_active": false, "lava_source_active": true, "magic_level": 1, "pressure": 8, "scorched": true, "tags": PackedStringArray("faucet", "lava_flowing", "pressurized", "overheated"), "temperature": 12, "valve_broken": false, "valve_frozen": false, "valve_operable": true, "valve_position": &"open", "visual_state": &"overheated"}
+resolution = {"required_false": PackedStringArray("lava_flowing", "lava_source_active")}
+solution_plans = [{"abilities": PackedStringArray("antimagic"), "family": &"suppress_lava_source"}, {"abilities": PackedStringArray("repair", "thermal_regulator", "contact_heat"), "family": &"regulated_source"}]
+visual_effects = PackedStringArray("lava_flowing")
+presentation = {"card_title": "Лавовая течь", "danger": "Лава, высокая температура", "description": "В ванной демона из аварийного крана идёт лава. Поток усиливается, а металлический корпус уже нагрелся.", "objective": "Остановить лавовый поток и привести кран в безопасное состояние", "resident_request": "Остановите лаву и приведите кран в безопасное состояние. И осторожнее с ванной — сантехника здесь дорогая!", "title": "Из крана течёт лава", "unresolved_message": "Работу нельзя завершить: лава всё ещё течёт."}
+completion = {"review": "Спасибо! Из крана снова не течёт лава. Для демона звучит как жалоба, но для владельца ванной — настоящее счастье.", "summary": "Поток лавы остановлен, кран приведён в безопасное состояние."}
+weight = 5

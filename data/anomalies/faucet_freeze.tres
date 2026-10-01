@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="GenerativeAnomalyDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/anomaly_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"faucet_freeze"
+display_name = "Магическое промерзание крана"
+generator_enabled = true
+tutorial_eligible = true
+compatible_object_ids = PackedStringArray("lava_faucet")
+required_tags = PackedStringArray("plumbing", "metal", "freezable")
+forbidden_tags = PackedStringArray("destroyed")
+initial_effects = PackedStringArray("frozen")
+objective_ids = PackedStringArray("thaw_object")
+initial_state = {"cold_source_active": true, "damage": 0, "flow_blocked": true, "flow_content": &"water", "frozen": true, "generated_anomaly_id": &"faucet_freeze", "heat_source_active": false, "lava_source_active": false, "magic_level": 1, "pressure": 0, "scorched": false, "tags": PackedStringArray("faucet", "frozen"), "temperature": -3, "valve_broken": false, "valve_frozen": true, "valve_operable": true, "valve_position": &"closed", "visual_state": &"emergency"}
+resolution = {"required_false": PackedStringArray("frozen")}
+solution_plans = [{"abilities": PackedStringArray("heat"), "family": &"controlled_thaw"}, {"abilities": PackedStringArray("repair", "thermal_regulator"), "family": &"regulated_source"}]
+visual_effects = PackedStringArray("frozen")
+presentation = {"card_title": "Промёрзший кран", "danger": "Магический холод, хрупкие соединения", "description": "Кран и соединения покрылись магическим льдом. Металл стал хрупким, а механизм полностью заблокирован.", "objective": "Осторожно отогреть кран, не повредив соединения", "resident_request": "Кран промёрз насквозь и не поворачивается. Отогрейте его осторожно — не хочу менять вместе с ним половину стены.", "title": "Кран покрылся магическим льдом", "unresolved_message": "Работу нельзя завершить: кран всё ещё промёрз и заблокирован."}
+completion = {"review": "Кран снова работает, лёд исчез, и стену разбирать не пришлось. Отличный результат.", "summary": "Магический лёд безопасно удалён, соединения крана не повреждены."}
+weight = 5

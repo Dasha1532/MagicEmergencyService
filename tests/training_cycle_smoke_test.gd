@@ -119,6 +119,8 @@ func _run() -> void:
 	_check(is_equal_approx(office.personnel_hire_button.position.x + office.personnel_hire_button.size.x * 0.5, course_guide.get_center().x), "Кнопка найма независимо выровнена по центру")
 	_check(is_equal_approx(office.personnel_specializations_button.position.x + office.personnel_specializations_button.size.x * 0.5, course_guide.get_center().x), "Кнопка специализаций независимо выровнена по центру")
 	_check(office.finish_day_button.get_parent() == office.dashboard_layer, "Кнопка завершения дня находится на доске заявок")
+	office._refresh()
+	_check(office.finish_day_button.disabled == not game_state.can_finish_day(), "Кнопка завершения дня всегда отражает возможность завершить день")
 	var returning_status: String = office._employee_card_status(
 		{"status": "Возвращается, прибудет в 09:36"}, false, false, false, false, true
 	)

@@ -57,6 +57,7 @@ func _repair_dialogue_is_open() -> bool:
 
 func _reconcile_step(game_state: Node) -> void:
 	var step := str(game_state.tutorial_state.get("step", ""))
+	var tutorial_job_id: StringName = game_state.get_tutorial_job_id()
 	if context == &"office":
 		# После первого дня начинается отдельная фаза обзора офиса. Не сверяем её
 		# с условиями заявки, иначе шаги поочерёдно возвращают друг друга каждый кадр.
@@ -67,21 +68,21 @@ func _reconcile_step(game_state: Node) -> void:
 			return
 		if not game_state.pending_job_report.is_empty() and step not in ["report", "claim"]:
 			game_state.set_tutorial_step(&"report")
-		elif game_state.completed_job_ids.has("lava_leak") and game_state.pending_job_report.is_empty() and step not in ["return_board", "finish_day", "final"]:
+		elif game_state.is_tutorial_job_completed() and game_state.pending_job_report.is_empty() and step not in ["return_board", "finish_day", "final"]:
 			game_state.set_tutorial_step(&"return_board")
-		elif game_state.is_job_dispatched(&"lava_leak") and step in ["office_welcome", "open_board", "open_first_job", "job_details", "assign_employee", "employee_scroll", "crew_choice", "dispatch"]:
+		elif game_state.is_job_dispatched(tutorial_job_id) and step in ["office_welcome", "open_board", "open_first_job", "job_details", "assign_employee", "employee_scroll", "crew_choice", "dispatch"]:
 			game_state.set_tutorial_step(&"travel")
-		elif not game_state.jobs[&"lava_leak"]["assigned"].is_empty() and step in ["office_welcome", "open_board", "open_first_job", "job_details", "assign_employee"]:
+		elif game_state.jobs.has(tutorial_job_id) and not game_state.jobs[tutorial_job_id]["assigned"].is_empty() and step in ["office_welcome", "open_board", "open_first_job", "job_details", "assign_employee"]:
 			game_state.set_tutorial_step(&"employee_scroll")
 		elif step == "open_board" and host.dashboard_layer.visible and not host.hub_layer.visible:
 			game_state.set_tutorial_step(&"open_first_job")
 		elif step == "open_first_job" and bool(host.get_meta("tutorial_job_clicked", false)):
 			game_state.set_tutorial_step(&"job_details")
-		elif step == "assign_employee" and not game_state.jobs[&"lava_leak"]["assigned"].is_empty():
+		elif step == "assign_employee" and game_state.jobs.has(tutorial_job_id) and not game_state.jobs[tutorial_job_id]["assigned"].is_empty():
 			game_state.set_tutorial_step(&"employee_scroll")
-		elif step == "dispatch" and game_state.is_job_dispatched(&"lava_leak"):
+		elif step == "dispatch" and game_state.is_job_dispatched(tutorial_job_id):
 			game_state.set_tutorial_step(&"travel")
-		elif step == "open_object" and game_state.has_employee_on_site(&"lava_leak"):
+		elif step == "open_object" and game_state.has_employee_on_site(tutorial_job_id):
 			# Остаёмся на шаге до нажатия «ОТКРЫТЬ ОБЪЕКТ» и смены сцены.
 			pass
 		elif step == "complete_job" and not game_state.pending_job_report.is_empty():
@@ -122,7 +123,12 @@ func _step_data(step: String) -> Dictionary:
 	match step:
 		"office_welcome": return {"text": "Добро пожаловать в Магическую аварийную службу. Здесь принимают вызовы, собирают бригады и разбираются с последствиями — желательно в таком порядке.", "continue": true}
 		"open_board": return {"text": "Новые вызовы ждут на «ДОСКЕ ЗАЯВОК». Откройте её и посмотрим, кому сегодня особенно не повезло."}
-		"open_first_job": return {"text": "Первый вызов — «Из крана течёт лава». Нажмите на карточку, чтобы прочитать адрес, описание и опасности."}
+		"open_first_job":
+			var game_state := get_node_or_null("/root/GameState")
+			var title := "первая заявка"
+			if game_state != null and game_state.jobs.has(game_state.get_tutorial_job_id()):
+				title = "«%s»" % tr(str(game_state.jobs[game_state.get_tutorial_job_id()].get("title", "Первая заявка")))
+			return {"text": "Первый вызов — %s. Нажмите на карточку, чтобы прочитать адрес, описание и опасности." % title}
 		"job_details": return {"text": "Справа собраны сведения о вызове: адрес, жилец, опасности и описание происшествия. Перед выездом стоит прочитать всё, что сообщил заказчик.", "continue": true}
 		"assign_employee": return {"text": "Ниже находятся сотрудники службы. Нажмите на карточку любого свободного сотрудника, чтобы включить его в бригаду."}
 		"employee_scroll": return {"text": "Сейчас для вызовов доступны три сотрудника — все они помещаются на экране. Когда вы наймёте новых специалистов, список можно будет прокручивать колёсиком мыши или горизонтальным ползунком.", "continue": true}
