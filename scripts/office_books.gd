@@ -125,7 +125,7 @@ func _build_reviews() -> void:
 	heading.text = "КНИГА ОТЗЫВОВ"
 	var titles: PackedStringArray = game_state.get_reputation_titles(2)
 	summary.text = tr("Репутация: %d — %s\nПрозвища: %s. Отзывов: %d") % [game_state.reputation, tr(game_state.get_reputation_status()), ", ".join(_translated_strings(titles)), game_state.job_reports.size()]
-	detail_title.text = "ОТЗЫВЫ ЖИЛЬЦОВ"
+	detail_title.text = "ОТЗЫВЫ КЛИЕНТОВ"
 	detail_body.text = "Здесь появятся оценки завершённых заявок."
 	if game_state.job_reports.is_empty():
 		_add_empty_entry("Завершённых заявок пока нет")
@@ -133,7 +133,7 @@ func _build_reviews() -> void:
 	for index in range(game_state.job_reports.size() - 1, -1, -1):
 		var report: Dictionary = game_state.job_reports[index]
 		var rating := _report_rating(report)
-		_add_entry("%s\n%s — %s" % [tr(str(report.get("resident", "Жилец"))), _stars(rating), tr(str(report.get("title", "Заявка")))], _show_review.bind(report))
+		_add_entry("%s\n%s — %s" % [tr(str(report.get("resident", "Клиент"))), _stars(rating), tr(str(report.get("title", "Заявка")))], _show_review.bind(report))
 
 
 func _build_archive() -> void:
@@ -160,11 +160,11 @@ func _render_financial_event(event: Dictionary) -> void:
 	var kind := str(event.get("kind", ""))
 	var kind_text: String = {
 		"opening_balance": "Начальный баланс", "job": "Завершённая заявка",
-		"purchase": "Покупка", "hire": "Найм сотрудника", "compensation": "Компенсация жильцу",
+		"purchase": "Покупка", "hire": "Найм сотрудника", "compensation": "Компенсация клиенту",
 		"legacy_adjustment": "Старая операция", "debug_grant": "Тестовое пополнение",
 	}.get(kind, "Денежная операция")
 	var amount := int(event.get("amount", 0))
-	detail_title.text = tr(str(event.get("title", kind_text)))
+	detail_title.text = LocalizationHelperScript.translate_saved_text(event.get("title", kind_text))
 	detail_body.text = tr("%s\n%s\n\nИзменение средств: %s%d монет") % [tr(kind_text), _event_date(event), "+" if amount >= 0 else "", amount]
 	if kind == "job":
 		detail_body.text += tr("\nПолучено: %d монет") % int(event.get("income", 0))
@@ -196,7 +196,7 @@ func _show_review(report: Dictionary) -> void:
 
 func _render_review(report: Dictionary) -> void:
 	var reputation_change := int(report.get("reputation_change", 0))
-	detail_title.text = "%s — %s" % [tr(str(report.get("resident", "Жилец"))), _stars(_report_rating(report))]
+	detail_title.text = "%s — %s" % [tr(str(report.get("resident", "Клиент"))), _stars(_report_rating(report))]
 	detail_body.text = tr("%s\n%s\n\n%s\n\nИзменение репутации: %s%d") % [
 		tr(str(report.get("title", "Заявка"))), _report_date(report), LocalizationHelperScript.translate_saved_text(_review_text(report)),
 		"+" if reputation_change >= 0 else "", reputation_change,
@@ -232,7 +232,7 @@ func _render_archive_report(report: Dictionary) -> void:
 	detail_title.text = tr(str(report.get("title", "Завершённая заявка")))
 	var crew: Array = report.get("crew", [])
 	var localized_crew := _translated_strings(PackedStringArray(crew))
-	var text := tr("%s\nЖилец: %s\nБригада: %s\n\nИтог: %s\n\nОплата: %d монет") % [
+	var text := tr("%s\nКлиент: %s\nБригада: %s\n\nИтог: %s\n\nОплата: %d монет") % [
 		_report_date(report), tr(str(report.get("resident", "не указан"))), ", ".join(localized_crew) if not crew.is_empty() else tr("не указана"),
 		LocalizationHelperScript.translate_saved_text(report.get("summary", "Работы завершены.")), int(report.get("reward", 0)),
 	]
@@ -279,7 +279,7 @@ func _report_consequences(report: Dictionary) -> PackedStringArray:
 		"settled_by_restoration":
 			result.append(tr("Имущество восстановлено за счёт службы. Претензия закрыта."))
 		"paid":
-			result.append(tr("Претензия жильца удовлетворена: выплачено %d монет.") % int(report.get("compensation", 0)))
+			result.append(tr("%s: претензия удовлетворена, выплачено %d монет.") % [tr(str(report.get("resident", "Клиент"))), int(report.get("compensation", 0))])
 		"paid_after_denial":
 			result.append(tr("После первоначального отказа служба выплатила %d монет и восстановила потерянную из-за отказа репутацию.") % int(report.get("compensation", 0)))
 		"denied":

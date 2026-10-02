@@ -62,6 +62,7 @@ var last_employee_phrases: Dictionary = {}
 func initialize_from_job(job: Dictionary) -> void:
 	job_presentation = {
 		"title": str(job.get("title", "")),
+		"resident": str(job.get("resident", "Клиент")),
 		"resident_request": str(job.get("resident_request", "")),
 		"unresolved_message": str(job.get("unresolved_message", "")),
 	}
@@ -738,7 +739,7 @@ func get_completion_result(source_job_id: StringName = &"lava_leak") -> Dictiona
 			"reputation_change": -6,
 			"summary": melted_summary,
 			"review": "От крана остался оплавленный ком металла. В следующий раз сразу скажите, что вместо ремонта оказываете услуги по сносу.",
-			"consequences": ["Кран полностью уничтожен и требует замены.", "Жилец предъявил службе претензию на стоимость оборудования."],
+			"consequences": ["Кран полностью уничтожен и требует замены.", "%s: предъявлена претензия на стоимость оборудования." % str(job_presentation.get("resident", "Клиент"))],
 			"actions": action_log.duplicate(true),
 		}
 	var damage: int = int(world_object.get("damage", 0))

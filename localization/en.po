@@ -21,7 +21,7 @@ msgstr "\nEquipment refund included: %d coins"
 msgid "\nИзменение репутации: %s"
 msgstr "\nReputation change: %s"
 
-msgid "\nКомпенсация жильцу: %d монет\nИзменение средств службы: %d монет"
+msgid "\nКомпенсация клиенту: %d монет\nИзменение средств службы: %d монет"
 msgstr "\nResident compensation: %d coins\nChange of service funds: %d coins"
 
 msgid "\nКомпенсация проведена отдельной операцией: %d монет"
@@ -51,7 +51,7 @@ msgstr "\nReceived: %d coins"
 msgid "\nПредъявлена претензия: %d монет (решение не принято)"
 msgstr "\nClaim made: %d coins (no decision made)"
 
-msgid "\nПретензия жильца: %d монет\nРешение потребуется после принятия акта"
+msgid "\nПретензия клиента: %d монет\nРешение потребуется после принятия акта"
 msgstr "\nResident's claim: %d coins\nA decision will be required after the act is adopted"
 
 msgid "\nПретензия на %d монет отклонена; списания не было"
@@ -147,10 +147,10 @@ msgstr "%s\n%s, %s coins"
 msgid "%s\nАктивных заявок: %d, %s\n%s"
 msgstr "%s\nActive orders: %d, %s\n%s"
 
-msgid "%s\nЖилец: %s\nБригада: %s\n\nИтог: %s\n\nОплата: %d монет"
+msgid "%s\nКлиент: %s\nБригада: %s\n\nИтог: %s\n\nОплата: %d монет"
 msgstr "%s\nResident: %s\nCrew: %s\n\nTotal: %s\n\nPayment: %d coins"
 
-msgid "%s\nЖилец: %s\nОпасность: %s\n%s"
+msgid "%s\nКлиент: %s\nОпасность: %s\n%s"
 msgstr "%s\nOccupant: %s\nDanger: %s\n%s"
 
 msgid "%s — ЗАБЫТЬ"
@@ -822,14 +822,14 @@ msgstr "If you revive the bath, she may go off to find a warmer place. It won't 
 msgid "Жалобы и финансовые риски требуют срочного вмешательства городской инспекции."
 msgstr "Complaints and financial risks require urgent intervention by the city inspectorate."
 
-msgid "Жилец"
-msgstr "Resident"
+msgid "Клиент"
+msgstr "Client"
 
-msgid "Жилец потребовал компенсацию за причинённый ущерб. Можно возместить указанную сумму или отказать — решение повлияет на казну, отчёт и репутацию."
-msgstr "The resident demanded compensation for the damage caused. You can refund the specified amount or refuse - the decision will affect the funds, report and reputation."
+msgid "Клиент потребовал компенсацию за причинённый ущерб. Можно возместить указанную сумму или отказать — решение повлияет на казну, отчёт и репутацию."
+msgstr "The client demanded compensation for the damage caused. You can refund the specified amount or refuse - the decision will affect the funds, report and reputation."
 
-msgid "Жилец предъявил службе претензию на стоимость оборудования."
-msgstr "The resident filed a claim with the service for the cost of the equipment."
+msgid "Клиент предъявил службе претензию на стоимость оборудования."
+msgstr "The client filed a claim with the service for the cost of the equipment."
 
 msgid "За причинённый ущерб выплачена компенсация %d монет."
 msgstr "Compensation of %d coins was paid for the damage caused."
@@ -990,8 +990,8 @@ msgstr "JOB: PORTAL IN THE MIRROR"
 msgid "ЗАЯВКА: ХОДЯЧИЙ ШКАФ"
 msgstr "JOB: WALKING WARDROBE"
 
-msgid "Здесь будет реплика жильца."
-msgstr "The resident's response will be here."
+msgid "Здесь будет реплика клиента."
+msgstr "The client's response will be here."
 
 msgid "Здесь во время игры автоматически появятся итоги прохождения. Размер и положение можно менять мышкой."
 msgstr "Here, during the game, the results of the passage will automatically appear. The size and position can be changed with the mouse."
@@ -1062,7 +1062,7 @@ msgstr "Changes are applied immediately."
 msgid "Иллюстрация Феликса. Меняйте размер и положение мышкой."
 msgstr "Illustration by Felix. Change size and position with the mouse."
 
-msgid "ИМЯ ЖИЛЬЦА"
+msgid "ИМЯ КЛИЕНТА"
 msgstr "RESIDENT NAME"
 
 msgid "Иней растает, и застывшая лава снова пойдёт. Если это эксперимент — предупреждение я сделала."
@@ -1146,8 +1146,8 @@ msgstr "The button launches the final video, after which the game goes to the ma
 msgid "Комната крупно"
 msgstr "Room large"
 
-msgid "Компенсация жильцу"
-msgstr "Resident compensation"
+msgid "Компенсация клиенту"
+msgstr "Client compensation"
 
 msgid "КОМПЕНСИРОВАТЬ: −%d МОНЕТ"
 msgstr "COMPENSATE: −%d COINS"
@@ -1404,8 +1404,8 @@ msgstr "The magical background is suppressed. You can proceed with normal repair
 msgid "Магического фона нет."
 msgstr "There is no magical background."
 
-msgid "Магическое нарушение устранено. Протокол доволен, жилец — посмотрим."
-msgstr "The magical violation has been corrected. The resident is happy with the protocol - we'll see."
+msgid "Магическое нарушение устранено. Протокол доволен, клиент — посмотрим."
+msgstr "The magical violation has been corrected. The client is happy with the protocol - we'll see."
 
 msgid "Магическое пламя"
 msgstr "Magic flame"
@@ -1878,8 +1878,8 @@ msgstr "The residual cold trace has been eliminated; The water in the bathroom n
 msgid "Остаточный холодный след устранён; вода в ванной больше не замерзает. После силового удаления льда ванна треснула, повреждение не устранено."
 msgstr "The residual cold trace has been eliminated; The water in the bathroom no longer freezes. After forcefully removing the ice, the bathtub cracked, but the damage was not repaired."
 
-msgid "Осторожная работа сохраняет оплату и репутацию службы. Если пострадает имущество, жилец может потребовать компенсацию."
-msgstr "Careful work preserves the pay and reputation of the service. If property is damaged, the resident may seek compensation."
+msgid "Осторожная работа сохраняет оплату и репутацию службы. Если пострадает имущество, клиент может потребовать компенсацию."
+msgstr "Careful work preserves the pay and reputation of the service. If property is damaged, the client may seek compensation."
 
 msgid "Осторожнее! Вы уже портите моё имущество!"
 msgstr "Be careful! You are already ruining my property!"
@@ -1923,7 +1923,7 @@ msgstr "Bathroom finish damaged by additional heat."
 msgid "ОТЗЫВЫ"
 msgstr "REVIEWS"
 
-msgid "ОТЗЫВЫ ЖИЛЬЦОВ"
+msgid "ОТЗЫВЫ КЛИЕНТОВ"
 msgstr "RESIDENT FEEDBACK"
 
 msgid "ОТКАЗАТЬ: −%d РЕПУТАЦИИ"
@@ -2265,14 +2265,14 @@ msgstr "Practical revitalization of everyday objects"
 msgid "Предупреждение: терпение специалиста заканчивается."
 msgstr "Warning: the specialist's patience is running out."
 
-msgid "ПРЕТЕНЗИЯ ЖИЛЬЦА"
-msgstr "resident's complaint"
+msgid "ПРЕТЕНЗИЯ КЛИЕНТА"
+msgstr "client's complaint"
 
-msgid "претензия жильца"
-msgstr "resident's complaint"
+msgid "претензия клиента"
+msgstr "client's complaint"
 
-msgid "Претензия жильца удовлетворена: выплачено %d монет."
-msgstr "The resident's claim was satisfied: %d coins were paid."
+msgid "Претензия клиента удовлетворена: выплачено %d монет."
+msgstr "The client's claim was satisfied: %d coins were paid."
 
 msgid "претензия ожидает решения"
 msgstr "the claim is awaiting resolution"
@@ -2578,7 +2578,7 @@ msgid "Сильная сторона: сила и устойчивость"
 msgstr "Strengths: Strength and resilience"
 
 msgid "Систематический ущерб имуществу жителей и критическая задолженность службы."
-msgstr "Systematic damage to residents' property and critical service backlog."
+msgstr "Systematic damage to clients' property and critical service backlog."
 
 msgid "склад снаряжения"
 msgstr "EQUIPMENT WAREHOUSE"
@@ -2617,7 +2617,7 @@ msgid "Служба отказалась компенсировать причи
 msgstr "The service refused to compensate for the damage caused."
 
 msgid "Служба продолжит работу под наблюдением, пока не восстановит доверие жителей."
-msgstr "The service will continue to operate under supervision until it restores the trust of residents."
+msgstr "The service will continue to operate under supervision until it restores the trust of clients."
 
 msgid "Служебная ловушка для привидений"
 msgstr "Service Ghost Trap"
@@ -2799,7 +2799,7 @@ msgstr "Innate professional skills cannot be forgotten."
 msgid "Специалист по когтетехническому надзору просит не мешать."
 msgstr "The claw technician asks you not to interfere."
 
-msgid "Справа собраны сведения о вызове: адрес, жилец, опасности и описание происшествия. Перед выездом стоит прочитать всё, что сообщил заказчик."
+msgid "Справа собраны сведения о вызове: адрес, клиент, опасности и описание происшествия. Перед выездом стоит прочитать всё, что сообщил заказчик."
 msgstr "On the right is collected information about the call: address, occupant, hazards and description of the incident. Before leaving, you should read everything that the customer said."
 
 msgid "срок истёк"
@@ -3055,7 +3055,7 @@ msgid "Чем будем чинить?"
 msgstr "What are we going to fix it with?"
 
 msgid "Четыре подтверждённые претензии жителей к работе службы."
-msgstr "Four confirmed complaints from residents regarding the work of the service."
+msgstr "Four confirmed complaints from clients regarding the work of the service."
 
 msgid "Что вы наделали! Я буду жаловаться!"
 msgstr "What have you done! I'll complain!"
@@ -3221,3 +3221,48 @@ msgstr "Esc - close menu"
 
 msgid "LEFTWALL — У ЛЕВОЙ СТЕНЫ"
 msgstr "LEFTWALL - AT THE LEFT WALL"
+
+msgid "ОТНОШЕНИЯ С КЛИЕНТАМИ"
+msgstr "CLIENT RELATIONS"
+
+msgid "ОТВЕТ КЛИЕНТА"
+msgstr "CLIENT'S REPLY"
+
+msgid "Предпочтение клиента"
+msgstr "Client's preference"
+
+msgid "%s просит прислать %s"
+msgstr "%s asks you to send %s"
+
+msgid "Клиент: %s"
+msgstr "Client: %s"
+
+msgid "Можно отправить другой состав без штрафа."
+msgstr "You can send a different crew without a penalty."
+
+msgid "ВХОД В КВАРТИРУ"
+msgstr "APARTMENT ACCESS"
+
+msgid "Вход запрещён клиентом"
+msgstr "Client has denied access"
+
+msgid "Предупреждение клиента"
+msgstr "Client's warning"
+
+msgid "%s: претензия удовлетворена, выплачено %d монет."
+msgstr "%s: the claim was settled, %d coins paid."
+
+msgid "Лилию"
+msgstr "Liliya"
+
+msgid "Грога"
+msgstr "Grog"
+
+msgid "Бориса"
+msgstr "Boris"
+
+msgid "Нику"
+msgstr "Nika"
+
+msgid "Феликса"
+msgstr "Felix"

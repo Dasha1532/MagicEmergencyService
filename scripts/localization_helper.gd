@@ -3,7 +3,7 @@ extends RefCounted
 
 
 static func translate_saved_text(value: Variant) -> String:
-	var source := str(value)
+	var source := client_terms(str(value))
 	if source.is_empty() or not TranslationServer.get_locale().begins_with("en"):
 		return source
 	var exact := str(TranslationServer.translate(source))
@@ -29,6 +29,13 @@ static func translate_saved_text(value: Variant) -> String:
 	if not segment.is_empty():
 		result += _translate_segment(segment)
 	return result
+
+
+static func client_terms(text: String) -> String:
+	var replacements := {"ЖИЛЬЦАМИ": "КЛИЕНТАМИ", "ЖИЛЬЦОВ": "КЛИЕНТОВ", "ЖИЛЬЦА": "КЛИЕНТА", "ЖИЛЕЦ": "КЛИЕНТ", "Жильцы": "Клиенты", "Жилец": "Клиент", "жильцами": "клиентами", "жильцов": "клиентов", "жильца": "клиента", "жильцу": "клиенту", "жильцом": "клиентом", "жильцы": "клиенты", "жилец": "клиент"}
+	for old_term: String in replacements:
+		text = text.replace(old_term, str(replacements[old_term]))
+	return text
 
 
 static func _translate_segment(segment: String) -> String:

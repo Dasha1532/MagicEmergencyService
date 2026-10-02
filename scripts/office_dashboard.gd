@@ -1,6 +1,7 @@
 extends Control
 
 const LocalizationHelperScript := preload("res://scripts/localization_helper.gd")
+const CompactDialogLayout := preload("res://scripts/compact_dialog_layout.gd")
 
 const HUD_ICON_SCRIPT = preload("res://scripts/hud_icon.gd")
 const COLOR_PANEL := Color(0.07, 0.045, 0.03, 0.94)
@@ -30,6 +31,7 @@ var detail_title: Label
 var detail_body: Label
 var detail_badge: Label
 var detail_more_button: Button
+var preference_request_label: Label
 var restoration_payment_label: Label
 var restoration_refuse_button: Button
 var restoration_refuse_dialog: Control
@@ -254,7 +256,7 @@ func _build_detail_panel() -> void:
 	panel.add_child(detail_title)
 
 	detail_badge = _label("ПОВТОРНЫЙ ВЫЗОВ", 13, COLOR_GOLD)
-	detail_badge.position = Vector2(22, 80)
+	detail_badge.position = Vector2(22, 100)
 	detail_badge.size = Vector2(220, 24)
 	detail_badge.visible = false
 	panel.add_child(detail_badge)
@@ -269,6 +271,12 @@ func _build_detail_panel() -> void:
 	detail_more_button.add_theme_font_size_override("font_size", 13)
 	detail_more_button.pressed.connect(_show_expanded_job_details)
 	panel.add_child(detail_more_button)
+	preference_request_label = _label("", 14, COLOR_GOLD)
+	preference_request_label.position = Vector2(22, 252)
+	preference_request_label.size = Vector2(371, 40)
+	preference_request_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	preference_request_label.visible = false
+	panel.add_child(preference_request_label)
 	restoration_payment_label = _label("", 16, COLOR_GOLD)
 	restoration_payment_label.position = Vector2(22, 252)
 	restoration_payment_label.size = Vector2(371, 86)
@@ -280,7 +288,7 @@ func _build_detail_panel() -> void:
 	panel.add_child(restoration_refuse_button)
 	var refusal_ui := _build_notice_overlay("ОТКАЗ ОТ ЗАЯВКИ", "Отказ снизит репутацию на 2. Невыплаченная претензия останется открытой.\n\nЗаявка будет закрыта и не появится повторно.", "ОТКАЗАТЬСЯ", "ВЕРНУТЬСЯ", _refuse_restoration)
 	restoration_refuse_dialog = refusal_ui["overlay"]
-	var access_ui := _build_notice_overlay("ЖИЛЕЦ НЕ ВПУСТИЛ СОТРУДНИКА", "", "ПОНЯТНО", "", Callable())
+	var access_ui := _build_notice_overlay("ВХОД В КВАРТИРУ", "", "ПОНЯТНО", "", Callable())
 	access_notice_dialog = access_ui["overlay"]
 	access_notice_body = access_ui["body"]
 
@@ -318,6 +326,7 @@ func _build_detail_panel() -> void:
 	detail_expanded_title = _label("ПОДРОБНОСТИ ЗАЯВКИ", 20, COLOR_GOLD)
 	detail_expanded_title.position = Vector2(22, 18)
 	detail_expanded_title.size = Vector2(371, 36)
+	detail_expanded_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail_expanded_panel.add_child(detail_expanded_title)
 	detail_expanded_body = RichTextLabel.new()
 	detail_expanded_body.add_theme_font_size_override("normal_font_size", 16)
@@ -326,7 +335,7 @@ func _build_detail_panel() -> void:
 	detail_resident_button = _button("", Vector2(22, 60), Vector2(371, 36))
 	detail_resident_button.add_theme_font_size_override("font_size", 15)
 	detail_resident_button.clip_text = true
-	detail_resident_button.tooltip_text = "Посмотреть отношения жильца с сотрудниками"
+	detail_resident_button.tooltip_text = "Посмотреть отношения клиента с сотрудниками"
 	detail_resident_button.pressed.connect(_open_job_resident_memory)
 	detail_expanded_panel.add_child(detail_resident_button)
 	detail_expanded_body.position = Vector2(22, 108)
@@ -336,6 +345,7 @@ func _build_detail_panel() -> void:
 	var close_details_button := _button("СКРЫТЬ  ▴", Vector2(22, 384), Vector2(371, 52))
 	close_details_button.pressed.connect(func() -> void: detail_expanded_panel.visible = false)
 	detail_expanded_panel.add_child(close_details_button)
+	detail_expanded_panel.set_meta("compact_close", close_details_button)
 
 
 func _build_notice_overlay(title_text: String, body_text: String, confirm_text: String, cancel_text: String, on_confirm: Callable) -> Dictionary:
@@ -370,10 +380,14 @@ func _build_notice_overlay(title_text: String, body_text: String, confirm_text: 
 			on_confirm.call()
 	)
 	panel.add_child(confirm_button)
+	var buttons: Array[Button] = [confirm_button]
 	if not cancel_text.is_empty():
 		var cancel_button := _button(cancel_text, Vector2(410, 278), Vector2(310, 62))
 		cancel_button.pressed.connect(func() -> void: overlay.visible = false)
 		panel.add_child(cancel_button)
+		buttons.append(cancel_button)
+	if title_text not in ["ОТНОШЕНИЯ С КЛИЕНТАМИ", "ОТВЕТ КЛИЕНТА"]:
+		CompactDialogLayout.bind(panel, title, body, buttons)
 	return {"overlay": overlay, "body": body, "panel": panel, "title": title, "confirm": confirm_button}
 
 
@@ -616,11 +630,11 @@ func _build_personnel_screen() -> void:
 	back_button.pressed.connect(_show_hub)
 	personnel_layer.add_child(back_button)
 	var description_rect := _personnel_guide_rect("DescriptionArea")
-	var memory_button := _button("ОТНОШЕНИЯ С ЖИЛЬЦАМИ", Vector2(description_rect.position.x, description_rect.end.y - 36), Vector2(description_rect.size.x, 36))
+	var memory_button := _button("ОТНОШЕНИЯ С КЛИЕНТАМИ", Vector2(description_rect.position.x, description_rect.end.y - 36), Vector2(description_rect.size.x, 36))
 	memory_button.add_theme_font_size_override("font_size", 14)
 	memory_button.pressed.connect(_open_resident_memory)
 	personnel_layer.add_child(memory_button)
-	var memory_ui := _build_notice_overlay("ОТНОШЕНИЯ С ЖИЛЬЦАМИ", "", "ЗАКРЫТЬ", "", Callable())
+	var memory_ui := _build_notice_overlay("ОТНОШЕНИЯ С КЛИЕНТАМИ", "", "ЗАКРЫТЬ", "", Callable())
 	resident_memory_dialog = memory_ui["overlay"]
 	resident_memory_panel = memory_ui["panel"]
 	resident_memory_close = memory_ui["confirm"]
@@ -644,7 +658,7 @@ func _build_personnel_screen() -> void:
 	)
 	memory_placeholder.get_parent().add_child(resident_memory_body)
 	memory_placeholder.queue_free()
-	var apology_ui := _build_notice_overlay("ОТВЕТ ЖИЛЬЦА", "", "ХОРОШО", "", Callable())
+	var apology_ui := _build_notice_overlay("ОТВЕТ КЛИЕНТА", "", "ХОРОШО", "", Callable())
 	apology_reply_dialog = apology_ui["overlay"]
 	apology_reply_body = apology_ui["body"]
 	apology_reply_panel = apology_ui["panel"]
@@ -777,6 +791,7 @@ func _build_specialization_dialog() -> void:
 	specialization_title = _label("СПЕЦИАЛИЗАЦИИ", 26, COLOR_GOLD)
 	specialization_title.position = Vector2(35, 30)
 	specialization_title.size = Vector2(530, 42)
+	specialization_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	specialization_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	panel.add_child(specialization_title)
 	var explanation := _label("У сотрудника две ячейки.\nЗабытая способность исчезнет из доступных действий.\nПри необходимости её можно изучить заново.", 16, COLOR_PARCHMENT)
@@ -800,6 +815,7 @@ func _build_specialization_dialog() -> void:
 	var close_button := _button("ЗАКРЫТЬ", Vector2(150, 420), Vector2(300, 54))
 	close_button.pressed.connect(_close_specializations)
 	panel.add_child(close_button)
+	panel.set_meta("compact_close", close_button)
 
 	specialization_confirm_layer = Control.new()
 	specialization_confirm_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -830,6 +846,7 @@ func _build_specialization_dialog() -> void:
 	var cancel_button := _button("ОТМЕНА", Vector2(285, 205), Vector2(210, 52))
 	cancel_button.pressed.connect(_cancel_forget_specialization)
 	confirm_panel.add_child(cancel_button)
+	CompactDialogLayout.bind(confirm_panel, confirm_title, specialization_confirm_text, [confirm_button, cancel_button])
 
 
 func _build_supply_shop() -> void:
@@ -1106,6 +1123,7 @@ func _build_section_dialog() -> void:
 	var close_button := _button("ВЕРНУТЬСЯ В ОФИС", Vector2(120, 292), Vector2(400, 58))
 	close_button.pressed.connect(func() -> void: section_dialog.visible = false)
 	section_dialog.add_child(close_button)
+	CompactDialogLayout.bind(section_dialog, section_title, section_body, [close_button])
 
 
 func _build_job_report_dialog() -> void:
@@ -1155,7 +1173,7 @@ func _build_claim_dialog() -> void:
 	claim_layer.add_child(shade)
 	var panel := _panel(Vector2(390, 225), Vector2(820, 450), 14)
 	claim_layer.add_child(panel)
-	claim_title = _label("ПРЕТЕНЗИЯ ЖИЛЬЦА", 28, COLOR_GOLD)
+	claim_title = _label("ПРЕТЕНЗИЯ КЛИЕНТА", 28, COLOR_GOLD)
 	claim_title.position = Vector2(45, 34)
 	claim_title.size = Vector2(730, 48)
 	claim_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1173,6 +1191,7 @@ func _build_claim_dialog() -> void:
 	claim_deny_button = _button("", Vector2(435, 340), Vector2(330, 68))
 	claim_deny_button.pressed.connect(_resolve_claim.bind(false))
 	panel.add_child(claim_deny_button)
+	CompactDialogLayout.bind(panel, claim_title, claim_body, [claim_pay_button, claim_deny_button])
 
 
 func _build_arrival_dialog() -> void:
@@ -1206,6 +1225,7 @@ func _build_arrival_dialog() -> void:
 	var no_button := _button("НЕТ", Vector2(386, 232), Vector2(280, 58))
 	no_button.pressed.connect(func() -> void: arrival_dialog.visible = false)
 	panel.add_child(no_button)
+	CompactDialogLayout.bind(panel, arrival_dialog_title, arrival_dialog_body, [yes_button, no_button])
 
 
 func _build_dispatch_warning_dialog() -> void:
@@ -1239,6 +1259,7 @@ func _build_dispatch_warning_dialog() -> void:
 	var back_button := _button("ВЕРНУТЬСЯ К СОСТАВУ", Vector2(410, 278), Vector2(310, 62))
 	back_button.pressed.connect(func() -> void: dispatch_warning_dialog.visible = false)
 	panel.add_child(back_button)
+	CompactDialogLayout.bind(panel, title, dispatch_warning_body, [proceed_button, back_button])
 
 
 func _build_demo_completion_dialog() -> void:
@@ -1836,9 +1857,9 @@ func _refresh_job_report() -> void:
 	if bool(report.get("maximum_payment", false)):
 		finance_text += tr("\nОценка выполнения: отлично")
 	if compensation > 0:
-		finance_text += tr("\nКомпенсация жильцу: %d монет\nИзменение средств службы: %d монет") % [compensation, int(report.get("net_change", -compensation))]
+		finance_text += tr("\nКомпенсация клиенту: %d монет\nИзменение средств службы: %d монет") % [compensation, int(report.get("net_change", -compensation))]
 	elif int(report.get("claim_amount", 0)) > 0:
-		finance_text += tr("\nПретензия жильца: %d монет\nРешение потребуется после принятия акта") % int(report.get("claim_amount", 0))
+		finance_text += tr("\nПретензия клиента: %d монет\nРешение потребуется после принятия акта") % int(report.get("claim_amount", 0))
 	job_report_body.text = tr("%s\n\nЗаказчик: %s\nБригада: %s\n\n%s\n\n%s") % [tr(str(report.get("title", "Заявка"))), tr(str(report.get("resident", ""))), crew_text, finance_text, LocalizationHelperScript.translate_saved_text(report.get("summary", ""))]
 	call_deferred("_fit_job_report_dialog_to_content")
 
@@ -1848,15 +1869,17 @@ func _fit_job_report_dialog_to_content() -> void:
 		return
 	var viewport_size := get_viewport_rect().size
 	var maximum_panel_height := minf(780.0, viewport_size.y - 48.0)
-	var minimum_body_height := 210.0
-	var maximum_body_height := maximum_panel_height - 240.0
+	var minimum_body_height := 48.0
+	var maximum_body_height := maximum_panel_height - 194.0
 	var content_height := ceilf(job_report_body.get_content_height()) + 20.0
 	var body_height := clampf(content_height, minimum_body_height, maximum_body_height)
-	var panel_height := body_height + 240.0
+	var panel_height := body_height + 194.0
 	job_report_panel.size = Vector2(940.0, panel_height)
 	job_report_panel.position = Vector2((viewport_size.x - job_report_panel.size.x) * 0.5, (viewport_size.y - panel_height) * 0.5)
 	job_report_body.size = Vector2(820.0, body_height)
-	job_report_close_button.position = Vector2(290.0, panel_height - 94.0)
+	job_report_close_button.custom_minimum_size = Vector2(240, 48)
+	job_report_close_button.size = Vector2(240, 48)
+	job_report_close_button.position = Vector2(350.0, panel_height - 76.0)
 	job_report_body.scroll_active = content_height > body_height
 	job_report_body.scroll_to_line(0)
 
@@ -1875,7 +1898,7 @@ func _show_claim_dialog() -> void:
 	var audio_manager := get_node_or_null("/root/AudioManager")
 	if audio_manager != null and audio_manager.has_method(&"play_complaint"):
 		audio_manager.call(&"play_complaint")
-	claim_title.text = tr("ПРЕТЕНЗИЯ: %s") % tr(str(report.get("resident", "Жилец")))
+	claim_title.text = tr("ПРЕТЕНЗИЯ: %s") % tr(str(report.get("resident", "Клиент")))
 	var balance_after_payment: int = int(game_state.money) - amount
 	var denial_penalty: int = int(game_state.get_claim_denial_penalty(amount))
 	var payment_warning := tr("После выплаты в казне останется %d монет.") % balance_after_payment
@@ -1953,6 +1976,31 @@ func _refresh_specialization_dialog() -> void:
 		specialization_slots.add_child(ability_button)
 	var general_state: StringName = game_state.get_forget_availability(selected_employee_id, StringName(abilities[0])) if not abilities.is_empty() else &"available"
 	specialization_notice.text = _forget_state_text(general_state) if general_state != &"available" else "Выберите занятую ячейку, чтобы освободить её."
+	_layout_specializations.call_deferred()
+
+
+func _layout_specializations() -> void:
+	var panel: Panel = specialization_title.get_parent()
+	var explanation: Label = panel.get_child(1)
+	specialization_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	specialization_title.size.y = 0
+	specialization_title.size.y = ceilf(specialization_title.get_minimum_size().y)
+	explanation.clip_text = false
+	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	explanation.position.y = specialization_title.position.y + specialization_title.size.y + 18
+	explanation.size.y = 0
+	explanation.size.y = explanation.get_minimum_size().y
+	specialization_slots.position.y = explanation.position.y + explanation.size.y + 20
+	specialization_slots.size.y = specialization_slots.get_combined_minimum_size().y
+	specialization_notice.position.y = specialization_slots.position.y + specialization_slots.size.y + 18
+	specialization_notice.size.y = 0
+	specialization_notice.size.y = specialization_notice.get_minimum_size().y + 4
+	var close_button: Button = panel.get_meta("compact_close")
+	close_button.custom_minimum_size = Vector2(180, 48)
+	close_button.size = Vector2(180, 48)
+	close_button.position = Vector2(210, specialization_notice.position.y + specialization_notice.size.y + 20)
+	panel.size.y = close_button.position.y + 48 + 28
+	panel.position = (get_viewport_rect().size - panel.size) * 0.5
 
 
 func _request_forget_specialization(ability_id: StringName) -> void:
@@ -2241,7 +2289,8 @@ func _rebuild_employees() -> void:
 		var card := _button("", Vector2.ZERO, Vector2(390, 225))
 		var is_training: bool = game_state.is_employee_training(employee_id)
 		card.disabled = is_training or dispatched or returning
-		card.tooltip_text = "Жилец запретил этому сотруднику входить в квартиру" if banned else ("Жилец предупреждал этого сотрудника после повреждения имущества" if warned else (employee["status"] if in_transit or returning else ("Сотрудник находится на объекте" if on_site else ("Сотрудник заканчивает обучение на следующий день" if is_training else "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение"))))
+		var client_name := str(game_state.jobs.get(selected_job_id, {}).get("resident", "Клиент"))
+		card.tooltip_text = "%s: этому сотруднику запрещён вход в квартиру" % client_name if banned else ("%s: сотруднику вынесено предупреждение после повреждения имущества" % client_name if warned else (employee["status"] if in_transit or returning else ("Сотрудник находится на объекте" if on_site else ("Сотрудник заканчивает обучение на следующий день" if is_training else "Нажмите, чтобы назначить сотрудника на выбранную заявку или снять назначение"))))
 		card.add_theme_stylebox_override("normal", _style(COLOR_SELECTED if selected else COLOR_CARD, COLOR_GOLD if selected else COLOR_BRASS, 3 if selected else 2, 9))
 		card.pressed.connect(_toggle_employee.bind(employee_id))
 		employee_list.add_child(card)
@@ -2283,7 +2332,8 @@ func _rebuild_employees() -> void:
 		card.add_child(method_label)
 		var relation: Dictionary = game_state.get_employee_relation_for_job(employee_id, selected_job_id)
 		if not selected_job_id.is_empty():
-			var relation_label := _label("Жилец: %s" % _relation_description(relation), 12, COLOR_GOLD)
+			var preferred: bool = employee_id == game_state.get_preferred_employee_for_job(selected_job_id)
+			var relation_label := _label("Предпочтение клиента" if preferred else "Клиент: %s" % _relation_description(relation), 12, COLOR_GOLD)
 			relation_label.position = Vector2(180, 148)
 			relation_label.size = Vector2(198, 20)
 			relation_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2319,11 +2369,11 @@ func _open_resident_memory() -> void:
 	for entry: Dictionary in entries:
 		var relation: Dictionary = entry["relation"]
 		var description := _relation_description(relation)
-		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else ("Предупреждение жильца" if str(relation.get("access_status", "allowed")) == "warned" else "Вход разрешён")
+		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else ("Предупреждение клиента" if str(relation.get("access_status", "allowed")) == "warned" else "Вход разрешён")
 		lines.append("%s\nОтношение: %s. %s." % [tr(str(entry["resident_name"])), description, access_note])
 		_append_apology_option(lines, str(entry["resident_id"]), selected_employee_id, str(entry["resident_name"]))
 	if entries.is_empty():
-		lines.append("Жильцы пока не запомнили работу этого сотрудника.")
+		lines.append("Клиенты пока не запомнили работу этого сотрудника.")
 	_show_resident_memory(lines)
 
 
@@ -2339,7 +2389,7 @@ func _open_job_resident_memory() -> void:
 		if not bool(employee.get("available", false)):
 			continue
 		var relation: Dictionary = game_state.get_employee_relation_for_job(employee_id, selected_job_id)
-		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else ("Предупреждение жильца" if str(relation.get("access_status", "allowed")) == "warned" else "Вход разрешён")
+		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else ("Предупреждение клиента" if str(relation.get("access_status", "allowed")) == "warned" else "Вход разрешён")
 		lines.append("%s\nОтношение: %s. %s." % [tr(str(employee["name"])), _relation_description(relation), access_note])
 		_append_apology_option(lines, resident_id, employee_id, str(job.get("resident", "")))
 	_show_resident_memory(lines)
@@ -2355,7 +2405,7 @@ func _append_apology_option(lines: PackedStringArray, resident_id: String, emplo
 		&"unsettled_damage":
 			lines.append("Извиниться можно после компенсации или восстановления имущества.")
 		&"needs_other_crew_work":
-			lines.append("Для нового извинения нужна успешная работа у этого жильца другим составом после возмещения ущерба.")
+			lines.append("Для нового извинения нужна успешная работа у этого клиента другим составом после возмещения ущерба.")
 
 
 func _on_apology_clicked(meta: Variant) -> void:
@@ -2419,9 +2469,9 @@ func _layout_resident_memory() -> void:
 func _employee_card_status(employee_id: StringName, employee: Dictionary, pending_selected: bool, selected: bool, on_site: bool, in_transit: bool, returning: bool) -> String:
 	var access_status: StringName = game_state.get_employee_access_status_for_job(employee_id, selected_job_id)
 	if access_status == &"banned":
-		return "Запрещён вход жильцом"
+		return "Вход запрещён клиентом"
 	if access_status == &"warned":
-		return "Предупреждение жильца"
+		return "Предупреждение клиента"
 	if pending_selected:
 		return "Выбран для отправки"
 	if returning:
@@ -2443,6 +2493,7 @@ func _translated_strings(values: PackedStringArray) -> PackedStringArray:
 
 
 func _refresh_details() -> void:
+	preference_request_label.visible = false
 	restoration_payment_label.visible = false
 	restoration_refuse_button.visible = false
 	if detail_expanded_panel != null:
@@ -2462,20 +2513,36 @@ func _refresh_details() -> void:
 	var assigned: PackedStringArray = job["assigned"]
 	var is_linked := bool(job.get("consequence", false)) or bool(job.get("restoration", false))
 	var restoration := bool(job.get("restoration", false))
+	var preference_request: String = game_state.get_preferred_employee_request(selected_job_id)
+	var has_preference := not preference_request.is_empty()
 	detail_title.text = tr(str(job["title"]))
 	detail_badge.visible = is_linked
 	detail_badge.text = "ПОВТОРНЫЙ ВЫЗОВ"
-	detail_body.position.y = 106 if is_linked or restoration else 94
-	detail_body.size.y = 92 if is_linked or restoration else 104
+	detail_body.position.y = 126 if is_linked or restoration else 94
+	detail_body.size.y = 72 if is_linked or restoration else 104
+	if restoration and has_preference:
+		detail_body.size.y = 64
 	detail_body.text = "%s\n%s" % [tr(str(job["address"])), _job_condition_text(job)]
 	detail_more_button.visible = true
+	detail_more_button.position.y = 202 if restoration and has_preference else 210
 	detail_more_button.tooltip_text = tr(str(job["description"]))
 	restoration_payment_label.visible = restoration
 	restoration_payment_label.text = game_state.get_restoration_payment_text(selected_job_id)
 	restoration_refuse_button.visible = restoration
+	restoration_refuse_button.position.y = detail_more_button.position.y
+	restoration_payment_label.position.y = 240 if has_preference else 252
+	restoration_payment_label.size.y = 78 if has_preference else 86
 	restoration_refuse_button.disabled = not game_state.get_pending_job_action(selected_job_id).is_empty()
 	assignment_label.position.y = 342 if restoration else 258
 	assignment_label.size.y = 38 if restoration else 90
+	preference_request_label.visible = has_preference
+	preference_request_label.text = preference_request
+	preference_request_label.position.y = 320 if restoration else 252
+	preference_request_label.size.y = 36 if restoration else 40
+	preference_request_label.tooltip_text = "Можно отправить другой состав без штрафа."
+	if has_preference:
+		assignment_label.position.y = 360 if restoration else 298
+		assignment_label.size.y = 24 if restoration else 74
 
 	if assigned.is_empty():
 		assignment_label.text = "Бригада: не назначена"
@@ -2528,13 +2595,33 @@ func _show_expanded_job_details() -> void:
 	var job: Dictionary = game_state.jobs[selected_job_id]
 	var linked_note := "Связь: по этому объекту служба уже выезжала ранее.\n\n" if bool(job.get("consequence", false)) or bool(job.get("restoration", false)) else ""
 	detail_expanded_title.text = tr(str(job["title"]))
-	detail_resident_button.text = "Жилец: %s" % tr(str(job["resident"]))
+	detail_resident_button.text = "Клиент: %s" % tr(str(job["resident"]))
 	detail_expanded_body.scroll_to_line(0)
 	detail_expanded_body.text = "%s%s\n%s\n\n%s" % [linked_note, tr(str(job["address"])), _job_condition_text(job), tr(str(job["description"]))]
+	var preference_request: String = game_state.get_preferred_employee_request(selected_job_id)
+	if not preference_request.is_empty():
+		detail_expanded_body.text += "\n\n" + preference_request
 	detail_expanded_panel.visible = true
 	if bool(job.get("restoration", false)):
 		detail_expanded_body.text += "\n\n" + game_state.get_restoration_payment_text(selected_job_id)
 	detail_expanded_panel.move_to_front()
+	_layout_expanded_details.call_deferred()
+
+
+func _layout_expanded_details() -> void:
+	detail_expanded_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail_expanded_title.size.y = 0
+	detail_expanded_title.size.y = ceilf(detail_expanded_title.get_minimum_size().y)
+	detail_resident_button.position.y = detail_expanded_title.position.y + detail_expanded_title.size.y + 14
+	detail_expanded_body.position.y = detail_resident_button.position.y + detail_resident_button.size.y + 14
+	var content_height := float(detail_expanded_body.get_content_height()) + 8
+	detail_expanded_body.size.y = clampf(content_height, 48, 266)
+	detail_expanded_body.scroll_active = content_height > 266
+	var close_button: Button = detail_expanded_panel.get_meta("compact_close")
+	close_button.custom_minimum_size = Vector2(160, 44)
+	close_button.size = Vector2(160, 44)
+	close_button.position = Vector2((415 - 160) * 0.5, detail_expanded_body.position.y + detail_expanded_body.size.y + 18)
+	detail_expanded_panel.size.y = close_button.position.y + close_button.size.y + 18
 
 
 func _confirm_restoration_refusal() -> void:

@@ -96,7 +96,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 15
-text = "ИМЯ ЖИЛЬЦА"
+text = "ИМЯ КЛИЕНТА"
 
 [node name="Message" type="Label" parent="." unique_id=732988527]
 layout_mode = 0
@@ -109,7 +109,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 17
-text = "Здесь будет реплика жильца."
+text = "Здесь будет реплика клиента."
 vertical_alignment = 1
 autowrap_mode = 2
 

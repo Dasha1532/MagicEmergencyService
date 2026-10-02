@@ -1,5 +1,7 @@
 extends Control
 
+const CompactDialogLayout := preload("res://scripts/compact_dialog_layout.gd")
+
 signal employee_selected(employee_id: StringName)
 signal completion_requested
 signal long_action_started(employee_id: StringName)
@@ -358,7 +360,7 @@ func _build_access_notice() -> void:
 	panel.size = Vector2(780, 380)
 	panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 14))
 	access_notice.add_child(panel)
-	var title := _label("ЖИЛЕЦ НЕ ВПУСТИЛ СОТРУДНИКА", 24, COLOR_GOLD)
+	var title := _label("ВХОД В КВАРТИРУ", 24, COLOR_GOLD)
 	title.position = Vector2(38, 34)
 	title.size = Vector2(704, 42)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -380,6 +382,7 @@ func _build_access_notice() -> void:
 	button.add_theme_stylebox_override("hover", _style(COLOR_SELECTED, COLOR_GOLD, 2, 9))
 	button.pressed.connect(_advance_access_sequence)
 	panel.add_child(button)
+	CompactDialogLayout.bind(panel, title, access_notice_text, [button])
 
 
 func _update_employee_card(employee_id: StringName) -> void:
@@ -473,7 +476,7 @@ func show_resident_dialogue(message: String) -> void:
 		return
 	var job: Dictionary = game_state.get_active_job()
 	queued_dialogues.clear()
-	_display_dialogue(str(job.get("resident", "Жилец")), message, false, _resident_portrait(job))
+	_display_dialogue(str(job.get("resident", "Клиент")), message, false, _resident_portrait(job))
 
 
 func queue_dialogue(speaker: String, message: String, is_warning: bool = false) -> void:
@@ -490,7 +493,7 @@ func queue_resident_dialogue(message: String) -> void:
 		return
 	var job: Dictionary = game_state.get_active_job()
 	var dialogue: Dictionary = {
-		"speaker": str(job.get("resident", "Жилец")),
+		"speaker": str(job.get("resident", "Клиент")),
 		"message": message,
 		"warning": false,
 		"portrait": _resident_portrait(job),

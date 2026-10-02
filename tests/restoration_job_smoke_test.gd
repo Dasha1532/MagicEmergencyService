@@ -37,7 +37,9 @@ func _run() -> void:
 	assert(state.jobs[job_id]["assigned"].size() == 2)
 	assert(not state.jobs[job_id]["assigned"].has("liliya"))
 	assert(state.is_employee_returning(&"liliya"))
-	assert("эту магичку" in state.take_access_messages(job_id)[0])
+	var notice: String = state.take_access_messages(job_id)[0]
+	assert("Хозяин не впустил сотрудника: Лилия Морозова" in notice)
+	assert(not "эту магичку" in notice)
 	var simulation = load("res://scripts/repair_simulation.gd").new()
 	simulation.initialize_from_job(state.jobs[job_id])
 	assert(not simulation.is_resolved())
@@ -121,7 +123,7 @@ func _run() -> void:
 	assert("предпочитает" in office.resident_memory_body.text)
 	var relation_button: Button
 	for child in office.personnel_layer.get_children():
-		if child is Button and child.text == "ОТНОШЕНИЯ С ЖИЛЬЦАМИ":
+		if child is Button and child.text == "ОТНОШЕНИЯ С КЛИЕНТАМИ":
 			relation_button = child
 	assert(relation_button != null)
 	assert(relation_button.position.y > 100)

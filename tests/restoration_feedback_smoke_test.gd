@@ -83,6 +83,8 @@ func _run() -> void:
 	assert(office.access_notice_dialog.is_visible_in_tree())
 	assert("Лилия Морозова" in office.access_notice_body.text)
 	assert("возвращается в офис" in office.access_notice_body.text)
+	assert(not "Я просил" in office.access_notice_body.text)
+	assert(not "Господин Рагнар:" in office.access_notice_body.text)
 	assert(state.jobs[job_id]["assigned"].is_empty())
 	assert(state.is_employee_returning(&"liliya"))
 	assert(office.restoration_refuse_dialog is Control and not office.restoration_refuse_dialog is Window)

@@ -9,7 +9,7 @@ signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 24
+const SAVE_VERSION: int = 25
 const RESTORATION_PROFILE := preload("res://data/restoration/faucet.tres")
 const RESTORATION_REFUSAL_REVIEW := "Заменить уничтоженный кран отказались. Придётся искать другую службу."
 const LEGACY_SAVE_PATH: String = "user://savegame.json"
@@ -230,6 +230,7 @@ func get_action_duration(action_id: StringName, intent: StringName = &"") -> int
 var employees: Dictionary = {
 	&"liliya": {
 		"name": "Лилия Морозова",
+		"request_name": "Лилию",
 		"access_refusal_phrase": "Я просил больше не присылать эту магичку",
 		"apology_reference": "вашей магичке",
 		"role": "Маг-практик",
@@ -261,6 +262,7 @@ var employees: Dictionary = {
 	},
 	&"grog": {
 		"name": "Грог Кувалда",
+		"request_name": "Грога",
 		"access_refusal_phrase": "Я просил больше не присылать этого орка",
 		"apology_reference": "вашему орку",
 		"role": "Орк-такелажник",
@@ -289,6 +291,7 @@ var employees: Dictionary = {
 	},
 	&"boris": {
 		"name": "Борис Медяк",
+		"request_name": "Бориса",
 		"role": "Мастер-сантехник",
 		"portrait": "res://assets/portraits/employees/boris.png",
 		"actor_neutral_pose": "res://assets/characters/employees/boris/full_body.png",
@@ -316,6 +319,7 @@ var employees: Dictionary = {
 	},
 	&"nika": {
 		"name": "Ника Искра",
+		"request_name": "Нику",
 		"role": "Маг-телекинетик",
 		"portrait": "res://assets/portraits/employees/nika.png",
 		"portrait_region": Rect2(0, 0, 1254, 1254),
@@ -348,6 +352,7 @@ var employees: Dictionary = {
 	},
 	&"felix": {
 		"name": "Феликс Пепельный",
+		"request_name": "Феликса",
 		"role": "Магический инспектор",
 		"portrait": "res://assets/portraits/employees/felix.png",
 		"actor_neutral_pose": "res://assets/characters/employees/felix/full_body.png",
@@ -382,7 +387,7 @@ var employees: Dictionary = {
 				"Заклинание прекращено. Гарантия на мебель в мои обязанности не входит.",
 				"Очаг нестабильности погашен. Всё остальное классифицируется как обычная поломка.",
 				"Чары сняты. Если объект всё ещё ведёт себя странно, это уже вопрос к мастеру.",
-				"Магическое нарушение устранено. Протокол доволен, жилец — посмотрим.",
+				"Магическое нарушение устранено. Протокол доволен, клиент — посмотрим.",
 			]},
 		],
 		"available": false,
@@ -845,6 +850,47 @@ func get_employee_relation_for_job(employee_id: StringName, job_id: StringName) 
 	return world_memory.get_relation(resident_id, String(employee_id))
 
 
+func _preferred_employee_for_resident(resident_id: String) -> StringName:
+	var best_id: StringName = &""
+	var best_weight := 0
+	var best_trust := 0
+	var employee_ids: Array = employees.keys()
+	employee_ids.sort()
+	for employee_id: StringName in employee_ids:
+		if not bool(employees[employee_id].get("available", false)):
+			continue
+		var relation: Dictionary = world_memory.get_relation(resident_id, String(employee_id))
+		var weight := int(relation.get("preference_weight", 0))
+		var trust := int(relation.get("professional_trust", 0))
+		if str(relation.get("access_status", "allowed")) == "banned" or trust < 20 or weight <= 0:
+			continue
+		if weight > best_weight or (weight == best_weight and trust > best_trust):
+			best_id = employee_id
+			best_weight = weight
+			best_trust = trust
+	return best_id
+
+
+func get_preferred_employee_for_job(job_id: StringName) -> StringName:
+	if not jobs.has(job_id):
+		return &""
+	var job: Dictionary = jobs[job_id]
+	var instance: Dictionary = job.get("generated_instance", {})
+	var resident_id := str(instance.get("resident_id", job.get("resident", "")))
+	var employee_id := StringName(str(instance.get("preferred_employee_id", _preferred_employee_for_resident(resident_id))))
+	if not employees.has(employee_id) or not bool(employees[employee_id].get("available", false)) or is_employee_banned_for_job(employee_id, job_id):
+		return &""
+	return employee_id
+
+
+func get_preferred_employee_request(job_id: StringName) -> String:
+	var employee_id := get_preferred_employee_for_job(job_id)
+	if employee_id.is_empty():
+		return ""
+	var employee: Dictionary = employees[employee_id]
+	return tr("%s просит прислать %s") % [tr(str(jobs[job_id]["resident"])), tr(str(employee.get("request_name", employee["name"])))]
+
+
 func get_apology_availability(resident_id: String, employee_id: StringName) -> StringName:
 	if not employees.has(employee_id) or not bool(employees[employee_id].get("available", false)):
 		return &"unavailable"
@@ -1305,7 +1351,7 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 	var access_notes := PackedStringArray()
 	for employee_id: String in newly_banned_ids:
 		var banned_employee: Dictionary = employees.get(StringName(employee_id), {}) as Dictionary
-		access_notes.append(tr("Жилец запретил вход в квартиру сотруднику: %s.") % tr(str(banned_employee.get("name", employee_id))))
+		access_notes.append(tr("%s: запрещён вход в квартиру сотруднику %s.") % [tr(str(job.get("resident", "Клиент"))), tr(str(banned_employee.get("name", employee_id)))])
 	if not access_notes.is_empty():
 		completed_report["summary"] = summary + "\n\n" + "\n".join(access_notes)
 	completed_report["newly_banned_employee_ids"] = newly_banned_ids
@@ -1563,7 +1609,7 @@ func resolve_pending_claim(pay_compensation: bool) -> bool:
 		pending_job_report["claim_settled_report_count"] = job_reports.size()
 		pending_job_report["compensation"] = claim_amount
 		pending_job_report["net_change"] = int(pending_job_report.get("reward", 0)) - claim_amount
-		_record_financial_event(&"compensation", -claim_amount, str(pending_job_report.get("title", "Компенсация жильцу")), {
+		_record_financial_event(&"compensation", -claim_amount, str(pending_job_report.get("title", "Компенсация клиенту")), {
 			"job_id": str(pending_job_report.get("job_id", "")), "resident": str(pending_job_report.get("resident", "")),
 		})
 	else:
@@ -1626,7 +1672,7 @@ func pay_denied_claim(job_id: String, completed_day: int, completed_time: int) -
 		)
 		job_reports[index] = report
 		_evaluate_dismissal()
-		_record_financial_event(&"compensation", -claim_amount, str(report.get("title", "Компенсация жильцу")), {
+		_record_financial_event(&"compensation", -claim_amount, str(report.get("title", "Компенсация клиенту")), {
 			"job_id": job_id, "resident": str(report.get("resident", "")), "late_payment": true,
 		})
 		state_changed.emit()
@@ -1791,7 +1837,7 @@ func _tutorial_summary_label(value: Variant) -> String:
 		"consequences": "последствия решения", "resolve_job": "самостоятельная работа",
 		"wait_resolution": "устранение аварии",
 		"complete_job": "завершение работы", "report": "итоговый отчёт",
-		"claim": "претензия жильца", "return_board": "возвращение в офис",
+		"claim": "претензия клиента", "return_board": "возвращение в офис",
 		"finish_day": "завершение дня", "personnel_overview": "раздел сотрудников",
 		"supply_overview": "лавка снабжения", "storage_overview": "склад снаряжения",
 		"final": "новый рабочий день",
@@ -2049,7 +2095,7 @@ func _load_from_path(path: String) -> Error:
 		for generated_id_value: Variant in loaded_generated_jobs:
 			var instance_value: Variant = (loaded_generated_jobs as Dictionary)[generated_id_value]
 			if instance_value is Dictionary:
-				_register_generated_job((instance_value as Dictionary).duplicate(true))
+				_register_generated_job((instance_value as Dictionary).duplicate(true), false)
 	tutorial_job_id = StringName(str(save_data.get("tutorial_job_id", "lava_leak")))
 	if not jobs.has(tutorial_job_id):
 		tutorial_job_id = &"lava_leak"
@@ -2266,6 +2312,7 @@ func _load_from_path(path: String) -> Error:
 	_update_employee_statuses()
 	_evaluate_dismissal()
 	_migrate_restoration_trust()
+	_migrate_job_preferences()
 	state_changed.emit()
 	return OK
 
@@ -2380,14 +2427,29 @@ func _save_last_generated_anomaly(anomaly_id: StringName) -> void:
 	config.save(GENERATOR_HISTORY_PATH)
 
 
-func _register_generated_job(instance: Dictionary) -> void:
+func _register_generated_job(instance: Dictionary, capture_preference: bool = true) -> void:
 	var instance_id := StringName(str(instance.get("instance_id", GeneratedJobGeneratorScript.JOB_ID)))
 	if instance_id.is_empty():
 		return
+	if capture_preference and not instance.has("preferred_employee_id"):
+		instance["preferred_employee_id"] = String(_preferred_employee_for_resident(str(instance.get("resident_id", ""))))
 	generated_jobs[String(instance_id)] = instance.duplicate(true)
 	var job: Dictionary = GeneratedJobGeneratorScript.materialize_job(instance)
 	if not job.is_empty():
 		jobs[instance_id] = job
+
+
+func _migrate_job_preferences() -> void:
+	for job_id: StringName in jobs:
+		var job: Dictionary = jobs[job_id]
+		if not bool(job.get("generated", false)):
+			continue
+		var instance: Dictionary = job.get("generated_instance", {})
+		if instance.has("preferred_employee_id"):
+			continue
+		instance["preferred_employee_id"] = String(_preferred_employee_for_resident(str(instance.get("resident_id", ""))))
+		job["generated_instance"] = instance
+		generated_jobs[String(job_id)] = instance.duplicate(true)
 
 
 func _restoration_source_report(job: Dictionary) -> Dictionary:
@@ -2502,7 +2564,7 @@ func _process_resident_access() -> void:
 func take_access_messages(job_id: StringName) -> PackedStringArray:
 	var messages := PackedStringArray()
 	for event: Dictionary in take_access_events(job_id):
-		messages.append("%s: «%s».\n%s" % [str(jobs[job_id]["resident"]), str(event["phrase"]), str(event["message"])])
+		messages.append(str(event["message"]))
 	return messages
 
 
@@ -2512,7 +2574,11 @@ func take_access_events(job_id: StringName) -> Array[Dictionary]:
 		return events
 	for value: Variant in jobs[job_id].get("access_messages", []):
 		if value is Dictionary:
-			events.append((value as Dictionary).duplicate(true))
+			var event := (value as Dictionary).duplicate(true)
+			var employee_id := StringName(str(event.get("employee_id", "")))
+			if employees.has(employee_id):
+				event["message"] = "Хозяин не впустил сотрудника: %s. Сотрудник возвращается в офис." % str(employees[employee_id]["name"])
+			events.append(event)
 		else:
 			# Совместимость с сообщениями, сохранёнными до разделения реплики и уведомления.
 			var text_value := str(value)
@@ -2579,6 +2645,9 @@ func _migrate_missing_faucet_consequences() -> void:
 
 
 func _sanitize_internal_faucet_check_text(report: Dictionary) -> void:
+	for field: String in ["summary", "review", "review_before_claim_decision"]:
+		if report.has(field):
+			report[field] = LocalizationHelper.client_terms(str(report[field])).replace("Клиент запретил вход", str(report.get("resident", "Клиент")) + " запретил вход")
 	var summary := str(report.get("summary", ""))
 	summary = summary.replace("Кран автоматически проверен: механизм исправен, температура безопасна.", "Кран исправен, температура безопасна.")
 	summary = summary.replace(" и прошёл автоматическую проверку исправности", "")
@@ -2587,7 +2656,7 @@ func _sanitize_internal_faucet_check_text(report: Dictionary) -> void:
 	var cleaned_consequences: Array = []
 	for consequence: Variant in report.get("consequences", []):
 		if str(consequence) != "Автоматическая проверка исправности пройдена.":
-			cleaned_consequences.append(consequence)
+			cleaned_consequences.append(LocalizationHelper.client_terms(consequence).replace("Клиент предъявил службе претензию", str(report.get("resident", "Клиент")) + ": предъявлена претензия"))
 	report["consequences"] = cleaned_consequences
 
 
@@ -2694,7 +2763,7 @@ func _rebuild_legacy_financial_ledger() -> void:
 		var paid_compensation := int(report.get("compensation", 0)) if claim_status in ["paid", "paid_after_denial"] else 0
 		if paid_compensation > 0:
 			financial_ledger.append({
-				"kind": "compensation", "amount": -paid_compensation, "title": str(report.get("title", "Компенсация жильцу")),
+				"kind": "compensation", "amount": -paid_compensation, "title": str(report.get("title", "Компенсация клиенту")),
 				"job_id": str(report.get("job_id", "")), "resident": str(report.get("resident", "")),
 				"day": int(report.get("claim_decision_day", report.get("completed_day", 0))),
 				"time_minutes": int(report.get("claim_decision_time", report.get("completed_time", -1))), "legacy": true,
