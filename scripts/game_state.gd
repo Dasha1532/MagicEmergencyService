@@ -9,7 +9,7 @@ signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 23
+const SAVE_VERSION: int = 24
 const RESTORATION_PROFILE := preload("res://data/restoration/faucet.tres")
 const RESTORATION_REFUSAL_REVIEW := "Заменить уничтоженный кран отказались. Придётся искать другую службу."
 const LEGACY_SAVE_PATH: String = "user://savegame.json"
@@ -231,6 +231,7 @@ var employees: Dictionary = {
 	&"liliya": {
 		"name": "Лилия Морозова",
 		"access_refusal_phrase": "Я просил больше не присылать эту магичку",
+		"apology_reference": "вашей магичке",
 		"role": "Маг-практик",
 		"portrait": "res://assets/portraits/employees/liliya.png",
 		"actor_neutral_pose": "res://assets/characters/employees/liliya/full_body.png",
@@ -261,6 +262,7 @@ var employees: Dictionary = {
 	&"grog": {
 		"name": "Грог Кувалда",
 		"access_refusal_phrase": "Я просил больше не присылать этого орка",
+		"apology_reference": "вашему орку",
 		"role": "Орк-такелажник",
 		"portrait": "res://assets/portraits/employees/grog.png",
 		"actor_neutral_pose": "res://assets/characters/employees/grog/full_body.png",
@@ -841,6 +843,66 @@ func get_employee_relation_for_job(employee_id: StringName, job_id: StringName) 
 	var job: Dictionary = jobs[job_id]
 	var resident_id := str((job.get("generated_instance", {}) as Dictionary).get("resident_id", job.get("resident", "")))
 	return world_memory.get_relation(resident_id, String(employee_id))
+
+
+func get_apology_availability(resident_id: String, employee_id: StringName) -> StringName:
+	if not employees.has(employee_id) or not bool(employees[employee_id].get("available", false)):
+		return &"unavailable"
+	var relation: Dictionary = world_memory.get_relation(resident_id, String(employee_id))
+	if str(relation.get("access_status", "allowed")) != "banned":
+		return &"not_banned"
+	var damage_job_ids := PackedStringArray()
+	for memory: Dictionary in relation.get("memories", []):
+		if str(memory.get("event", "")) in ["destroyed_property", "caused_damage"]:
+			damage_job_ids.append(str(memory.get("job_id", "")))
+	var latest_damage_index := -1
+	var settled_after_count := 0
+	for index in job_reports.size():
+		var report: Dictionary = job_reports[index]
+		if str(report.get("resident_id", report.get("resident", ""))) != resident_id:
+			continue
+		var actors: Variant = report.get("damage_employee_ids", [])
+		if not actors.has(String(employee_id)) and not damage_job_ids.has(str(report.get("job_id", ""))):
+			continue
+		latest_damage_index = index
+		if int(report.get("claim_amount", 0)) > 0 and str(report.get("claim_status", "none")) not in ["paid", "paid_after_denial", "settled_by_restoration"] and not bool(report.get("property_restored", false)):
+			return &"unsettled_damage"
+		settled_after_count = maxi(settled_after_count, int(report.get("claim_settled_report_count", index + 1)))
+	if latest_damage_index < 0:
+		return &"unsettled_damage"
+	if int(relation.get("apology_count", 0)) == 0:
+		return &"available"
+	for index in range(maxi(latest_damage_index + 1, settled_after_count), job_reports.size()):
+		var report: Dictionary = job_reports[index]
+		if str(report.get("resident_id", report.get("resident", ""))) != resident_id:
+			continue
+		var crew: Variant = report.get("crew_ids", [])
+		var actors: Variant = report.get("damage_employee_ids", [])
+		if crew.is_empty() or crew.has(String(employee_id)) or not actors.is_empty():
+			continue
+		if int(report.get("rating", 0)) >= 4 and not bool(report.get("overdue", false)) and int(report.get("claim_amount", 0)) == 0 and not bool(report.get("restoration_refused", false)) and not bool(report.get("object_destroyed", false)) and (not bool(report.get("payment_forfeited", false)) or bool(report.get("restoration", false))):
+			return &"available"
+	return &"needs_other_crew_work"
+
+
+func apologize_to_resident(resident_id: String, employee_id: StringName) -> bool:
+	if get_apology_availability(resident_id, employee_id) != &"available":
+		return false
+	if not world_memory.accept_apology(resident_id, String(employee_id), day):
+		return false
+	state_changed.emit()
+	save_autosave()
+	return true
+
+
+func get_apology_reply(resident_id: String, employee_id: StringName) -> String:
+	var restored_property := false
+	for report: Dictionary in job_reports:
+		var actors: Variant = report.get("damage_employee_ids", [])
+		if str(report.get("resident_id", report.get("resident", ""))) == resident_id and actors.has(String(employee_id)):
+			restored_property = bool(report.get("property_restored", false))
+	var opening := "Кран заменили." if restored_property else "Ущерб возмещён."
+	return "%s Ладно, дам %s ещё один шанс. Но рассчитываю, что больше ничего не пострадает." % [opening, str(employees[employee_id].get("apology_reference", "этому сотруднику"))]
 
 
 func get_employee_resident_memory(employee_id: StringName) -> Array[Dictionary]:
@@ -1498,6 +1560,7 @@ func resolve_pending_claim(pay_compensation: bool) -> bool:
 		money -= claim_amount
 		coins_spent.emit(claim_amount)
 		pending_job_report["claim_status"] = "paid"
+		pending_job_report["claim_settled_report_count"] = job_reports.size()
 		pending_job_report["compensation"] = claim_amount
 		pending_job_report["net_change"] = int(pending_job_report.get("reward", 0)) - claim_amount
 		_record_financial_event(&"compensation", -claim_amount, str(pending_job_report.get("title", "Компенсация жильцу")), {
@@ -1544,6 +1607,7 @@ func pay_denied_claim(job_id: String, completed_day: int, completed_time: int) -
 		var restored_reputation := maxi(0, int(report.get("claim_reputation_penalty", 0)))
 		reputation += restored_reputation
 		report["claim_status"] = "paid_after_denial"
+		report["claim_settled_report_count"] = job_reports.size()
 		report["compensation"] = claim_amount
 		report["net_change"] = int(report.get("reward", 0)) - claim_amount
 		report["reputation_change"] = int(report.get("reputation_change", 0)) + restored_reputation
@@ -2351,6 +2415,8 @@ func _settle_restoration(job: Dictionary) -> int:
 		return 0
 	var restored := maxi(0, -int(source.get("reputation_change", 0)))
 	source["property_restored"] = true
+	if not source.has("claim_settled_report_count"):
+		source["claim_settled_report_count"] = job_reports.size() + 1
 	source["restoration_reputation_restored"] = restored
 	source["claim_reputation_penalty"] = 0
 	if not _restoration_is_paid(job):

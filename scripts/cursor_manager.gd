@@ -4,6 +4,16 @@ const CURSOR_SIZE := Vector2i(64, 64)
 const DEFAULT_CURSOR := preload("res://assets/ui/cursors/default.png")
 const INTERACT_CURSOR := preload("res://assets/ui/cursors/interact.png")
 const FORBIDDEN_CURSOR := preload("res://assets/ui/cursors/forbidden.png")
+var plain_link_owner: Control
+
+
+func set_plain_link_cursor(owner: Control, enabled: bool) -> void:
+	if enabled:
+		plain_link_owner = owner
+		_set_cursor_image(DEFAULT_CURSOR, Input.CURSOR_POINTING_HAND, Vector2(12, 6))
+	elif plain_link_owner == owner:
+		plain_link_owner = null
+		_set_cursor_image(INTERACT_CURSOR, Input.CURSOR_POINTING_HAND, Vector2(23, 25))
 
 
 func _ready() -> void:

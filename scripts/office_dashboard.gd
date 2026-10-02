@@ -62,6 +62,14 @@ var personnel_training_button: Button
 var personnel_specializations_button: Button
 var resident_memory_dialog: Control
 var resident_memory_body: RichTextLabel
+var resident_memory_panel: Panel
+var resident_memory_close: Button
+var resident_memory_title: Label
+var apology_targets: Dictionary = {}
+var apology_reply_dialog: Control
+var apology_reply_body: Label
+var apology_reply_panel: Panel
+var apology_reply_close: Button
 var specialization_layer: Control
 var specialization_title: Label
 var specialization_slots: VBoxContainer
@@ -366,7 +374,7 @@ func _build_notice_overlay(title_text: String, body_text: String, confirm_text: 
 		var cancel_button := _button(cancel_text, Vector2(410, 278), Vector2(310, 62))
 		cancel_button.pressed.connect(func() -> void: overlay.visible = false)
 		panel.add_child(cancel_button)
-	return {"overlay": overlay, "body": body}
+	return {"overlay": overlay, "body": body, "panel": panel, "title": title, "confirm": confirm_button}
 
 
 func _refuse_restoration() -> void:
@@ -614,6 +622,9 @@ func _build_personnel_screen() -> void:
 	personnel_layer.add_child(memory_button)
 	var memory_ui := _build_notice_overlay("ОТНОШЕНИЯ С ЖИЛЬЦАМИ", "", "ЗАКРЫТЬ", "", Callable())
 	resident_memory_dialog = memory_ui["overlay"]
+	resident_memory_panel = memory_ui["panel"]
+	resident_memory_close = memory_ui["confirm"]
+	resident_memory_title = memory_ui["title"]
 	var memory_placeholder: Label = memory_ui["body"]
 	resident_memory_body = RichTextLabel.new()
 	resident_memory_body.position = memory_placeholder.position
@@ -621,8 +632,29 @@ func _build_personnel_screen() -> void:
 	resident_memory_body.add_theme_font_size_override("normal_font_size", 18)
 	resident_memory_body.add_theme_color_override("default_color", COLOR_PARCHMENT)
 	resident_memory_body.scroll_active = true
+	resident_memory_body.bbcode_enabled = true
+	resident_memory_body.meta_clicked.connect(_on_apology_clicked)
+	resident_memory_body.meta_hover_started.connect(func(_meta: Variant) -> void: _set_apology_cursor(true))
+	resident_memory_body.meta_hover_ended.connect(func(_meta: Variant) -> void: _set_apology_cursor(false))
+	resident_memory_body.mouse_exited.connect(func() -> void: _set_apology_cursor(false))
+	resident_memory_body.tree_exiting.connect(func() -> void: _set_apology_cursor(false))
+	resident_memory_dialog.visibility_changed.connect(func() -> void:
+		if not resident_memory_dialog.visible:
+			_set_apology_cursor(false)
+	)
 	memory_placeholder.get_parent().add_child(resident_memory_body)
 	memory_placeholder.queue_free()
+	var apology_ui := _build_notice_overlay("ОТВЕТ ЖИЛЬЦА", "", "ХОРОШО", "", Callable())
+	apology_reply_dialog = apology_ui["overlay"]
+	apology_reply_body = apology_ui["body"]
+	apology_reply_panel = apology_ui["panel"]
+	apology_reply_close = apology_ui["confirm"]
+	var reply_title: Label = apology_ui["title"]
+	reply_title.position = Vector2(28, 22)
+	reply_title.size = Vector2(524, 36)
+	reply_title.add_theme_font_size_override("font_size", 22)
+	apology_reply_body.position = Vector2(28, 74)
+	apology_reply_body.size = Vector2(524, 0)
 
 	for index in PERSONNEL_ORDER.size():
 		var employee_id := StringName(PERSONNEL_ORDER[index])
@@ -2280,6 +2312,7 @@ func _relation_description(relation: Dictionary) -> String:
 
 
 func _open_resident_memory() -> void:
+	apology_targets.clear()
 	var employee: Dictionary = game_state.employees[selected_employee_id]
 	var lines := PackedStringArray([tr(str(employee["name"]))])
 	var entries: Array[Dictionary] = game_state.get_employee_resident_memory(selected_employee_id)
@@ -2288,15 +2321,18 @@ func _open_resident_memory() -> void:
 		var description := _relation_description(relation)
 		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else ("Предупреждение жильца" if str(relation.get("access_status", "allowed")) == "warned" else "Вход разрешён")
 		lines.append("%s\nОтношение: %s. %s." % [tr(str(entry["resident_name"])), description, access_note])
+		_append_apology_option(lines, str(entry["resident_id"]), selected_employee_id, str(entry["resident_name"]))
 	if entries.is_empty():
 		lines.append("Жильцы пока не запомнили работу этого сотрудника.")
 	_show_resident_memory(lines)
 
 
 func _open_job_resident_memory() -> void:
+	apology_targets.clear()
 	if not game_state.jobs.has(selected_job_id):
 		return
 	var job: Dictionary = game_state.jobs[selected_job_id]
+	var resident_id := str((job.get("generated_instance", {}) as Dictionary).get("resident_id", job.get("resident", "")))
 	var lines := PackedStringArray([tr(str(job.get("resident", "")))])
 	for employee_id: StringName in game_state.employees:
 		var employee: Dictionary = game_state.employees[employee_id]
@@ -2305,15 +2341,79 @@ func _open_job_resident_memory() -> void:
 		var relation: Dictionary = game_state.get_employee_relation_for_job(employee_id, selected_job_id)
 		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else ("Предупреждение жильца" if str(relation.get("access_status", "allowed")) == "warned" else "Вход разрешён")
 		lines.append("%s\nОтношение: %s. %s." % [tr(str(employee["name"])), _relation_description(relation), access_note])
+		_append_apology_option(lines, resident_id, employee_id, str(job.get("resident", "")))
 	_show_resident_memory(lines)
 
 
+func _append_apology_option(lines: PackedStringArray, resident_id: String, employee_id: StringName, resident_name: String) -> void:
+	var availability: StringName = game_state.get_apology_availability(resident_id, employee_id)
+	match availability:
+		&"available":
+			var token := str(apology_targets.size())
+			apology_targets[token] = {"resident_id": resident_id, "employee_id": employee_id, "resident_name": resident_name}
+			lines.append("[url=%s][color=#f5c775]Извиниться[/color][/url]" % token)
+		&"unsettled_damage":
+			lines.append("Извиниться можно после компенсации или восстановления имущества.")
+		&"needs_other_crew_work":
+			lines.append("Для нового извинения нужна успешная работа у этого жильца другим составом после возмещения ущерба.")
+
+
+func _on_apology_clicked(meta: Variant) -> void:
+	var target: Dictionary = apology_targets.get(str(meta), {})
+	if target.is_empty():
+		return
+	var resident_id := str(target["resident_id"])
+	var employee_id := StringName(target["employee_id"])
+	if not game_state.apologize_to_resident(resident_id, employee_id):
+		return
+	resident_memory_dialog.visible = false
+	apology_reply_body.text = "%s\n\n%s" % [tr(str(target["resident_name"])), tr(game_state.get_apology_reply(resident_id, employee_id))]
+	apology_reply_dialog.visible = true
+	apology_reply_dialog.move_to_front()
+	_layout_apology_reply.call_deferred()
+
+
+func _layout_apology_reply() -> void:
+	var body_height := maxf(48.0, apology_reply_body.get_minimum_size().y) + 8.0
+	apology_reply_body.size.y = body_height
+	apology_reply_close.custom_minimum_size = Vector2(200, 48)
+	apology_reply_close.size = Vector2(200, 48)
+	apology_reply_close.position = Vector2(190, 94 + body_height)
+	apology_reply_panel.size = Vector2(580, body_height + 170)
+	apology_reply_panel.position = (Vector2(1600, 900) - apology_reply_panel.size) * 0.5
+
+
 func _show_resident_memory(lines: PackedStringArray) -> void:
+	resident_memory_body.position = Vector2(28, 78)
+	resident_memory_body.size.x = 524
+	resident_memory_body.scroll_active = false
 	resident_memory_body.text = "\n\n".join(lines)
 	resident_memory_body.scroll_to_line(0)
 	game_state.set_clock_paused(true)
 	resident_memory_dialog.visible = true
 	resident_memory_dialog.move_to_front()
+	_layout_resident_memory.call_deferred()
+
+
+func _set_apology_cursor(enabled: bool) -> void:
+	var manager := get_node_or_null("/root/CursorManager")
+	if manager != null:
+		manager.set_plain_link_cursor(resident_memory_body, enabled)
+
+
+func _layout_resident_memory() -> void:
+	var content_height := float(resident_memory_body.get_content_height()) + 8.0
+	var body_height := clampf(content_height, 48.0, 400.0)
+	resident_memory_body.size.y = body_height
+	resident_memory_body.scroll_active = content_height > 400.0
+	resident_memory_title.position = Vector2(28, 24)
+	resident_memory_title.size = Vector2(524, 36)
+	resident_memory_title.add_theme_font_size_override("font_size", 22)
+	resident_memory_close.position = Vector2(180, 98 + body_height)
+	resident_memory_close.size = Vector2(220, 48)
+	resident_memory_close.custom_minimum_size = Vector2(220, 48)
+	resident_memory_panel.size = Vector2(580, body_height + 174)
+	resident_memory_panel.position = (Vector2(1600, 900) - resident_memory_panel.size) * 0.5
 
 
 func _employee_card_status(employee_id: StringName, employee: Dictionary, pending_selected: bool, selected: bool, on_site: bool, in_transit: bool, returning: bool) -> String:

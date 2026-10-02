@@ -604,6 +604,12 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 		var relation: Dictionary = get_or_create_relation(resident_id, emp_id)
 		var previous_access_status := str(relation.get("access_status", "allowed"))
 		var memories: Array = relation["memories"]
+		if not damage_employee_ids.is_empty():
+			relation["last_damage_job_id"] = str(report.get("job_id", ""))
+			relation["preference_weight"] = 0
+			if int(relation.get("apology_count", 0)) > 0:
+				relation["access_status"] = "banned"
+				relation["apology_probation"] = false
 
 		if destroyed_with_claim:
 			relation["professional_trust"] = mini(int(relation.get("professional_trust", 0)) - 30, -30)
@@ -637,8 +643,9 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 			})
 			if int(relation["professional_trust"]) >= 20:
 				relation["preference_weight"] = int(relation.get("preference_weight", 0)) + 1
-			if str(relation.get("access_status", "allowed")) == "warned" and int(relation["professional_trust"]) >= 0:
+			if str(relation.get("access_status", "allowed")) == "warned" and (bool(relation.get("apology_probation", false)) or int(relation["professional_trust"]) >= 0):
 				relation["access_status"] = "allowed"
+				relation["apology_probation"] = false
 
 		_trim_memories(memories, 20)
 		relation["memories"] = memories
@@ -646,6 +653,19 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 		if previous_access_status != "banned" and str(relation.get("access_status", "allowed")) == "banned":
 			newly_banned_ids.append(emp_id)
 	return newly_banned_ids
+
+
+func accept_apology(resident_id: String, employee_id: String, day: int) -> bool:
+	var relation := get_or_create_relation(resident_id, employee_id)
+	if str(relation.get("access_status", "allowed")) != "banned":
+		return false
+	relation["access_status"] = "warned"
+	relation["apology_probation"] = true
+	relation["apology_count"] = int(relation.get("apology_count", 0)) + 1
+	var memories: Array = relation["memories"]
+	memories.append({"event": "apology_accepted", "day": day})
+	_trim_memories(memories, 20)
+	return true
 
 
 func _trim_memories(memories: Array, limit: int) -> void:
