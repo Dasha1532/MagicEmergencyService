@@ -299,37 +299,13 @@ func _build_interface() -> void:
 	skip_button.pressed.connect(func() -> void: confirm_layer.visible = true)
 	panel.add_child(skip_button)
 
-	confirm_layer = Control.new()
-	confirm_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	confirm_layer = preload("res://scenes/ui/SkipTutorialDialog.tscn").instantiate()
 	confirm_layer.visible = false
-	confirm_layer.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(confirm_layer)
-	var dimmer := ColorRect.new()
-	dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dimmer.color = Color(0.01, 0.008, 0.006, 0.82)
-	dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
-	confirm_layer.add_child(dimmer)
-	var confirm_panel := Panel.new()
-	confirm_panel.position = Vector2(460, 285)
-	confirm_panel.size = Vector2(680, 330)
-	confirm_panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 3, 12))
-	confirm_layer.add_child(confirm_panel)
-	var prompt := Label.new()
-	prompt.text = "Пропустить обучение в этом сохранении?\nВсе разделы останутся доступны,\nа подсказки больше не появятся."
-	prompt.position = Vector2(70, 38)
-	prompt.size = Vector2(540, 140)
-	prompt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	prompt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	prompt.add_theme_font_size_override("font_size", 17)
-	prompt.add_theme_color_override("font_color", COLOR_TEXT)
-	confirm_panel.add_child(prompt)
-	var confirm := _button("ПРОПУСТИТЬ", Vector2(45, 230), Vector2(275, 56))
+	var confirm: Button = confirm_layer.get_node("%Confirm")
 	confirm.pressed.connect(func() -> void: get_node("/root/GameState").skip_tutorial())
-	confirm_panel.add_child(confirm)
-	var cancel := _button("ВЕРНУТЬСЯ К ОБУЧЕНИЮ", Vector2(360, 230), Vector2(275, 56))
+	var cancel: Button = confirm_layer.get_node("%Cancel")
 	cancel.pressed.connect(func() -> void: confirm_layer.visible = false)
-	confirm_panel.add_child(cancel)
 
 
 func _button(text_value: String, button_position: Vector2, button_size: Vector2) -> Button:

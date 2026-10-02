@@ -49,6 +49,20 @@ func _run() -> void:
 	assert(state.money == 600)
 	assert(state.reputation == 37)
 	assert(state.job_reports[0]["claim_status"] == "settled_by_restoration")
+	assert(state.world_memory.get_relation("ragnar", "boris").get("professional_trust") == 10)
+	var recorded_relation: Dictionary = state.world_memory.get_relation("ragnar", "boris")
+	state._migrate_restoration_trust()
+	assert(state.world_memory.get_relation("ragnar", "boris") == recorded_relation)
+	state.world_memory.resident_relations["ragnar"].erase("boris")
+	state.job_reports.back()["relations_recorded"] = false
+	state._migrate_restoration_trust()
+	assert(state.world_memory.get_relation("ragnar", "boris").get("professional_trust") == 10)
+	assert(state.world_memory.get_relation("ragnar", "grog").get("professional_trust") == 10)
+	state._migrate_restoration_trust()
+	assert(state.world_memory.get_relation("ragnar", "boris").get("professional_trust") == 10)
+	assert(state._save_to_path("res://tests/.restoration_trust_roundtrip.json") == OK)
+	assert(state._load_from_path("res://tests/.restoration_trust_roundtrip.json") == OK)
+	assert(state.world_memory.get_relation("ragnar", "boris").get("professional_trust") == 10)
 	assert(not state.pay_denied_claim("destroyed", 1, 0))
 	_source(state, "paid")
 	state.day = 2
@@ -86,6 +100,32 @@ func _run() -> void:
 	assert("Состояние: требуется полная замена" in office.detail_expanded_body.text)
 	assert("Опасность:" in office._job_condition_text({"danger": "Магический холод"}))
 	assert(office.books_layer._review_text({"restoration_refused": true}) == state.RESTORATION_REFUSAL_REVIEW)
+	state.world_memory.evaluate_crew_relations({"resident_id": "ragnar", "rating": 5, "crew_ids": ["boris"]})
+	assert(office._relation_description(state.world_memory.get_relation("ragnar", "boris")) == "доверяет")
+	state.world_memory.evaluate_crew_relations({"resident_id": "ragnar", "rating": 5, "crew_ids": ["boris"]})
+	assert(office._relation_description(state.world_memory.get_relation("ragnar", "boris")) == "предпочитает")
+	office.selected_employee_id = &"boris"
+	office._open_resident_memory()
+	assert("Господин Рагнар" in office.resident_memory_body.text)
+	assert("предпочитает" in office.resident_memory_body.text)
+	assert(office.resident_memory_dialog.is_visible_in_tree())
+	office.resident_memory_dialog.visible = false
+	state.world_memory.evaluate_crew_relations({"resident_id": "ragnar", "rating": 1, "claim_amount": 350, "object_destroyed": true, "damage_employee_ids": ["liliya"], "crew_ids": ["liliya"]})
+	office._show_expanded_job_details()
+	assert("Господин Рагнар" in office.detail_resident_button.text)
+	office.detail_resident_button.pressed.emit()
+	assert(office.resident_memory_dialog.is_visible_in_tree())
+	assert("Борис Медяк" in office.resident_memory_body.text)
+	assert("Лилия Морозова" in office.resident_memory_body.text)
+	assert("Вход запрещён" in office.resident_memory_body.text)
+	assert("предпочитает" in office.resident_memory_body.text)
+	var relation_button: Button
+	for child in office.personnel_layer.get_children():
+		if child is Button and child.text == "ОТНОШЕНИЯ С ЖИЛЬЦАМИ":
+			relation_button = child
+	assert(relation_button != null)
+	assert(relation_button.position.y > 100)
+	assert(office.personnel_description.position.y + office.personnel_description.size.y < relation_button.position.y)
 	assert(office.restoration_payment_label.get_minimum_size().y <= 86)
 	assert(office.restoration_payment_label.position.y + office.restoration_payment_label.size.y <= office.assignment_label.position.y)
 	office.queue_free()

@@ -38,7 +38,8 @@ var access_notice_body: Label
 var restoration_refuse_job_id: StringName = &""
 var detail_expanded_panel: Panel
 var detail_expanded_title: Label
-var detail_expanded_body: Label
+var detail_expanded_body: RichTextLabel
+var detail_resident_button: Button
 var assignment_label: Label
 var warning_label: Label
 var depart_button: Button
@@ -59,6 +60,8 @@ var personnel_portrait: TextureRect
 var personnel_hire_button: Button
 var personnel_training_button: Button
 var personnel_specializations_button: Button
+var resident_memory_dialog: Control
+var resident_memory_body: RichTextLabel
 var specialization_layer: Control
 var specialization_title: Label
 var specialization_slots: VBoxContainer
@@ -308,9 +311,18 @@ func _build_detail_panel() -> void:
 	detail_expanded_title.position = Vector2(22, 18)
 	detail_expanded_title.size = Vector2(371, 36)
 	detail_expanded_panel.add_child(detail_expanded_title)
-	detail_expanded_body = _label("", 16, COLOR_PARCHMENT)
-	detail_expanded_body.position = Vector2(22, 64)
-	detail_expanded_body.size = Vector2(371, 310)
+	detail_expanded_body = RichTextLabel.new()
+	detail_expanded_body.add_theme_font_size_override("normal_font_size", 16)
+	detail_expanded_body.add_theme_color_override("default_color", COLOR_PARCHMENT)
+	detail_expanded_body.scroll_active = true
+	detail_resident_button = _button("", Vector2(22, 60), Vector2(371, 36))
+	detail_resident_button.add_theme_font_size_override("font_size", 15)
+	detail_resident_button.clip_text = true
+	detail_resident_button.tooltip_text = "Посмотреть отношения жильца с сотрудниками"
+	detail_resident_button.pressed.connect(_open_job_resident_memory)
+	detail_expanded_panel.add_child(detail_resident_button)
+	detail_expanded_body.position = Vector2(22, 108)
+	detail_expanded_body.size = Vector2(371, 266)
 	detail_expanded_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail_expanded_panel.add_child(detail_expanded_body)
 	var close_details_button := _button("СКРЫТЬ  ▴", Vector2(22, 384), Vector2(371, 52))
@@ -592,9 +604,25 @@ func _build_personnel_screen() -> void:
 	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	personnel_layer.add_child(heading)
 
-	var back_button := _button("←  В ОФИС", Vector2(1190, 37), Vector2(150, 48))
+	var back_button := _button("←  В ОФИС", Vector2(1040, 37), Vector2(150, 48))
 	back_button.pressed.connect(_show_hub)
 	personnel_layer.add_child(back_button)
+	var description_rect := _personnel_guide_rect("DescriptionArea")
+	var memory_button := _button("ОТНОШЕНИЯ С ЖИЛЬЦАМИ", Vector2(description_rect.position.x, description_rect.end.y - 36), Vector2(description_rect.size.x, 36))
+	memory_button.add_theme_font_size_override("font_size", 14)
+	memory_button.pressed.connect(_open_resident_memory)
+	personnel_layer.add_child(memory_button)
+	var memory_ui := _build_notice_overlay("ОТНОШЕНИЯ С ЖИЛЬЦАМИ", "", "ЗАКРЫТЬ", "", Callable())
+	resident_memory_dialog = memory_ui["overlay"]
+	var memory_placeholder: Label = memory_ui["body"]
+	resident_memory_body = RichTextLabel.new()
+	resident_memory_body.position = memory_placeholder.position
+	resident_memory_body.size = memory_placeholder.size
+	resident_memory_body.add_theme_font_size_override("normal_font_size", 18)
+	resident_memory_body.add_theme_color_override("default_color", COLOR_PARCHMENT)
+	resident_memory_body.scroll_active = true
+	memory_placeholder.get_parent().add_child(resident_memory_body)
+	memory_placeholder.queue_free()
 
 	for index in PERSONNEL_ORDER.size():
 		var employee_id := StringName(PERSONNEL_ORDER[index])
@@ -667,6 +695,7 @@ func _build_personnel_screen() -> void:
 	personnel_name = _personnel_label_from_guide("NameArea", 26, Color(0.25, 0.14, 0.055))
 	personnel_role = _personnel_label_from_guide("RoleArea", 19, Color(0.34, 0.22, 0.11))
 	personnel_description = _personnel_label_from_guide("DescriptionArea", 17, Color(0.24, 0.16, 0.09))
+	personnel_description.size.y -= 46
 	personnel_status = _personnel_label_from_guide("StatusArea", 13, Color(0.24, 0.16, 0.09))
 	personnel_strength = _personnel_label_from_guide("StrengthArea", 13, Color(0.24, 0.16, 0.09))
 	personnel_weakness = _personnel_label_from_guide("WeaknessArea", 13, Color(0.24, 0.16, 0.09))
@@ -2220,6 +2249,13 @@ func _rebuild_employees() -> void:
 		method_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		method_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(method_label)
+		var relation: Dictionary = game_state.get_employee_relation_for_job(employee_id, selected_job_id)
+		if not selected_job_id.is_empty():
+			var relation_label := _label("Жилец: %s" % _relation_description(relation), 12, COLOR_GOLD)
+			relation_label.position = Vector2(180, 148)
+			relation_label.size = Vector2(198, 20)
+			relation_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			card.add_child(relation_label)
 
 		var status_color := COLOR_MUTED if in_transit or returning else (COLOR_GOLD if selected else COLOR_MUTED)
 		var status_text: String = _employee_card_status(employee_id, employee, pending_selected, selected, on_site, in_transit, returning)
@@ -2230,6 +2266,54 @@ func _rebuild_employees() -> void:
 		status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(status_label)
+
+
+func _relation_description(relation: Dictionary) -> String:
+	var trust := int(relation.get("professional_trust", 0))
+	if str(relation.get("access_status", "allowed")) == "banned" or trust < 0:
+		return "не доверяет"
+	if int(relation.get("preference_weight", 0)) > 0 and trust >= 20:
+		return "предпочитает"
+	if trust > 0:
+		return "доверяет"
+	return "нейтральное отношение" if not (relation.get("memories", []) as Array).is_empty() else "ещё не знаком"
+
+
+func _open_resident_memory() -> void:
+	var employee: Dictionary = game_state.employees[selected_employee_id]
+	var lines := PackedStringArray([tr(str(employee["name"]))])
+	var entries: Array[Dictionary] = game_state.get_employee_resident_memory(selected_employee_id)
+	for entry: Dictionary in entries:
+		var relation: Dictionary = entry["relation"]
+		var description := _relation_description(relation)
+		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else ("Предупреждение жильца" if str(relation.get("access_status", "allowed")) == "warned" else "Вход разрешён")
+		lines.append("%s\nОтношение: %s. %s." % [tr(str(entry["resident_name"])), description, access_note])
+	if entries.is_empty():
+		lines.append("Жильцы пока не запомнили работу этого сотрудника.")
+	_show_resident_memory(lines)
+
+
+func _open_job_resident_memory() -> void:
+	if not game_state.jobs.has(selected_job_id):
+		return
+	var job: Dictionary = game_state.jobs[selected_job_id]
+	var lines := PackedStringArray([tr(str(job.get("resident", "")))])
+	for employee_id: StringName in game_state.employees:
+		var employee: Dictionary = game_state.employees[employee_id]
+		if not bool(employee.get("available", false)):
+			continue
+		var relation: Dictionary = game_state.get_employee_relation_for_job(employee_id, selected_job_id)
+		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else ("Предупреждение жильца" if str(relation.get("access_status", "allowed")) == "warned" else "Вход разрешён")
+		lines.append("%s\nОтношение: %s. %s." % [tr(str(employee["name"])), _relation_description(relation), access_note])
+	_show_resident_memory(lines)
+
+
+func _show_resident_memory(lines: PackedStringArray) -> void:
+	resident_memory_body.text = "\n\n".join(lines)
+	resident_memory_body.scroll_to_line(0)
+	game_state.set_clock_paused(true)
+	resident_memory_dialog.visible = true
+	resident_memory_dialog.move_to_front()
 
 
 func _employee_card_status(employee_id: StringName, employee: Dictionary, pending_selected: bool, selected: bool, on_site: bool, in_transit: bool, returning: bool) -> String:
@@ -2344,7 +2428,9 @@ func _show_expanded_job_details() -> void:
 	var job: Dictionary = game_state.jobs[selected_job_id]
 	var linked_note := "Связь: по этому объекту служба уже выезжала ранее.\n\n" if bool(job.get("consequence", false)) or bool(job.get("restoration", false)) else ""
 	detail_expanded_title.text = tr(str(job["title"]))
-	detail_expanded_body.text = "%s%s\nЖилец: %s\n%s\n\n%s" % [linked_note, tr(str(job["address"])), tr(str(job["resident"])), _job_condition_text(job), tr(str(job["description"]))]
+	detail_resident_button.text = "Жилец: %s" % tr(str(job["resident"]))
+	detail_expanded_body.scroll_to_line(0)
+	detail_expanded_body.text = "%s%s\n%s\n\n%s" % [linked_note, tr(str(job["address"])), _job_condition_text(job), tr(str(job["description"]))]
 	detail_expanded_panel.visible = true
 	if bool(job.get("restoration", false)):
 		detail_expanded_body.text += "\n\n" + game_state.get_restoration_payment_text(selected_job_id)

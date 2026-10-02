@@ -589,8 +589,10 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 			if not str(employee_id).is_empty() and not damage_employee_ids.has(str(employee_id)):
 				damage_employee_ids.append(str(employee_id))
 	var destroyed_with_claim := bool(report.get("object_destroyed", false)) and claim_amount > 0
+	var successful_restoration := bool(report.get("restoration", false)) and not bool(report.get("restoration_refused", false))
+	var successful_work := rating >= 4 and not overdue and claim_amount == 0 and (not bool(report.get("payment_forfeited", false)) or successful_restoration)
 	var involved_employee_ids: Array[String] = damage_employee_ids.duplicate()
-	if damage_employee_ids.is_empty() and not destroyed_with_claim and rating >= 4 and not overdue and not bool(report.get("payment_forfeited", false)) and claim_amount == 0:
+	if damage_employee_ids.is_empty() and not destroyed_with_claim and successful_work:
 		var crew_ids: Variant = report.get("crew_ids", [])
 		if crew_ids is Array or crew_ids is PackedStringArray:
 			for employee_id: Variant in crew_ids:
@@ -625,7 +627,7 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 				relation["access_status"] = "banned"
 			elif str(relation.get("access_status", "allowed")) != "banned":
 				relation["access_status"] = "warned"
-		elif rating >= 4 and not overdue and not bool(report.get("payment_forfeited", false)):
+		elif successful_work:
 			relation["professional_trust"] = int(relation.get("professional_trust", 0)) + 10
 			relation["personal_affinity"] = int(relation.get("personal_affinity", 0)) + 2
 			memories.append({

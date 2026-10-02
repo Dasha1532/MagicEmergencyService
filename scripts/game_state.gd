@@ -9,7 +9,7 @@ signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 22
+const SAVE_VERSION: int = 23
 const RESTORATION_PROFILE := preload("res://data/restoration/faucet.tres")
 const RESTORATION_REFUSAL_REVIEW := "Заменить уничтоженный кран отказались. Придётся искать другую службу."
 const LEGACY_SAVE_PATH: String = "user://savegame.json"
@@ -835,6 +835,30 @@ func is_employee_banned_for_job(employee_id: StringName, job_id: StringName) -> 
 	return get_employee_access_status_for_job(employee_id, job_id) == &"banned"
 
 
+func get_employee_relation_for_job(employee_id: StringName, job_id: StringName) -> Dictionary:
+	if not jobs.has(job_id):
+		return {}
+	var job: Dictionary = jobs[job_id]
+	var resident_id := str((job.get("generated_instance", {}) as Dictionary).get("resident_id", job.get("resident", "")))
+	return world_memory.get_relation(resident_id, String(employee_id))
+
+
+func get_employee_resident_memory(employee_id: StringName) -> Array[Dictionary]:
+	var entries: Array[Dictionary] = []
+	for resident_id: Variant in world_memory.resident_relations:
+		var relation: Dictionary = world_memory.get_relation(str(resident_id), String(employee_id))
+		if (relation.get("memories", []) as Array).is_empty():
+			continue
+		var resident_name := str(resident_id)
+		for report: Dictionary in job_reports:
+			if str(report.get("resident_id", report.get("resident", ""))) == str(resident_id):
+				resident_name = str(report.get("resident", resident_name))
+				break
+		entries.append({"resident_id": str(resident_id), "resident_name": resident_name, "relation": relation})
+	entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return str(a["resident_name"]) < str(b["resident_name"]))
+	return entries
+
+
 func get_employee_access_status_for_job(employee_id: StringName, job_id: StringName) -> StringName:
 	if not jobs.has(job_id):
 		return &"allowed"
@@ -1215,6 +1239,7 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 	world_result["relationship_tone"] = "appreciative" if int(completed_report.get("rating", 0)) >= 4 and not overdue and compensation == 0 and not payment_forfeited else "neutral"
 	world_memory.finalize_job(completed_id, world_result, day, time_minutes)
 	var newly_banned_ids: Array[String] = world_memory.evaluate_crew_relations(completed_report)
+	completed_report["relations_recorded"] = true
 	var access_notes := PackedStringArray()
 	for employee_id: String in newly_banned_ids:
 		var banned_employee: Dictionary = employees.get(StringName(employee_id), {}) as Dictionary
@@ -2176,8 +2201,34 @@ func _load_from_path(path: String) -> Error:
 	_complete_finished_training()
 	_update_employee_statuses()
 	_evaluate_dismissal()
+	_migrate_restoration_trust()
 	state_changed.emit()
 	return OK
+
+
+func _migrate_restoration_trust() -> void:
+	for report: Dictionary in job_reports:
+		if not bool(report.get("restoration", false)) or bool(report.get("relations_recorded", false)):
+			continue
+		var missing_crew := PackedStringArray()
+		var resident_id := str(report.get("resident_id", report.get("resident", "")))
+		for employee_id: Variant in report.get("crew_ids", []):
+			var relation: Dictionary = world_memory.get_relation(resident_id, str(employee_id))
+			var already_recorded := false
+			for memory: Dictionary in relation.get("memories", []):
+				if str(memory.get("job_id", "")) == str(report.get("job_id", "")):
+					already_recorded = true
+					break
+			if not already_recorded:
+				missing_crew.append(str(employee_id))
+		var restored_report := report.duplicate(true)
+		restored_report["crew_ids"] = Array(missing_crew)
+		# Только пропущенный положительный итог; ущерб и запреты не переигрываются.
+		if int(report.get("rating", 0)) >= 4 and not bool(report.get("restoration_refused", false)) and (report.get("damage_employee_ids", []) as Array).is_empty():
+			world_memory.evaluate_crew_relations(restored_report)
+		report["relations_recorded"] = true
+		if str(pending_job_report.get("job_id", "")) == str(report.get("job_id", "")):
+			pending_job_report["relations_recorded"] = true
 
 
 func _publish_generated_wardrobe_job(seed_value: int) -> bool:
