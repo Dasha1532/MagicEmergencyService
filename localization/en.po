@@ -3266,3 +3266,27 @@ msgstr "Nika"
 
 msgid "Феликса"
 msgstr "Felix"
+
+msgid "{Имя}, хорошо, что вы здесь. Вам я доверяю."
+msgstr "{Имя}, it's good to have you here. I trust you."
+
+msgid "{Имя}, с вами за работу можно не переживать."
+msgstr "{Имя}, I don't have to worry with you on the job."
+
+msgid "{Имя}, оставляю это в ваших руках."
+msgstr "{Имя}, I'll leave this in your hands."
+
+msgid "{Имя}, приятно вас видеть. С вами спокойнее."
+msgstr "{Имя}, it's good to see you. I feel reassured with you here."
+
+msgid "{Имя}, хорошо, что сегодня вы в бригаде."
+msgstr "{Имя}, it's good to have you on the crew today."
+
+msgid "{Имя}, попробуем ещё раз. Только осторожнее."
+msgstr "{Имя}, let's try again. Just be careful."
+
+msgid "{Имя}, надеюсь, сегодня обойдётся без неприятностей."
+msgstr "{Имя}, I hope there won't be any trouble today."
+
+msgid "{Имя}, давайте спокойно и аккуратно."
+msgstr "{Имя}, let's take it slowly and carefully."

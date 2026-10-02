@@ -168,7 +168,7 @@ func _open_room() -> void:
 	if not bool(simulation.world_object.get("resident_intro_seen", false)):
 		simulation.world_object["resident_intro_seen"] = true
 		game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
-		repair_hud.show_resident_dialogue(simulation.get_resident_request())
+		repair_hud.show_resident_dialogue(game_state.get_resident_greeting(game_state.active_job_id, simulation.get_resident_request()))
 	feedback_panel.visible = false
 	_sync_wardrobe_steps()
 

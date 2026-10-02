@@ -9,7 +9,8 @@ signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 25
+const SAVE_VERSION: int = 26
+const CLIENT_GREETING_PROFILE := preload("res://data/client_relationship_greetings.gd")
 const RESTORATION_PROFILE := preload("res://data/restoration/faucet.tres")
 const RESTORATION_REFUSAL_REVIEW := "Заменить уничтоженный кран отказались. Придётся искать другую службу."
 const LEGACY_SAVE_PATH: String = "user://savegame.json"
@@ -1380,7 +1381,12 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 	return true
 
 
-func get_resident_greeting(job_id: StringName) -> String:
+func get_resident_greeting(job_id: StringName, default_request: String = "") -> String:
+	var personal_greeting := _get_relationship_greeting(job_id)
+	if not personal_greeting.is_empty():
+		return personal_greeting
+	if not default_request.is_empty():
+		return default_request
 	var current_job: Dictionary = jobs.get(job_id, {})
 	var history: Array[Dictionary] = []
 	for report_value: Variant in job_reports:
@@ -1407,6 +1413,49 @@ func get_resident_greeting(job_id: StringName) -> String:
 		var problems: Dictionary = {"faucet_freeze": "Теперь этот же кран начал покрываться льдом.", "faucet_overheat": "Теперь этот же кран начал сам нагреваться."}
 		return str(thanks.get(source_anomaly, "В прошлый раз вы помогли, спасибо.")) + " " + str(problems.get(current_anomaly, "Теперь с тем же объектом происходит что-то новое — посмотрите."))
 	return "Рад снова вас видеть. В прошлый раз вы здорово помогли."
+
+
+func _get_relationship_greeting(job_id: StringName) -> String:
+	if not jobs.has(job_id):
+		return ""
+	var pools: Dictionary = CLIENT_GREETING_PROFILE.POOLS
+	var best: Dictionary = {}
+	var preferred := get_preferred_employee_for_job(job_id)
+	# Stable tie-breaking; only employees admitted and already on site qualify.
+	for employee_id: StringName in EMPLOYEE_ORDER:
+		if not jobs[job_id].get("assigned", PackedStringArray()).has(String(employee_id)):
+			continue
+		if not can_employee_work_on_job(employee_id, job_id):
+			continue
+		var relation := get_employee_relation_for_job(employee_id, job_id)
+		for pool_id: String in pools:
+			var pool: Dictionary = pools[pool_id]
+			if pool.has("access_status"):
+				if str(relation.get("access_status", "allowed")) != str(pool["access_status"]):
+					continue
+			elif int(relation.get("professional_trust", 0)) < int(pool.get("minimum_trust", 1)):
+				continue
+			var score := int(pool["priority"]) * 1000000 + (100000 if employee_id == preferred else 0) + int(relation.get("professional_trust", 0))
+			if best.is_empty() or score > int(best["score"]):
+				best = {"employee_id": employee_id, "pool_id": pool_id, "score": score}
+	if best.is_empty():
+		return ""
+	var employee_id: StringName = best["employee_id"]
+	var pool_id: String = best["pool_id"]
+	var job: Dictionary = jobs[job_id]
+	var resident_id := str((job.get("generated_instance", {}) as Dictionary).get("resident_id", job.get("resident", "")))
+	var relation: Dictionary = world_memory.get_or_create_relation(resident_id, String(employee_id))
+	var previous := str(relation.get("last_greeting_template", ""))
+	var candidates := PackedStringArray()
+	for phrase: String in pools[pool_id]["phrases"]:
+		if phrase != previous:
+			candidates.append(phrase)
+	if candidates.is_empty():
+		return ""
+	var template := candidates[randi_range(0, candidates.size() - 1)]
+	relation["last_greeting_template"] = template
+	var employee_name := tr(str(employees[employee_id]["name"])).get_slice(" ", 0)
+	return tr(template).replace("{Имя}", employee_name)
 
 
 func dismiss_pending_job_report() -> void:
