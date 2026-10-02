@@ -13,6 +13,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="11_pause"]
 [ext_resource type="Texture2D" uid="uid://mx7dwig26o6t" path="res://assets/objects/frozen_bath/bath_broken_empty.png" id="12_bath_broken_empty"]
 [ext_resource type="Texture2D" uid="uid://chrmgeu0c11dy" path="res://assets/effects/status/frost.png" id="13_frost"]
+[ext_resource type="Texture2D" uid="uid://dgbvp6nkohhw1" path="res://assets/objects/frozen_bath/ice_stream.png" id="14_ice_stream"]
+[ext_resource type="Texture2D" path="res://assets/objects/lava_faucet/water_stream.png" id="15_water_stream"]
 
 [node name="FrozenBathRoom" type="Node2D" unique_id=498516223]
 script = ExtResource("10_script")
@@ -38,6 +40,7 @@ expand_mode = 1
 stretch_mode = 6
 
 [node name="BrokenBath" type="TextureRect" parent="." unique_id=1337184794]
+visible = false
 offset_left = 217.0
 offset_top = 417.0
 offset_right = 996.0
@@ -57,6 +60,25 @@ mouse_filter = 2
 texture = ExtResource("12_bath_broken_empty")
 expand_mode = 1
 stretch_mode = 6
+
+[node name="IceStream" type="TextureRect" parent="." unique_id=1761055070]
+offset_left = 340.0
+offset_top = 409.0
+offset_right = 416.0
+offset_bottom = 501.0
+mouse_filter = 2
+texture = ExtResource("14_ice_stream")
+expand_mode = 1
+
+[node name="WaterStream" type="TextureRect" parent="."]
+visible = false
+offset_left = 296.0
+offset_top = 426.0
+offset_right = 461.0
+offset_bottom = 502.0
+mouse_filter = 2
+texture = ExtResource("15_water_stream")
+expand_mode = 1
 
 [node name="Faucet" type="Control" parent="." unique_id=2057437053]
 layout_mode = 3

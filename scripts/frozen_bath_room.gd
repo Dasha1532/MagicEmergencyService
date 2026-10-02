@@ -2,10 +2,14 @@ extends Node2D
 
 const FrozenBathSimulationScript := preload("res://scripts/frozen_bath_simulation.gd")
 const EmployeeReactionResolverScript := preload("res://scripts/employee_reaction_resolver.gd")
+const FlowRules := preload("res://scripts/object_flow_rules.gd")
+const ActionRules := preload("res://scripts/object_interaction_rules.gd")
 const FAUCET_ACTIONS := ["diagnose", "repair", "antimagic", "freeze", "heat"]
 const BATH_ACTIONS := ["diagnose", "physical_move", "heat", "freeze", "telekinesis", "animate"]
 
 @onready var frozen_bath: TextureRect = $FrozenBath
+@onready var ice_stream: TextureRect = $IceStream
+@onready var water_stream: TextureRect = $WaterStream
 @onready var broken_bath: TextureRect = $BrokenBath
 @onready var broken_empty_bath: TextureRect = $BrokenEmptyBath
 @onready var frozen_faucet: TextureRect = $Faucet/Frozen
@@ -27,16 +31,23 @@ var selected_employee_id: StringName = &""
 var action_in_progress := false
 var pending_action_id: StringName = &""
 var selected_target: StringName = &"faucet"
+var ice_motion: Tween
+var water_motion: Tween
+var waiting_work_action: StringName = &""
+var work_timer_finished := false
+var work_actor_finished := false
 
 
 func _ready() -> void:
-	if game_state.active_job_id != &"frozen_bath":
+	if game_state.active_job_id != &"frozen_bath" and str(game_state.jobs.get(game_state.active_job_id, {}).get("simulation_type", "")) != "cold_trace":
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 		return
 	simulation = FrozenBathSimulationScript.new()
+	simulation.initialize_from_job(game_state.jobs[game_state.active_job_id])
 	var saved_state: Dictionary = game_state.get_job_repair_state(game_state.active_job_id)
 	if not saved_state.is_empty():
 		simulation.load_state(saved_state)
+	simulation.advance_flow_until(game_state.time_minutes)
 	bath_interaction_button.pressed.connect(_on_bath_selected)
 	faucet_interaction_button.pressed.connect(_on_faucet_selected)
 	tool_bar.tool_selected.connect(_on_tool_selected)
@@ -50,11 +61,38 @@ func _ready() -> void:
 	selected_employee_id = repair_hud.get_selected_employee_id()
 	_configure_employee_actor()
 	_apply_visual_state()
+	_start_ice_motion()
 	_resume_pending_action()
 	if not bool(simulation.world_object.get("resident_intro_seen", false)):
 		simulation.world_object["resident_intro_seen"] = true
 		_save_state()
-		repair_hud.show_resident_dialogue(game_state.get_resident_greeting(game_state.active_job_id, simulation.get_resident_request()))
+		if not repair_hud.enable_access_dialogues():
+			repair_hud.show_resident_dialogue(game_state.get_resident_greeting(game_state.active_job_id, simulation.get_resident_request()))
+
+
+func _process(_delta: float) -> void:
+	if simulation == null:
+		return
+	if simulation.advance_flow_until(game_state.time_minutes):
+		_save_state()
+		_apply_visual_state()
+
+
+func _start_ice_motion() -> void:
+	ice_motion = _start_stream_motion(ice_stream)
+	water_motion = _start_stream_motion(water_stream)
+
+
+func _start_stream_motion(stream: TextureRect) -> Tween:
+	var base_position := stream.position
+	var motion := create_tween().set_loops()
+	motion.tween_property(stream, "position", base_position + Vector2(0, 3), 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	motion.parallel().tween_property(stream, "modulate", Color(0.86, 0.95, 1.0, 0.9), 0.55)
+	motion.tween_property(stream, "position", base_position, 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	motion.parallel().tween_property(stream, "modulate", Color.WHITE, 0.55)
+	if not stream.visible:
+		motion.pause()
+	return motion
 
 
 func _on_long_action_started(employee_id: StringName) -> void:
@@ -95,7 +133,7 @@ func _on_faucet_selected() -> void:
 func _open_target_actions() -> void:
 	if action_in_progress:
 		return
-	if simulation.is_fully_resolved():
+	if simulation.is_fully_resolved() and selected_target != &"faucet":
 		repair_hud.show_system_message("Температура воды уже стабилизирована.", false)
 		return
 	if selected_employee_id.is_empty():
@@ -109,7 +147,7 @@ func _open_target_actions() -> void:
 			repair_hud.show_system_message(instant_result, false)
 		return
 	tool_bar.configure_for_employee(str(employee["name"]), employee["abilities"], str(employee["core_actions"]))
-	if not _employee_has_action_for_target(employee["abilities"], selected_target):
+	if not _employee_has_action_for_target(employee["abilities"], selected_target) and not (selected_target == &"faucet" and not ActionRules.contextual_actions(simulation.world_object, employee).is_empty()):
 		tool_bar.visible = false
 		var refusal := _target_refusal_for_employee(selected_employee_id, selected_target)
 		if not repair_hud.show_employee_reaction(selected_employee_id, refusal):
@@ -118,14 +156,16 @@ func _open_target_actions() -> void:
 	var hidden_actions := _hidden_actions_for_target(selected_target)
 	if selected_employee_id == &"boris" and not game_state.has_supply_item(&"thermal_regulator"):
 		hidden_actions.append("repair")
+	if not ActionRules.is_applicable(&"repair", simulation.world_object):
+		hidden_actions.append("repair")
 	if selected_target == &"faucet":
 		tool_bar.show_for_object("Кран", faucet_target.global_position, {
 			&"diagnose": "Осмотреть кран",
-			&"repair": "Установить терморегулятор воды — 3 мин.",
+			&"repair": "Установить терморегулятор",
 			&"antimagic": "Снять холодный след",
 			&"freeze": "Усилить заморозку",
 			&"heat": "Снять след огнём",
-		}, [], hidden_actions)
+		}, ActionRules.contextual_actions(simulation.world_object, employee), hidden_actions)
 	else:
 		tool_bar.show_for_object("Ванна со льдом", bath_target.global_position, {
 			&"diagnose": "Осмотреть ванну",
@@ -139,8 +179,6 @@ func _open_target_actions() -> void:
 
 func _instant_target_result(employee_id: StringName, target_id: StringName) -> String:
 	if employee_id == &"boris" and target_id == &"bath":
-		return FrozenBathSimulationScript.BORIS_BATH_DIAGNOSIS
-	if employee_id == &"boris" and target_id == &"faucet" and simulation != null and bool(simulation.world_object.get("faucet_diagnosed", false)):
 		return simulation.get_employee_reaction(employee_id, &"diagnose", target_id)
 	return ""
 
@@ -205,24 +243,48 @@ func _on_pre_action_dialogue_finished() -> void:
 func _begin_action(action_id: StringName) -> void:
 	if _action_already_completed(action_id):
 		return
+	if action_id == &"turn_valve" and not ActionRules.valve_preflight_reason(simulation.world_object, game_state.get_employee_with_equipment(selected_employee_id)).is_empty():
+		_resolve_action(action_id)
+		return
 	action_in_progress = true
 	bath_interaction_button.disabled = true
 	faucet_interaction_button.disabled = true
 	var is_physical: bool = game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical"
 	var is_equipment: bool = action_id == &"repair" and selected_employee_id == &"boris" and game_state.has_supply_item(&"thermal_regulator")
-	if is_physical or is_equipment:
-		repair_hud.start_timed_action(selected_employee_id, action_id, _resolve_action.bind(action_id), 3 if is_equipment else -1)
+	if (is_physical or is_equipment) and not ActionRules.resolves_on_impact(action_id):
+		waiting_work_action = action_id
+		work_timer_finished = false
+		work_actor_finished = false
 	var action_target := faucet_target.global_position if selected_target == &"faucet" else bath_target.global_position
 	employee_actor.play_action(action_id, action_target, physical_approach.position if is_physical else Vector2.INF)
 
 
 func _on_action_impact(action_id: StringName) -> void:
-	if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"magic":
+	if waiting_work_action == action_id:
+		var is_equipment: bool = action_id == &"repair" and selected_employee_id == &"boris" and game_state.has_supply_item(&"thermal_regulator")
+		repair_hud.start_timed_action(selected_employee_id, action_id, _on_work_timer_finished, 3 if is_equipment else -1)
+		return
+	if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"magic" or ActionRules.resolves_on_impact(action_id):
 		_resolve_action(action_id)
 
 
+func _on_work_timer_finished() -> void:
+	work_timer_finished = true
+	_finish_physical_work()
+
+
+func _finish_physical_work() -> void:
+	if waiting_work_action.is_empty() or not work_timer_finished or not work_actor_finished:
+		return
+	var completed_action := waiting_work_action
+	waiting_work_action = &""
+	_resolve_action(completed_action)
+	action_in_progress = false
+	_set_interaction_enabled(not simulation.is_fully_resolved())
+
+
 func _resolve_action(action_id: StringName) -> void:
-	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, game_state.has_supply_item(&"thermal_regulator"), selected_target)
+	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, game_state.has_supply_item(&"thermal_regulator"), selected_target, game_state.get_employee_with_equipment(selected_employee_id))
 	if bool(result.get("applied", false)) and action_id == &"physical_move":
 		_play_audio_cue(&"play_heavy_impact")
 		_play_audio_cue(&"play_glass_debris")
@@ -252,6 +314,10 @@ func _play_audio_cue(method: StringName) -> void:
 
 
 func _on_action_finished() -> void:
+	if not waiting_work_action.is_empty():
+		work_actor_finished = true
+		_finish_physical_work()
+		return
 	action_in_progress = false
 	_set_interaction_enabled(not simulation.is_fully_resolved())
 
@@ -264,17 +330,30 @@ func _apply_visual_state() -> void:
 	frozen_bath.visible = not damaged and not ice_removed and ((not resolved) or bath_still_frozen)
 	broken_bath.visible = damaged and not ice_removed
 	broken_empty_bath.visible = damaged and ice_removed
-	frozen_faucet.visible = not resolved and not bool(simulation.world_object.get("cold_trace_removed", false))
+	frozen_faucet.visible = bool(simulation.world_object.get("frozen", false))
 	faucet_frost.visible = frozen_faucet.visible and bool(simulation.world_object.get("extra_frost", false))
 	regulated_faucet.visible = resolved and bool(simulation.world_object.get("regulator_installed", false))
-	normal_faucet.visible = resolved and not regulated_faucet.visible
+	normal_faucet.visible = not frozen_faucet.visible and not regulated_faucet.visible
+	# Геометрия задаётся только сценой, чтобы её можно было править в редакторе.
+	ice_stream.visible = FlowRules.is_flowing(simulation.world_object, "ice")
+	water_stream.visible = FlowRules.is_flowing(simulation.world_object, "water")
+	if water_motion != null:
+		if water_stream.visible:
+			water_motion.play()
+		else:
+			water_motion.pause()
+	if ice_motion != null:
+		if ice_stream.visible:
+			ice_motion.play()
+		else:
+			ice_motion.pause()
 	_set_interaction_enabled(not simulation.is_fully_resolved() and not action_in_progress)
 	repair_hud.set_completion_ready(resolved)
 
 
 func _set_interaction_enabled(enabled: bool) -> void:
 	bath_interaction_button.disabled = not enabled
-	faucet_interaction_button.disabled = not enabled
+	faucet_interaction_button.disabled = action_in_progress
 
 
 func _action_already_completed(action_id: StringName) -> bool:

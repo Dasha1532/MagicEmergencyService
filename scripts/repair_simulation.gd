@@ -77,6 +77,7 @@ func initialize_from_job(job: Dictionary) -> void:
 	if not initial_state.has("incident_flow_content"):
 		world_object["incident_flow_content"] = StringName(str(world_object.get("flow_content", "water")))
 	world_object["definition_id"] = StringName(str(job.get("object_definition_id", world_object.get("definition_id", "lava_faucet"))))
+	_clear_unfounded_soot()
 
 
 func load_state(saved_state: Dictionary) -> void:
@@ -101,7 +102,7 @@ func load_state(saved_state: Dictionary) -> void:
 		# Металлический кран нагревается и плавится, но не получает состояние горения.
 		world_object["burning"] = false
 		if not restored_object.has("scorched"):
-			world_object["scorched"] = _tags().has("overheated") or _tags().has("melted") or int(world_object["damage"]) > 0
+			world_object["scorched"] = _tags().has("melted")
 		if world_object["visual_state"] == &"overheated":
 			world_object["temperature"] = maxi(OVERHEAT_THRESHOLD, int(world_object["temperature"]))
 		elif world_object["visual_state"] == &"melted" or _tags().has("melted"):
@@ -109,6 +110,7 @@ func load_state(saved_state: Dictionary) -> void:
 			_remove_tag("lava_flowing")
 			_remove_tag("pressurized")
 			_add_tag("sealed_by_melt")
+			world_object["flow_blocked"] = true
 			world_object["pressure"] = 0
 
 	action_log.clear()
@@ -119,6 +121,7 @@ func load_state(saved_state: Dictionary) -> void:
 				var saved_action_dictionary: Dictionary = saved_action
 				action_log.append(saved_action_dictionary.duplicate(true))
 	last_employee_phrases.clear()
+	_clear_unfounded_soot()
 	var saved_last_phrases: Variant = saved_state.get("last_employee_phrases", {})
 	if saved_last_phrases is Dictionary:
 		last_employee_phrases = (saved_last_phrases as Dictionary).duplicate(true)
@@ -342,8 +345,8 @@ func _pick_random_phrase(options: PackedStringArray) -> String:
 
 
 func apply_action(employee_id: StringName, action_id: StringName, employee_data: Dictionary = {}) -> Dictionary:
-	var damage_before := int(world_object.get("damage", 0))
-	var destruction_before := _is_object_destroyed()
+	var object_id := str(world_object.get("instance_id", "old_quarter_5.bathroom.lava_faucet"))
+	var before := {object_id: world_object.duplicate(true)}
 	var applied: bool = false
 	var message: String = "Это действие не меняет состояние крана."
 	var extra: Dictionary = {}
@@ -418,17 +421,12 @@ func apply_action(employee_id: StringName, action_id: StringName, employee_data:
 		"resolved": is_resolved(),
 	}
 	result.merge(extra, true)
-	result["caused_damage"] = applied and (int(world_object.get("damage", 0)) > damage_before or (not destruction_before and _is_object_destroyed()))
-	action_log.append({
-		"employee_id": String(employee_id),
-		"action_id": String(action_id),
-		"result": result.duplicate(true),
-	})
+	action_log.append(ObjectInteractionRulesScript.action_event(employee_id, action_id, before, {object_id: world_object}, result))
 	return result
 
 
 func _is_object_destroyed() -> bool:
-	return bool(world_object.get("broken", false)) or bool(world_object.get("valve_broken", false)) or bool(world_object.get("destroyed", false)) or _tags().has("melted") or _tags().has("destroyed") or _tags().has("broken")
+	return ObjectInteractionRulesScript.is_destroyed(world_object)
 
 
 func can_begin_action(action_id: StringName, employee_data: Dictionary = {}) -> bool:
@@ -436,6 +434,8 @@ func can_begin_action(action_id: StringName, employee_data: Dictionary = {}) -> 
 		return false
 	if action_id == &"turn_valve" and _is_object_destroyed():
 		return false
+	if action_id == &"turn_valve":
+		return ObjectInteractionRulesScript.valve_preflight_reason(world_object, employee_data).is_empty()
 	if action_requires_heat_contact(action_id) and _requires_heat_protection() and not _has_contact_heat_protection(employee_data):
 		return false
 	if action_id == &"replace_faucet" and _has_active_replacement_hazard():
@@ -492,21 +492,25 @@ func can_install_temperature_regulator() -> bool:
 	return false
 
 
+func _clear_unfounded_soot() -> void:
+	# Старые начальные состояния ошибочно связывали копоть с самим перегревом.
+	if int(world_object.get("damage", 0)) != 0:
+		return
+	for event: Dictionary in action_log:
+		if str(event.get("action_id", "")) == "heat":
+			return
+	world_object["scorched"] = false
+
+
 func _turn_valve(remote: bool, employee_data: Dictionary = {}) -> Dictionary:
-	if bool(world_object.get("valve_broken", false)) or bool(world_object.get("broken", false)):
-		return {"applied": false, "message": "Вентиль сломан и больше не управляет краном."}
-	if bool(world_object.get("frozen", false)) or bool(world_object.get("valve_frozen", false)):
-		return {"applied": false, "message": "Вентиль примёрз и не поворачивается. Сначала его нужно отогреть."}
-	if not bool(world_object.get("valve_operable", true)):
-		return {"applied": false, "message": "Механизм вентиля заклинило."}
+	var blocked := ObjectInteractionRulesScript.valve_block_reason(world_object, employee_data, remote)
+	if not blocked.is_empty():
+		return {"applied": false, "message": blocked}
 	var hot_contact := _requires_heat_protection()
 	var protected_hot_contact := hot_contact and not remote and (_has_contact_heat_protection(employee_data) or bool(world_object.get("heat_gloves_available", false)))
 	if hot_contact and not remote and not protected_hot_contact:
 		return {"applied": false, "message": "Металл раскалён. Без термостойких рукавиц вентиль трогать нельзя."}
 	var was_open := StringName(str(world_object.get("valve_position", "closed"))) != &"closed"
-	var can_open_hazardous_valves := bool(employee_data.get("can_open_hazardous_valves", false))
-	if not remote and not was_open and not _can_open_water_for_test() and not can_open_hazardous_valves:
-		return {"applied": false, "message": "Вентиль закрыт. Пока активная опасность не устранена, Борис не будет открывать поток."}
 	world_object["valve_position"] = &"closed" if was_open else &"open"
 	if was_open:
 		_remove_tag("lava_flowing")
@@ -693,7 +697,7 @@ func _apply_technical_repair() -> Dictionary:
 		return {"applied": false, "message": "Металл всё ещё раскалён. Борис отказывается начинать ремонт, пока кран не остынет."}
 	world_object["pressure"] = 0
 	world_object["damage"] = maxi(0, int(world_object["damage"]) - 2)
-	world_object["scorched"] = int(world_object["damage"]) > 0
+	world_object["scorched"] = bool(world_object.get("scorched", false)) and int(world_object["damage"]) > 0
 	_remove_tag("overheated")
 	_add_tag("stabilized")
 	_add_tag("repaired")
@@ -873,6 +877,7 @@ func _apply_heat() -> String:
 		_remove_tag("pressurized")
 		_add_tag("melted")
 		_add_tag("sealed_by_melt")
+		world_object["flow_blocked"] = true
 		world_object["pressure"] = 0
 		world_object["damage"] = maxi(6, int(world_object["damage"]))
 		world_object["scorched"] = true

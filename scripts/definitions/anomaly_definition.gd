@@ -17,6 +17,8 @@ extends Resource
 @export var presentation: Dictionary = {}
 @export var completion: Dictionary = {}
 @export var weight: int = 1
+@export var scene_path: String = "res://scenes/RepairHouse.tscn"
+@export var simulation_type: StringName = &"lava_faucet"
 
 
 func to_dictionary() -> Dictionary:
@@ -37,4 +39,6 @@ func to_dictionary() -> Dictionary:
 		"presentation": presentation.duplicate(true),
 		"completion": completion.duplicate(true),
 		"weight": weight,
+		"scene_path": scene_path,
+		"simulation_type": simulation_type,
 	}

@@ -61,10 +61,8 @@ func show_melted_state(show_lava: bool) -> void:
 
 func sync_from_state(object_state: Dictionary) -> void:
 	var tags := PackedStringArray(object_state.get("tags", PackedStringArray()))
-	var show_lava := tags.has("lava_flowing")
-	var valve_open := StringName(str(object_state.get("valve_position", "closed"))) != &"closed"
-	var flow_content := StringName(str(object_state.get("flow_content", "none")))
-	var show_water := valve_open and flow_content == &"water" and not bool(object_state.get("flow_blocked", false)) and not show_lava
+	var show_lava := preload("res://scripts/object_flow_rules.gd").is_flowing(object_state, "lava")
+	var show_water := preload("res://scripts/object_flow_rules.gd").is_flowing(object_state, "water")
 	if tags.has("melted") or StringName(str(object_state.get("visual_state", ""))) == &"melted":
 		show_melted_state(show_lava)
 	elif bool(object_state.get("broken", false)) or tags.has("broken"):

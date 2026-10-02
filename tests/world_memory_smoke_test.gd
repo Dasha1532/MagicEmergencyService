@@ -99,7 +99,7 @@ func _run() -> void:
 	var rebound_memory := _completed_thaw_memory(false)
 	_check(rebound_memory.has_consequence(&"faucet_overheat"), "Заморозка с последующим отогревом создаёт отложенный перегрев из состояния и действий")
 	var cooling_memory := _completed_cooling_memory()
-	_check(cooling_memory.has_consequence(&"faucet_freeze") and not cooling_memory.has_consequence(&"faucet_overheat"), "Перегрев с последующим охлаждением создаёт отложенное замерзание из свойств памяти мира")
+	_check(cooling_memory.has_consequence(&"cold_trace") and not cooling_memory.has_consequence(&"faucet_overheat"), "Перегрев с последующим охлаждением создаёт холодный след из свойств памяти мира")
 	var replaced_memory := _completed_thaw_memory(true)
 	_check(not replaced_memory.has_consequence(&"faucet_overheat"), "Замена крана отменяет тепловое последствие прежней физической инкарнации")
 	_check_no_inverse_consequence_loop()

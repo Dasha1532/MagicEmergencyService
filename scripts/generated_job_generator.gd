@@ -3,7 +3,7 @@ extends RefCounted
 
 const Catalog := preload("res://scripts/generative_job_catalog.gd")
 
-const GENERATOR_VERSION: int = 2
+const GENERATOR_VERSION: int = 3
 const JOB_ID: StringName = &"generated_wardrobe_1"
 const TUTORIAL_FAUCET_JOB_ID: StringName = &"generated_faucet_tutorial_1"
 const REQUESTED_ZONES: PackedStringArray = ["left_wall"]
@@ -22,8 +22,11 @@ static func generate(seed_value: int, available_abilities: PackedStringArray, ex
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var compatible: Array[Dictionary] = Catalog.compatible_anomalies(&"eleonora_room", &"wardrobe")
+	compatible = compatible.filter(func(candidate: Dictionary) -> bool: return not find_safe_plans({"anomaly_id": candidate["id"], "resident_id": "eleonora"}, available_abilities, world_context).is_empty())
 	if compatible.size() > 1 and not excluded_anomaly_ids.is_empty():
-		compatible = compatible.filter(func(anomaly: Dictionary) -> bool: return not excluded_anomaly_ids.has(str(anomaly.get("id", ""))))
+		var fresh: Array[Dictionary] = compatible.filter(func(anomaly: Dictionary) -> bool: return not excluded_anomaly_ids.has(str(anomaly.get("id", ""))))
+		if not fresh.is_empty():
+			compatible = fresh
 	if compatible.is_empty():
 		return {}
 	var anomaly: Dictionary = compatible[rng.randi_range(0, compatible.size() - 1)]
@@ -74,11 +77,11 @@ static func generate(seed_value: int, available_abilities: PackedStringArray, ex
 		"objective_ids": Array(anomaly["objective_ids"]),
 		"presentation": presentation,
 	}
-	var accessible_plans := find_safe_plans(instance, available_abilities)
+	_attach_world_context(instance, "old_quarter_5.hall.wardrobe", world_context)
+	var accessible_plans := find_safe_plans(instance, available_abilities, world_context)
 	if accessible_plans.is_empty():
 		return {}
 	instance["validated_safe_plans"] = accessible_plans
-	_attach_world_context(instance, "old_quarter_5.hall.wardrobe", world_context)
 	return instance
 
 
@@ -87,13 +90,15 @@ static func generate_tutorial_faucet(seed_value: int, available_abilities: Packe
 		return {}
 	var compatible: Array[Dictionary] = Catalog.compatible_anomalies(&"ragnar_bathroom", &"lava_faucet")
 	compatible = compatible.filter(func(anomaly: Dictionary) -> bool: return bool(anomaly.get("tutorial_eligible", false)))
-	if compatible.size() > 1 and not excluded_anomaly_ids.is_empty():
-		compatible = compatible.filter(func(anomaly: Dictionary) -> bool: return not excluded_anomaly_ids.has(str(anomaly.get("id", ""))))
 	var resolvable: Array[Dictionary] = []
 	for anomaly: Dictionary in compatible:
-		var probe := {"anomaly_id": anomaly["id"]}
-		if not find_safe_plans(probe, available_abilities).is_empty():
+		var probe := {"anomaly_id": anomaly["id"], "resident_id": "ragnar"}
+		if not find_safe_plans(probe, available_abilities, world_context).is_empty():
 			resolvable.append(anomaly)
+	if resolvable.size() > 1 and not excluded_anomaly_ids.is_empty():
+		var fresh: Array[Dictionary] = resolvable.filter(func(anomaly: Dictionary) -> bool: return not excluded_anomaly_ids.has(str(anomaly.get("id", ""))))
+		if not fresh.is_empty():
+			resolvable = fresh
 	if resolvable.is_empty():
 		return {}
 	var rng := RandomNumberGenerator.new()
@@ -118,7 +123,7 @@ static func generate_tutorial_faucet(seed_value: int, available_abilities: Packe
 		"object_definition_id": &"lava_faucet",
 		"anomaly_id": anomaly_id,
 		"tutorial_eligible": true,
-		"scene_path": "res://scenes/RepairHouse.tscn",
+		"scene_path": str(anomaly.get("scene_path", "res://scenes/RepairHouse.tscn")),
 		"urgency_id": &"urgent",
 		"urgency": "Срочно",
 		"initial_time": 95,
@@ -126,10 +131,12 @@ static func generate_tutorial_faucet(seed_value: int, available_abilities: Packe
 		"initial_state": initial_state,
 		"objective_ids": Array(anomaly["objective_ids"]),
 		"presentation": presentation,
-		"simulation_type": &"lava_faucet",
+		"simulation_type": StringName(str(anomaly.get("simulation_type", "lava_faucet"))),
 	}
-	instance["validated_safe_plans"] = find_safe_plans(instance, available_abilities)
 	_attach_world_context(instance, "old_quarter_5.bathroom.lava_faucet", world_context)
+	instance["validated_safe_plans"] = find_safe_plans(instance, available_abilities, world_context)
+	if (instance["validated_safe_plans"] as Array).is_empty():
+		return {}
 	return instance
 
 
@@ -164,7 +171,7 @@ static func generate_faucet_consequence(event: Dictionary, available_abilities: 
 		"object_definition_id": &"lava_faucet",
 		"object_instance_id": "old_quarter_5.bathroom.lava_faucet",
 		"anomaly_id": anomaly_id,
-		"scene_path": "res://scenes/RepairHouse.tscn",
+		"scene_path": str(anomaly.get("scene_path", "res://scenes/RepairHouse.tscn")),
 		"urgency_id": &"important",
 		"urgency": "Важно",
 		"initial_time": 90,
@@ -172,22 +179,24 @@ static func generate_faucet_consequence(event: Dictionary, available_abilities: 
 		"initial_state": initial_state,
 		"objective_ids": Array(anomaly.get("objective_ids", [])),
 		"presentation": presentation,
-		"simulation_type": &"lava_faucet",
+		"simulation_type": StringName(str(anomaly.get("simulation_type", "lava_faucet"))),
 		"source_deferred_event_id": event_id,
 		"source_job_id": str(event.get("source_job_id", "")),
 		"cause_chain_id": str(event.get("cause_chain_id", "")),
 	}
-	var plans := find_safe_plans(instance, available_abilities)
+	_attach_world_context(instance, "old_quarter_5.bathroom.lava_faucet", world_context)
+	var plans := find_safe_plans(instance, available_abilities, world_context)
 	if plans.is_empty():
 		return {}
 	instance["validated_safe_plans"] = plans
-	_attach_world_context(instance, "old_quarter_5.bathroom.lava_faucet", world_context)
 	return instance
 
 
 static func _faucet_relationship_text(anomaly_id: StringName, relationship_tone: String) -> String:
 	var appreciative := relationship_tone == "appreciative"
 	match anomaly_id:
+		&"cold_trace":
+			return "Спасибо за прошлую работу. Теперь из крана сыплется лёд, и ванна уже заполнена." if appreciative else "После прошлого обращения появилась новая проблема: из крана сыплется лёд, и ванна уже заполнена."
 		&"faucet_freeze":
 			return "Спасибо, что вчера быстро привели кран в порядок. Сегодня утром он начал покрываться льдом." if appreciative else "После прошлого обращения появилась новая проблема: сегодня утром кран начал покрываться льдом."
 		&"faucet_overheat":
@@ -212,6 +221,10 @@ static func _attach_world_context(instance: Dictionary, object_instance_id: Stri
 	instance["world_snapshot_revision"] = int(object_state.get("revision", 0))
 	instance["persistent_state"] = (object_state.get("properties", {}) as Dictionary).duplicate(true)
 	instance["pending_consequence_index"] = (world_context.get("consequences", []) as Array).duplicate(true)
+	instance["related_initial_states"] = {}
+	for related_id: String in objects:
+		if related_id != object_instance_id and related_id.substr(0, related_id.rfind(".")) == object_instance_id.substr(0, object_instance_id.rfind(".")):
+			instance["related_initial_states"][related_id] = (objects[related_id].get("properties", {}) as Dictionary).duplicate(true)
 
 
 static func _world_object_is_terminal(object_instance_id: String, world_context: Dictionary) -> bool:
@@ -221,9 +234,13 @@ static func _world_object_is_terminal(object_instance_id: String, world_context:
 	return bool(properties.get("destroyed", false))
 
 
-static func find_safe_plans(instance: Dictionary, abilities: PackedStringArray) -> Array[Dictionary]:
+static func find_safe_plans(instance: Dictionary, abilities: PackedStringArray, world_context: Dictionary = {}) -> Array[Dictionary]:
 	if instance.is_empty():
 		return []
+	var client_capabilities: Dictionary = world_context.get("client_capabilities", {}) as Dictionary
+	var resident_id := str(instance.get("resident_id", ""))
+	if client_capabilities.has(resident_id):
+		abilities = PackedStringArray(client_capabilities[resident_id])
 	var plans: Array[Dictionary] = []
 	var anomaly_id := StringName(str(instance.get("anomaly_id", "")))
 	if not Catalog.ANOMALIES.has(anomaly_id):

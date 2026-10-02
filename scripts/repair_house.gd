@@ -210,15 +210,13 @@ func _apply_selected_action() -> void:
 	var contextual_actions: Array[Dictionary] = []
 	var hidden_actions := PackedStringArray(["animate"])
 	var employee: Dictionary = game_state.get_employee_with_equipment(selected_employee_id)
+	contextual_actions = ObjectInteractionRules.contextual_actions(simulation.world_object, employee)
 	if selected_employee_id == &"grog":
 		hidden_actions.append("physical_move")
-		contextual_actions.append({"id": &"turn_valve", "label": "Повернуть вентиль"})
 		contextual_actions.append({"id": &"normal_force", "label": "Обычная сила"})
 		contextual_actions.append({"id": &"brute_force", "label": "Грубая сила"})
 	elif selected_employee_id == &"boris":
-		if simulation.can_employee_start_action(&"turn_valve", employee):
-			contextual_actions.append({"id": &"turn_valve", "label": "Повернуть вентиль"})
-		if not simulation.can_employee_start_action(&"repair", employee):
+		if not ObjectInteractionRules.is_applicable(&"repair", simulation.world_object):
 			hidden_actions.append("repair")
 		if game_state.has_supply_item(&"thermal_regulator") and simulation.can_install_temperature_regulator() and simulation.can_employee_start_action(&"install_thermal_regulator", employee):
 			contextual_actions.append({"id": &"install_thermal_regulator", "label": "Установить терморегулятор"})
@@ -264,7 +262,7 @@ func _begin_selected_action() -> void:
 	if employee_actor.visible:
 		action_in_progress = true
 		lava_faucet.set_interaction_enabled(false)
-		if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical" and game_state.get_action_duration(selected_tool_id) > 1:
+		if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical" and not ObjectInteractionRules.resolves_on_impact(selected_tool_id) and game_state.get_action_duration(selected_tool_id) > 1:
 			_schedule_action(selected_tool_id)
 		employee_actor.play_action(
 			selected_tool_id,

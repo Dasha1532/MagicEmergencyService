@@ -394,7 +394,7 @@ func _update_employee_card(employee_id: StringName) -> void:
 	var detail_label: Label = employee_detail_labels[employee_id]
 	button.disabled = not on_site
 	button.tooltip_text = "" if on_site else tr(str(employee["status"]))
-	detail_label.text = tr(str(employee["core_actions"])) if on_site else tr(str(employee["status"]))
+	detail_label.text = tr(str(employee["core_actions"])).replace(" и ", "\n") if on_site else tr(str(employee["status"]))
 	detail_label.add_theme_color_override("font_color", COLOR_PARCHMENT if on_site else COLOR_MUTED)
 
 

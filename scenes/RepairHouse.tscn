@@ -151,7 +151,7 @@ begin_cap_mode = 2
 end_cap_mode = 2
 
 [node name="NormalFaucet" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1560197138]
-z_index = 1
+z_index = 2
 layout_mode = 0
 offset_left = -175.0
 offset_top = -45.0
@@ -163,7 +163,7 @@ expand_mode = 1
 
 [node name="DamagedFaucet" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1738841380]
 visible = false
-z_index = 1
+z_index = 2
 material = SubResource("ShaderMaterial_faucet_melt")
 layout_mode = 0
 offset_left = -172.0
@@ -176,7 +176,7 @@ expand_mode = 1
 
 [node name="FrozenFaucet" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1245964456]
 visible = false
-z_index = 1
+z_index = 2
 layout_mode = 0
 offset_left = -175.0
 offset_top = -45.0
@@ -188,7 +188,7 @@ expand_mode = 1
 
 [node name="BrokenFaucet" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=650722917]
 visible = false
-z_index = 1
+z_index = 2
 layout_mode = 0
 offset_left = -175.0
 offset_top = -45.0
@@ -200,7 +200,7 @@ expand_mode = 1
 
 [node name="MeltedFaucet" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=585248162]
 visible = false
-z_index = 1
+z_index = 2
 layout_mode = 0
 offset_left = -175.0
 offset_top = -45.0
@@ -212,7 +212,7 @@ expand_mode = 1
 
 [node name="RegulatedFaucet" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1300635052]
 visible = false
-z_index = 1
+z_index = 2
 layout_mode = 0
 offset_left = -175.0
 offset_top = -45.0
@@ -224,7 +224,7 @@ expand_mode = 1
 
 [node name="LavaStream" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1665473835]
 visible = false
-z_index = 2
+z_index = 1
 layout_mode = 0
 offset_left = -112.0
 offset_top = 51.0
@@ -235,7 +235,7 @@ texture = ExtResource("7_lava_stream")
 expand_mode = 1
 
 [node name="WaterStream" type="TextureRect" parent="InteractiveObjects/LavaFaucet" unique_id=1349949606]
-z_index = 2
+z_index = 1
 layout_mode = 0
 offset_left = -128.0
 offset_top = 52.0
@@ -258,6 +258,7 @@ flat = true
 position = Vector2(-96, 34)
 visual_size = 150.0
 soot_size = 235.0
+soot_z_index = 0
 frost_offset = Vector2(0, 4)
 fire_offset = Vector2(0, -8)
 soot_offset = Vector2(0, -4)

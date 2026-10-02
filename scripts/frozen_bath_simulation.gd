@@ -1,6 +1,11 @@
 class_name FrozenBathSimulation
 extends RefCounted
 
+const FlowRules := preload("res://scripts/object_flow_rules.gd")
+const ActionRules := preload("res://scripts/object_interaction_rules.gd")
+const BATH_INSTANCE_ID := "old_quarter_5.bathroom.bath"
+const FAUCET_INSTANCE_ID := "old_quarter_5.bathroom.lava_faucet"
+
 const BORIS_BATH_DIAGNOSIS := "Ванна цела, слив не забит. Проблема в том, что воду теперь можно вынимать отсюда одним куском."
 
 var world_object: Dictionary = {
@@ -15,9 +20,56 @@ var world_object: Dictionary = {
 	"faucet_diagnosed": false,
 }
 var action_log: Array[Dictionary] = []
+var last_flow_minute: int = -1
+var resident_request: String = ""
+var action_before: Dictionary = {}
+
+func _object_snapshots() -> Dictionary:
+	return {FAUCET_INSTANCE_ID: world_object.duplicate(true), BATH_INSTANCE_ID: {"contains_ice": not bool(world_object["ice_removed"]), "damaged": bool(world_object["bath_damaged"])}}
+
+
+func initialize_from_job(job: Dictionary) -> void:
+	resident_request = str(job.get("resident_request", ""))
+	var instance: Dictionary = job.get("generated_instance", {}) as Dictionary
+	world_object.merge((instance.get("initial_state", {}) as Dictionary).duplicate(true), true)
+	var remembered: Dictionary = (instance.get("related_initial_states", {}) as Dictionary).get(BATH_INSTANCE_ID, {}) as Dictionary
+	world_object["bath_damaged"] = bool(remembered.get("damaged", world_object.get("bath_damaged", false)))
+	_sync_object_properties()
+
+
+func _sync_object_properties() -> void:
+	world_object["definition_id"] = &"lava_faucet"
+	world_object["cold_trace_active"] = not bool(world_object["cold_trace_removed"])
+	world_object["cold_source_active"] = bool(world_object["cold_trace_active"])
+	world_object["flow_content"] = &"ice" if bool(world_object["cold_trace_active"]) else &"water"
+	world_object["valve_position"] = world_object.get("valve_position", &"open")
+	world_object["flow_blocked"] = bool(world_object.get("flow_blocked", false))
+	# Обледенение корпуса не блокирует исправный вентиль.
+	world_object["frozen"] = bool(world_object["cold_trace_active"]) or bool(world_object.get("extra_frost", false))
+	world_object["valve_frozen"] = bool(world_object.get("valve_frozen", false))
+	world_object["regulator_installed"] = bool(world_object.get("regulator_installed", false))
+	world_object["thermal_regulator_installed"] = world_object["regulator_installed"]
+	world_object["function_test_passed"] = bool(world_object["cold_trace_removed"])
+
+
+func advance_flow_until(time_minutes: int) -> bool:
+	if last_flow_minute < 0:
+		last_flow_minute = time_minutes
+		return false
+	if time_minutes == last_flow_minute:
+		return false
+	last_flow_minute = time_minutes
+	_sync_object_properties()
+	var bath := {"contains_ice": not bool(world_object["ice_removed"])}
+	if not FlowRules.apply_flow(world_object, bath):
+		return false
+	world_object["ice_removed"] = not bool(bath["contains_ice"])
+	world_object["bath_still_frozen"] = bool(bath["contains_ice"])
+	return true
 
 
 func load_state(saved_state: Dictionary) -> void:
+	last_flow_minute = int(saved_state.get("last_flow_minute", -1))
 	var saved_object: Variant = saved_state.get("world_object", {})
 	if saved_object is Dictionary:
 		world_object.merge((saved_object as Dictionary).duplicate(true), true)
@@ -27,17 +79,30 @@ func load_state(saved_state: Dictionary) -> void:
 		for saved_action: Variant in saved_actions:
 			if saved_action is Dictionary:
 				action_log.append((saved_action as Dictionary).duplicate(true))
+	_sync_object_properties()
 
 
 func get_state() -> Dictionary:
-	return {"world_object": world_object.duplicate(true), "action_log": action_log.duplicate(true)}
+	_sync_object_properties()
+	return {"world_object": world_object.duplicate(true), "action_log": action_log.duplicate(true), "last_flow_minute": last_flow_minute,
+		"related_objects": {BATH_INSTANCE_ID: {"contains_ice": not bool(world_object["ice_removed"]), "damaged": bool(world_object["bath_damaged"])}}}
 
 
 func get_resident_request() -> String:
+	if not resident_request.is_empty():
+		return resident_request
 	return "Я просил сделать ванную безопасной, а не перевести её из вулкана в ледник."
 
 
-func apply_action(employee_id: StringName, action_id: StringName, has_regulator: bool = false, target_id: StringName = &"all") -> Dictionary:
+func apply_action(employee_id: StringName, action_id: StringName, has_regulator: bool = false, target_id: StringName = &"all", employee_data: Dictionary = {}) -> Dictionary:
+	action_before = _object_snapshots()
+	if action_id == &"turn_valve":
+		var blocked := ActionRules.valve_block_reason(world_object, employee_data)
+		if not blocked.is_empty():
+			return _record(employee_id, action_id, false, true, blocked)
+		var opening := str(world_object.get("valve_position", "open")) != "open"
+		world_object["valve_position"] = &"open" if opening else &"closed"
+		return _record(employee_id, action_id, true, false, "Кран открыт." if opening else "Кран закрыт. Холодный след остаётся." if not bool(world_object["cold_trace_removed"]) else "Кран закрыт.")
 	if is_fully_resolved():
 		return _record(employee_id, action_id, false, true, "Магическая температура уже стабилизирована. Дополнительные действия не требуются.")
 	if action_id == &"antimagic" and bool(world_object["cold_trace_removed"]):
@@ -55,7 +120,7 @@ func apply_action(employee_id: StringName, action_id: StringName, has_regulator:
 		&"diagnose":
 			if target_id != &"bath":
 				world_object["faucet_diagnosed"] = true
-			message = "Ванна цела, слив не забит. Внутри находится цельная масса льда." if target_id == &"bath" else "Соединения исправны. Для стабилизации температуры нужен рунический терморегулятор из лавки снабжения."
+			message = _bath_diagnosis() if target_id == &"bath" else "Соединения исправны. Для стабилизации температуры нужен рунический терморегулятор из лавки снабжения."
 		&"heat":
 			if target_id == &"faucet":
 				world_object["resolved"] = true
@@ -135,6 +200,14 @@ func apply_action(employee_id: StringName, action_id: StringName, has_regulator:
 	return _record(employee_id, action_id, applied, warning, message)
 
 
+func _bath_diagnosis(personal: bool = false) -> String:
+	if bool(world_object.get("bath_damaged", false)):
+		return "Ванна повреждена: в корпусе трещина. Лёд внутри остался." if not bool(world_object.get("ice_removed", false)) else "Ванна повреждена: в корпусе трещина. Лёд уже убран."
+	if bool(world_object.get("ice_removed", false)):
+		return "Ванна цела, слив не забит. Лёд уже убран."
+	return BORIS_BATH_DIAGNOSIS if personal else "Ванна цела, слив не забит. Внутри находится цельная масса льда."
+
+
 func get_employee_reaction(employee_id: StringName, action_id: StringName, target_id: StringName = &"all") -> String:
 	if employee_id == &"felix" and action_id == &"antimagic" and bool(world_object["cold_trace_removed"]):
 		return "Холодный след уже снят. Повторно гасить отсутствующие чары не стану."
@@ -144,7 +217,7 @@ func get_employee_reaction(employee_id: StringName, action_id: StringName, targe
 		return "Лёд уберу. Если появится снова — в следующий раз принесу молот побольше."
 	if employee_id == &"boris" and action_id == &"diagnose":
 		if target_id == &"bath":
-			return BORIS_BATH_DIAGNOSIS
+			return _bath_diagnosis(true)
 		return "Трубы целы, кран цел. Похоже, после прошлого ремонта у него осталось слишком холодное отношение к работе."
 	match action_id:
 		&"heat":
@@ -200,6 +273,7 @@ func get_completion_result() -> Dictionary:
 
 
 func _record(employee_id: StringName, action_id: StringName, applied: bool, warning: bool, message: String) -> Dictionary:
+	_sync_object_properties()
 	var result := {"applied": applied, "warning": warning, "message": message, "resolved": is_resolved()}
-	action_log.append({"employee_id": String(employee_id), "action_id": String(action_id), "result": result.duplicate(true)})
+	action_log.append(ActionRules.action_event(employee_id, action_id, action_before, _object_snapshots(), result))
 	return result

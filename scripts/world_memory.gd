@@ -1,7 +1,7 @@
 class_name WorldMemory
 extends RefCounted
 
-const SCHEMA_VERSION: int = 2
+const SCHEMA_VERSION: int = 4
 const MAX_RECENT_EVENTS: int = 256
 const MAX_SIGNIFICANT_EVENTS: int = 128
 const MAX_CAUSE_DEPTH: int = 4
@@ -25,7 +25,7 @@ const SYSTEMIC_ANOMALIES: Array[Dictionary] = [
 		"score_property": "thermal_instability",
 		"minimum_score": 40.0,
 		"required_systemic_properties": {"last_thermal_direction": "cold"},
-		"event_type": "faucet_freeze",
+		"event_type": "cold_trace",
 		"delay_days": 1,
 		"due_minutes": 540,
 		"priority": 80,
@@ -33,6 +33,11 @@ const SYSTEMIC_ANOMALIES: Array[Dictionary] = [
 ]
 
 const OBJECT_DEFINITIONS: Dictionary = {
+	"old_quarter_5.bathroom.bath": {
+		"definition_id": "bath",
+		"property_keys": ["contains_ice", "damaged"],
+		"significant_keys": ["contains_ice", "damaged"],
+	},
 	"old_quarter_5.bathroom.lava_faucet": {
 		"definition_id": "lava_faucet",
 		"property_keys": [
@@ -42,6 +47,7 @@ const OBJECT_DEFINITIONS: Dictionary = {
 			"cold_source_active", "cold_leak", "heat_source_active", "lava_source_active",
 			"magic_level", "thermal_regulator_installed", "regulator_installed",
 			"function_test_passed", "frozen_lava_flow", "visual_state", "tags",
+			"cold_trace_active", "cold_trace_removed",
 		],
 		"significant_keys": [
 			"frozen", "scorched", "broken", "replaced", "valve_broken", "flow_blocked",
@@ -100,6 +106,15 @@ func load_data(data: Dictionary) -> void:
 	_load_dictionary_array(data.get("recent_events", []), recent_events, MAX_RECENT_EVENTS)
 	_load_dictionary_array(data.get("significant_events", []), significant_events, MAX_SIGNIFICANT_EVENTS)
 	_load_dictionary_array(data.get("deferred_events", []), deferred_events, MAX_SIGNIFICANT_EVENTS)
+	# Уже опубликованные заявки остаются прежними. Только ожидающий холодный
+	# след получает новую форму проявления; его причинная цепочка сохраняется.
+	for event: Dictionary in deferred_events:
+		if str(event.get("status", "")) == "pending" and str(event.get("rule_id", "")) == "thermal_instability" and str(event.get("event_type", "")) == "faucet_freeze":
+			event["event_type"] = "cold_trace"
+			event["signature"] = str(event.get("signature", "")).replace("|faucet_freeze|", "|cold_trace|")
+			var payload: Dictionary = event.get("payload", {}) as Dictionary
+			payload["anomaly_id"] = "cold_trace"
+			event["payload"] = payload
 	var loaded_contexts: Variant = data.get("job_contexts", {})
 	if loaded_contexts is Dictionary:
 		job_contexts = (loaded_contexts as Dictionary).duplicate(true)
@@ -140,6 +155,7 @@ func ensure_job_context(job_id: StringName, initial_properties: Dictionary, targ
 		"target_instance_id": target_instance_id,
 		"initial_properties": initial_properties.duplicate(true),
 		"processed_action_count": 0,
+		"resident_id": str(metadata.get("resident_id", "")),
 		"is_consequence": not str(metadata.get("source_deferred_event_id", "")).is_empty(),
 	}
 
@@ -162,11 +178,35 @@ func record_job_state(job_id: StringName, state: Dictionary, day: int, time_minu
 		for action_index: int in range(known_count, (actions as Array).size()):
 			var action: Variant = (actions as Array)[action_index]
 			if action is Dictionary:
-				_record_action(instance_id, job_id, action as Dictionary, world_object as Dictionary, day, time_minutes)
+				var entry: Dictionary = action as Dictionary
+				var changes: Array = entry.get("object_changes", []) as Array
+				if changes.is_empty():
+					_record_action(instance_id, job_id, entry, world_object as Dictionary, day, time_minutes)
+				else:
+					for change: Dictionary in changes:
+						var target := str(change.get("target_instance_id", ""))
+						if not OBJECT_DEFINITIONS.has(target):
+							continue
+						_ensure_object(target)
+						var after: Dictionary = change.get("after", {}) as Dictionary
+						_record_action(target, job_id, entry, after, day, time_minutes)
+						_update_object_snapshot(target, after)
+				var action_result: Dictionary = entry.get("result", {}) as Dictionary
+				if bool(action_result.get("caused_damage", false)):
+					var banned := evaluate_crew_relations({"resident_id": str(job_context.get("resident_id", "")), "job_id": String(job_id), "completed_day": day, "damage_employee_ids": [str(entry.get("employee_id", ""))], "object_destroyed": not (action_result.get("destroyed_target_ids", []) as Array).is_empty(), "damage_observed": true})
+					var newly_banned: Array = job_context.get("newly_banned_employee_ids", []) as Array
+					for employee_id: String in banned:
+						if not newly_banned.has(employee_id):
+							newly_banned.append(employee_id)
+					job_context["newly_banned_employee_ids"] = newly_banned
 		_job_event_counts[String(job_id)] = (actions as Array).size()
 		job_context["processed_action_count"] = (actions as Array).size()
 		job_contexts[String(job_id)] = job_context
 	_update_object_snapshot(instance_id, world_object as Dictionary)
+	for related_id: String in (state.get("related_objects", {}) as Dictionary):
+		if OBJECT_DEFINITIONS.has(related_id):
+			_ensure_object(related_id)
+			_update_object_snapshot(related_id, state["related_objects"][related_id] as Dictionary)
 
 
 func finalize_job(job_id: StringName, result: Dictionary, day: int, time_minutes: int) -> void:
@@ -588,7 +628,7 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 		for employee_id: Variant in report_damage_ids:
 			if not str(employee_id).is_empty() and not damage_employee_ids.has(str(employee_id)):
 				damage_employee_ids.append(str(employee_id))
-	var destroyed_with_claim := bool(report.get("object_destroyed", false)) and claim_amount > 0
+	var destroyed_with_claim := bool(report.get("object_destroyed", false)) and (claim_amount > 0 or bool(report.get("damage_observed", false)))
 	var successful_restoration := bool(report.get("restoration", false)) and not bool(report.get("restoration_refused", false))
 	var successful_work := rating >= 4 and not overdue and claim_amount == 0 and (not bool(report.get("payment_forfeited", false)) or successful_restoration)
 	var involved_employee_ids: Array[String] = damage_employee_ids.duplicate()
@@ -602,6 +642,16 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 
 	for emp_id: String in involved_employee_ids:
 		var relation: Dictionary = get_or_create_relation(resident_id, emp_id)
+		var damage_jobs: Dictionary = relation.get("damage_jobs", {}) as Dictionary
+		var severity_by_actor: Dictionary = report.get("damage_severity_by_employee", {}) as Dictionary
+		var actor_destroyed := int(severity_by_actor.get(emp_id, 2 if destroyed_with_claim else 1)) >= 2
+		var damage_level := 2 if actor_destroyed else 1
+		var damage_job_id := str(report.get("job_id", ""))
+		if not damage_employee_ids.is_empty() and not damage_job_id.is_empty():
+			if int(damage_jobs.get(damage_job_id, 0)) >= damage_level:
+				continue
+			damage_jobs[damage_job_id] = damage_level
+			relation["damage_jobs"] = damage_jobs
 		var previous_access_status := str(relation.get("access_status", "allowed"))
 		var memories: Array = relation["memories"]
 		if not damage_employee_ids.is_empty():
@@ -611,7 +661,7 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 				relation["access_status"] = "banned"
 				relation["apology_probation"] = false
 
-		if destroyed_with_claim:
+		if actor_destroyed:
 			relation["professional_trust"] = mini(int(relation.get("professional_trust", 0)) - 30, -30)
 			relation["personal_affinity"] = int(relation.get("personal_affinity", 0)) - 10
 			memories.append({

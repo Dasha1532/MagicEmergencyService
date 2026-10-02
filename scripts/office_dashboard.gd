@@ -2352,7 +2352,7 @@ func _rebuild_employees() -> void:
 
 func _relation_description(relation: Dictionary) -> String:
 	var trust := int(relation.get("professional_trust", 0))
-	if str(relation.get("access_status", "allowed")) == "banned" or trust < 0:
+	if str(relation.get("access_status", "allowed")) in ["banned", "warned"] or trust < 0:
 		return "не доверяет"
 	if int(relation.get("preference_weight", 0)) > 0 and trust >= 20:
 		return "предпочитает"
@@ -2369,7 +2369,7 @@ func _open_resident_memory() -> void:
 	for entry: Dictionary in entries:
 		var relation: Dictionary = entry["relation"]
 		var description := _relation_description(relation)
-		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else ("Предупреждение клиента" if str(relation.get("access_status", "allowed")) == "warned" else "Вход разрешён")
+		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else "Вход разрешён"
 		lines.append("%s\nОтношение: %s. %s." % [tr(str(entry["resident_name"])), description, access_note])
 		_append_apology_option(lines, str(entry["resident_id"]), selected_employee_id, str(entry["resident_name"]))
 	if entries.is_empty():
@@ -2389,7 +2389,7 @@ func _open_job_resident_memory() -> void:
 		if not bool(employee.get("available", false)):
 			continue
 		var relation: Dictionary = game_state.get_employee_relation_for_job(employee_id, selected_job_id)
-		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else ("Предупреждение клиента" if str(relation.get("access_status", "allowed")) == "warned" else "Вход разрешён")
+		var access_note := "Вход запрещён" if str(relation.get("access_status", "allowed")) == "banned" else "Вход разрешён"
 		lines.append("%s\nОтношение: %s. %s." % [tr(str(employee["name"])), _relation_description(relation), access_note])
 		_append_apology_option(lines, resident_id, employee_id, str(job.get("resident", "")))
 	_show_resident_memory(lines)
