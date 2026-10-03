@@ -56,6 +56,11 @@ const OBJECT_DEFINITIONS: Dictionary = {
 			"frozen_lava_flow", "visual_state", "damage",
 		],
 	},
+	"old_quarter_5.hall.wardrobe.contents": {
+		"definition_id": "dishes",
+		"property_keys": ["damage", "destroyed"],
+		"significant_keys": ["damage", "destroyed"],
+	},
 	"old_quarter_5.hall.wardrobe": {
 		"definition_id": "walking_wardrobe",
 		"property_keys": [

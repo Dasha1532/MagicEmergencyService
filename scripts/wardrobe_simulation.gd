@@ -3,6 +3,8 @@ extends RefCounted
 
 const ResidentReactionResolverScript := preload("res://scripts/resident_reaction_resolver.gd")
 const ObjectInteractionRulesScript := preload("res://scripts/object_interaction_rules.gd")
+const EmployeeReactionResolverScript := preload("res://scripts/employee_reaction_resolver.gd")
+const Reactions := preload("res://data/wardrobe_employee_reactions.gd")
 
 const ZONE_NAMES: Dictionary = {
 	&"entrance": "у входной двери",
@@ -25,6 +27,7 @@ var world_object: Dictionary = {
 	"position_zone": &"entrance",
 	"requested_zone": &"left_wall",
 	"moving": true,
+	"movement_seen": true,
 	"held": false,
 	"frozen": false,
 	"brittle": false,
@@ -40,12 +43,35 @@ var world_object: Dictionary = {
 	"damage": 0,
 	"contents_type": &"dishes",
 	"contents_damage": 0,
+	"contents_damage_limit": 3,
+	"contents_state": "intact",
 	"replacement_value": 520,
 	"contents_value": 180,
 	"resident_voice_variant": 0,
 	"resident_intro_seen": false,
 }
 var action_log: Array[Dictionary] = []
+var action_before: Dictionary = {}
+var last_no_force_phrase: int = -1
+var last_dish_break_phrase: int = -1
+
+func _snapshots() -> Dictionary:
+	_sync_contents_state()
+	return {String(world_object["instance_id"]): world_object.duplicate(true), String(world_object["instance_id"]) + ".contents": {"damage": int(world_object["contents_damage"]), "contents_state": world_object["contents_state"], "destroyed": world_object["contents_state"] == "all_broken"}}
+
+
+func _sync_contents_state() -> void:
+	world_object["contents_damage"] = clampi(int(world_object["contents_damage"]), 0, 3)
+	world_object["contents_state"] = Reactions.CONTENTS_STATES[int(world_object["contents_damage"])]
+
+
+func _dish_break_phrase() -> String:
+	var candidates: Array[int] = []
+	for index: int in Reactions.DISH_BREAK_PHRASES.size():
+		if index != last_dish_break_phrase:
+			candidates.append(index)
+	last_dish_break_phrase = candidates.pick_random()
+	return Reactions.DISH_BREAK_PHRASES[last_dish_break_phrase]
 
 
 func initialize_variant(_seed_value: int) -> void:
@@ -63,6 +89,7 @@ func initialize_generated(instance: Dictionary) -> void:
 	for key: String in ["definition_id", "generated_anomaly_id", "position_zone", "requested_zone", "visual_state", "contents_type", "size_class"]:
 		world_object[key] = StringName(str(world_object.get(key, "")))
 	world_object["generated_instance_id"] = str(instance.get("instance_id", ""))
+	world_object["movement_seen"] = bool(world_object["moving"]) or int(world_object["magic_level"]) > 0
 	world_object["generator_version"] = int(instance.get("generator_version", 1))
 	_sync_visual_state()
 
@@ -70,9 +97,13 @@ func initialize_generated(instance: Dictionary) -> void:
 func load_state(saved_state: Dictionary) -> void:
 	if saved_state.is_empty():
 		return
+	last_no_force_phrase = int(saved_state.get("last_no_force_phrase", -1))
+	last_dish_break_phrase = int(saved_state.get("last_dish_break_phrase", -1))
 	var saved_object: Variant = saved_state.get("world_object", {})
 	if saved_object is Dictionary:
 		world_object.merge((saved_object as Dictionary).duplicate(true), true)
+		if not saved_object.has("movement_seen"):
+			world_object["movement_seen"] = bool(world_object["moving"]) or int(world_object["magic_level"]) > 0 or str(world_object.get("generated_anomaly_id", "restless_animation")) == "restless_animation"
 	for key: String in ["definition_id", "generated_anomaly_id", "position_zone", "requested_zone", "visual_state", "contents_type", "size_class"]:
 		world_object[key] = StringName(str(world_object.get(key, "")))
 	# Совместимость с сохранениями раннего прототипа, где проход назывался center_wall.
@@ -90,11 +121,60 @@ func load_state(saved_state: Dictionary) -> void:
 		for saved_action: Variant in saved_actions:
 			if saved_action is Dictionary:
 				action_log.append((saved_action as Dictionary).duplicate(true))
+				for change: Dictionary in (saved_action as Dictionary).get("object_changes", []):
+					if bool((change.get("before", {}) as Dictionary).get("moving", false)) or bool((change.get("after", {}) as Dictionary).get("moving", false)):
+						world_object["movement_seen"] = true
+	_sync_visual_state()
+
+
+func physical_intents() -> Array[Dictionary]:
+	var choices: Array[Dictionary] = []
+	if bool(world_object["destroyed"]):
+		return choices
+	if bool(world_object["held"]):
+		choices.append({"id": &"release", "label": "Отпустить"})
+	elif bool(world_object["moving"]):
+		choices.append({"id": &"hold", "label": "Удерживать"})
+	var needs_move: bool = bool(world_object["moving"]) or int(world_object["magic_level"]) > 0 or world_object["position_zone"] != world_object["requested_zone"]
+	if needs_move and bool(world_object["movable"]) and not bool(world_object["anchored"]) and not bool(world_object["frozen"]):
+		if world_object["position_zone"] != &"left_wall":
+			choices.append({"id": &"move_left_fast", "label": "Быстро к левой стене"})
+			choices.append({"id": &"move_left_careful", "label": "Аккуратно к левой стене"})
+		if world_object["position_zone"] != &"kitchen_passage":
+			choices.append({"id": &"move_kitchen_fast", "label": "Быстро в проход на кухню"})
+			choices.append({"id": &"move_kitchen_careful", "label": "Аккуратно в проход на кухню"})
+	if bool(world_object["moving"]) and int(world_object["mobility"]) > 0:
+		choices.append({"id": &"break_legs", "label": "Сломать ножки"})
+	return choices
+
+
+func needs_repair() -> bool:
+	return not bool(world_object["destroyed"]) and (int(world_object["damage"]) > 0 or int(world_object["mobility"]) <= 0)
+
+
+func offers_force_inspection() -> bool:
+	return physical_intents().is_empty()
+
+
+func _no_force_phrase() -> String:
+	var candidates: Array[int] = []
+	for index: int in Reactions.NO_FORCE_PHRASES.size():
+		if index != last_no_force_phrase:
+			candidates.append(index)
+	last_no_force_phrase = candidates[randi_range(0, candidates.size() - 1)]
+	return Reactions.NO_FORCE_PHRASES[last_no_force_phrase]
+
+
+func needs_anchor() -> bool:
+	return not bool(world_object["destroyed"]) and not bool(world_object["anchored"]) and int(world_object["magic_level"]) > 0
 
 
 func get_state() -> Dictionary:
 	return {
+		"last_no_force_phrase": last_no_force_phrase,
+		"last_dish_break_phrase": last_dish_break_phrase,
 		"world_object": world_object.duplicate(true),
+		"related_objects": {String(world_object["instance_id"]) + ".contents": _snapshots()[String(world_object["instance_id"]) + ".contents"]},
 		"action_log": action_log.duplicate(true),
 	}
 
@@ -125,7 +205,7 @@ func advance_burning_until(current_minutes: int, spread_minutes: int) -> Array[D
 func get_resident_request() -> String:
 	var generated_request := str(world_object.get("generated_resident_request", ""))
 	if not generated_request.is_empty():
-		return generated_request
+		return generated_request.replace("пока от мебели и посуды ничего не осталось!", "пока огонь не добрался до посуды!")
 	return tr("Этот проклятый шкаф снова разгуливает по комнате! Остановите его и поставьте %s. Сделайте аккуратно, там хрупкая посуда.") % tr(_requested_zone_phrase())
 
 
@@ -154,44 +234,34 @@ func get_status_title() -> String:
 
 
 func get_employee_reaction(employee_id: StringName, action_id: StringName, intent: StringName = &"") -> String:
-	if employee_id == &"liliya" and action_id in [&"freeze", &"heat"] and bool(world_object["destroyed"]):
-		return "От шкафа остался только пепел. Здесь больше не на что воздействовать магией."
 	if employee_id == &"grog" and action_id == &"physical_move":
-		return {
-			&"hold": "Шкаф сильный. Но я сегодня завтракал.",
-			&"move_left": "К левой стене так к левой. Если снова уйдёт — принесу цепь.",
-			&"move_kitchen": "В проход так в проход. Только потом не спрашивайте, почему на кухню приходится ходить через шкаф.",
-		}.get(intent, "")
+		if String(intent).ends_with("_fast"):
+			return "Быстро переставлю. Только посуда внутри может не пережить тряску."
+		if String(intent).ends_with("_careful"):
+			return "Переставлю без спешки и толчков. Посуду побережём."
 	if employee_id == &"boris" and action_id == &"anchor" and world_object["position_zone"] != world_object["requested_zone"]:
 		return "Шкаф стоит не там, где просила хозяйка. Сначала поставьте его %s." % _requested_zone_phrase()
-	if employee_id == &"boris" and action_id == &"repair" and int(world_object["mobility"]) > 0 and not bool(world_object["destroyed"]):
-		return "Ремонтировать здесь нечего: ножки целы, корпус исправен. Шкаф ходит из-за чар, а не из-за поломки."
-	return {
-		&"boris": {
-			&"diagnose": "Следы магии, мебельный характер и ни одного гарантийного талона.",
-			&"anchor": "Прикручу к стене. После этого гулять сможет только вместе с домом.",
-		},
-		&"liliya": {
-			&"freeze": "Остановлю его ненадолго. Очень надеюсь, что шкаф не умеет дрожать от холода.",
-			&"heat": "Мебель обычно не прогревают до послушания. Но приказ я услышала.",
-		},
-		&"nika": {&"telekinesis": "Переставить шкаф без царапин — прекрасно. Осталось договориться со шкафом."},
-		&"felix": {&"antimagic": "Чары сниму. Дурной характер, если останется, оформим отдельно."},
-	}.get(employee_id, {}).get(action_id, "")
+	if employee_id == &"boris" and action_id == &"repair" and int(world_object["mobility"]) > 0 and int(world_object["damage"]) == 0 and not bool(world_object["destroyed"]):
+		return "Ремонтировать здесь нечего: ножки целы, корпус исправен." + (" Шкаф ходит из-за чар, а не из-за поломки." if bool(world_object["moving"]) else "")
+	return EmployeeReactionResolverScript.reaction_for({"action_reactions": Reactions.RULES.get(employee_id, [])}, action_id, world_object, intent)
 
 
 func apply_action(employee_id: StringName, action_id: StringName, intent: StringName = &"") -> Dictionary:
+	action_before = _snapshots()
 	var damage_before := int(world_object.get("damage", 0))
 	var contents_damage_before := int(world_object.get("contents_damage", 0))
 	var destroyed_before := bool(world_object.get("destroyed", false))
+	var burning_before := bool(world_object.get("burning", false))
 	var action_summary: String = "Это действие не изменило состояние шкафа."
 	var applied: bool = false
-	if bool(world_object["destroyed"]):
+	if bool(world_object["destroyed"]) and action_id != &"diagnose":
 		return _record_result(employee_id, action_id, intent, false, "От шкафа осталась только куча пепла. Воздействовать больше не на что.")
 
 	match action_id:
 		&"diagnose":
 			action_summary = _diagnose_wardrobe()
+			if employee_id == &"grog":
+				action_summary = _no_force_phrase() if offers_force_inspection() else "Здесь есть работа для моей силы. Выберите, что нужно сделать."
 			applied = true
 		&"repair":
 			var repair_result: Dictionary = _apply_technical_repair()
@@ -214,13 +284,15 @@ func apply_action(employee_id: StringName, action_id: StringName, intent: String
 		&"freeze":
 			var was_burning: bool = bool(world_object["burning"])
 			world_object["temperature"] = int(world_object["temperature"]) - 5
-			world_object["frozen"] = true
+			world_object["frozen"] = int(world_object["temperature"]) <= -2
 			world_object["brittle"] = int(world_object["temperature"]) <= -2
 			if int(world_object["temperature"]) <= 2:
 				world_object["burning"] = false
 				world_object["fire_spots"] = 0
 			if was_burning and not bool(world_object["burning"]):
-				action_summary = "Огонь погашен холодом. На шкафу осталась копоть, а древесина стала хрупкой."
+				action_summary = "Огонь погашен холодом. На шкафу осталась копоть."
+				if bool(world_object["brittle"]):
+					action_summary += " Древесина промёрзла и стала хрупкой."
 			elif was_burning:
 				action_summary = "Холод ослабил пожар, но шкаф всё ещё горит."
 			else:
@@ -228,7 +300,8 @@ func apply_action(employee_id: StringName, action_id: StringName, intent: String
 			applied = true
 		&"heat":
 			world_object["temperature"] = int(world_object["temperature"]) + 5
-			world_object["frozen"] = false
+			world_object["frozen"] = int(world_object["temperature"]) <= -2
+			world_object["brittle"] = int(world_object["temperature"]) <= -2
 			world_object["burning"] = int(world_object["temperature"]) >= 7
 			if bool(world_object["burning"]):
 				world_object["damage"] = int(world_object["damage"]) + 2
@@ -258,13 +331,13 @@ func apply_action(employee_id: StringName, action_id: StringName, intent: String
 
 	if applied:
 		_sync_visual_state()
-	var message: String = _compose_result_message(action_summary, action_id, intent) if applied else action_summary
+	var message: String = _compose_result_message(action_summary, action_id, intent) if applied and not (employee_id == &"grog" and action_id == &"diagnose") else action_summary
 	var caused_damage := applied and (
 		int(world_object.get("damage", 0)) > damage_before
 		or int(world_object.get("contents_damage", 0)) > contents_damage_before
 		or (not destroyed_before and bool(world_object.get("destroyed", false)))
 	)
-	if bool(world_object.get("burning", false)) and str(world_object.get("fire_origin_employee_id", "")).is_empty():
+	if applied and not burning_before and bool(world_object.get("burning", false)):
 		world_object["fire_origin_employee_id"] = String(employee_id)
 	return _record_result(employee_id, action_id, intent, applied, message, caused_damage)
 
@@ -280,6 +353,7 @@ func can_begin_action(action_id: StringName) -> bool:
 
 
 func advance_burning() -> Dictionary:
+	action_before = _snapshots()
 	if not bool(world_object["burning"]) or bool(world_object["destroyed"]):
 		return {"changed": false, "message": "", "resolved": is_resolved()}
 	world_object["burn_stage"] = int(world_object["burn_stage"]) + 1
@@ -304,7 +378,7 @@ func advance_burning() -> Dictionary:
 	world_object["noise"] = 0
 	world_object["fire_spots"] = 0
 	world_object["damage"] = 10
-	world_object["contents_damage"] = 6
+	world_object["contents_damage"] = 3
 	_sync_visual_state()
 	var destroyed_result: Dictionary = {
 		"changed": true,
@@ -319,12 +393,8 @@ func advance_burning() -> Dictionary:
 
 
 func _record_environment_result(result: Dictionary) -> void:
-	action_log.append({
-		"employee_id": str(world_object.get("fire_origin_employee_id", "")),
-		"action_id": "fire_spread",
-		"intent": "",
-		"result": result.duplicate(true),
-	})
+	result["applied"] = bool(result.get("changed", false))
+	action_log.append(ObjectInteractionRulesScript.action_event(StringName(str(world_object.get("fire_origin_employee_id", ""))), &"fire_spread", action_before, _snapshots(), result))
 
 
 func _record_result(employee_id: StringName, action_id: StringName, intent: StringName, applied: bool, message: String, caused_damage: bool = false) -> Dictionary:
@@ -336,12 +406,14 @@ func _record_result(employee_id: StringName, action_id: StringName, intent: Stri
 		"resolved": is_resolved(),
 		"caused_damage": caused_damage,
 	}
-	action_log.append({
-		"employee_id": String(employee_id),
-		"action_id": String(action_id),
-		"intent": String(intent),
-		"result": result.duplicate(true),
-	})
+	var event := ObjectInteractionRulesScript.action_event(employee_id, action_id, action_before, _snapshots(), result)
+	var previous_contents: Dictionary = action_before.get(String(world_object["instance_id"]) + ".contents", {}) as Dictionary
+	if applied and int(world_object["contents_damage"]) > int(previous_contents.get("damage", 0)):
+		result["contents_damaged"] = true
+		result["resident_message"] = _dish_break_phrase()
+		event["result"] = result.duplicate(true)
+	event["intent"] = String(intent)
+	action_log.append(event)
 	return result
 
 
@@ -369,6 +441,58 @@ func is_resolved() -> bool:
 
 
 func get_completion_result() -> Dictionary:
+	_sync_contents_state()
+	var result := _build_completion_result()
+	result["review"] = _property_review()
+	result["contents_state"] = world_object["contents_state"]
+	result["contents_damage"] = int(world_object["contents_damage"])
+	if int(world_object["contents_damage"]) > 0:
+		var state_description: String = Reactions.CONTENTS_REPORTS[int(world_object["contents_damage"])]
+		if state_description not in str(result["summary"]):
+			result["summary"] += " " + state_description
+	return result
+
+
+func _property_review() -> String:
+	if bool(world_object["destroyed"]):
+		return "Не удалось сохранить ни шкаф, ни посуду. После такой работы мне остаётся только подсчитывать потери."
+	var notes: Array[String] = []
+	if not str(world_object.get("fire_origin_employee_id", "")).is_empty():
+		notes.append("До вашего вмешательства шкаф хотя бы не горел. Теперь после работы остались последствия пожара.")
+	if int(world_object["mobility"]) <= 0:
+		notes.append("Шкаф теперь неподвижен, но ножки сломаны. Такой способ остановить мебель меня совершенно не устраивает.")
+	elif int(world_object["damage"]) > 0:
+		notes.append("С основной проблемой справились, но шкаф теперь повреждён. Я рассчитывала получить помощь, а не новую заботу о ремонте.")
+	if int(world_object["contents_damage"]) > 0:
+		notes.append(Reactions.CONTENTS_REPORTS[int(world_object["contents_damage"])] + " За такую помощь трудно быть благодарной.")
+	if bool(world_object["frozen"]):
+		notes.append("Шкаф оставили покрытым инеем. Хотелось бы пользоваться им сразу, а не ждать, пока он оттает.")
+	if bool(world_object.get("movement_seen", false)) and world_object["position_zone"] != world_object["requested_zone"]:
+		notes.append("Но шкаф так и не поставили туда, куда я просила.")
+	if not notes.is_empty():
+		return " ".join(notes)
+	var initial_fire := false
+	var initial_cold := false
+	var initial_found := false
+	if not action_log.is_empty():
+		for event: Dictionary in action_log:
+			for change: Dictionary in event.get("object_changes", []):
+				if str(change.get("target_instance_id", "")) == String(world_object["instance_id"]):
+					var initial: Dictionary = change.get("before", {}) as Dictionary
+					initial_fire = bool(initial.get("burning", false))
+					initial_cold = bool(initial.get("frozen", false))
+					initial_found = true
+					break
+			if initial_found:
+				break
+	if initial_fire or bool(world_object["scorched"]):
+		return "Пожар потушили, шкаф и посуду спасли. Следы копоти переживу — главное, что всё удалось сохранить."
+	if initial_cold:
+		return "Шкаф отогрели, древесину и посуду сохранили. Наконец можно открыть дверцы без опасения что-нибудь расколоть. Спасибо за аккуратность!"
+	return "Шкаф наконец стоит спокойно, посуда цела. Теперь можно пройти по комнате, не уступая дорогу собственной мебели. Спасибо!"
+
+
+func _build_completion_result() -> Dictionary:
 	if bool(world_object["destroyed"]):
 		var compensation: int = int(world_object["replacement_value"]) + int(world_object["contents_value"])
 		return {
@@ -383,7 +507,7 @@ func get_completion_result() -> Dictionary:
 			"actions": action_log.duplicate(true),
 		}
 	var generated_completion: Dictionary = world_object.get("generated_completion", {}) as Dictionary
-	if not generated_completion.is_empty() and is_resolved():
+	if not generated_completion.is_empty() and is_resolved() and int(world_object["damage"]) == 0 and int(world_object["contents_damage"]) == 0:
 		return {
 			"reward_adjustment": 0,
 			"reputation_change": 1,
@@ -405,6 +529,12 @@ func get_completion_result() -> Dictionary:
 	var adjustment: int = -furniture_penalty - contents_penalty
 	if not correct_place:
 		adjustment -= 60
+	if not generated_completion.is_empty():
+		var consequences := _completion_consequences(damage, contents_damage, correct_place)
+		return {"reward_adjustment": adjustment, "reputation_change": -damage - contents_damage,
+			"summary": "Причина аварии устранена. " + " ".join(consequences),
+			"review": "Авария устранена, но имущество получило повреждения.",
+			"consequences": consequences, "actions": action_log.duplicate(true)}
 	if int(world_object["mobility"]) <= 0:
 		var broken_reply: String = "Он больше не ходит, это правда. Но я просила остановить шкаф, а не покалечить его! Кто теперь будет чинить ножки?" if correct_place else "Вы сломали ножки и оставили шкаф посреди прохода? Теперь он не ходит, зато окончательно мешает пройти! Это вы называете ремонтом?"
 		return {
@@ -446,7 +576,7 @@ func _completion_consequences(damage: int, contents_damage: int, correct_place: 
 	if damage > 0:
 		consequences.append("Шкаф получил повреждения.")
 	if contents_damage > 0:
-		consequences.append("Посуда внутри шкафа повреждена.")
+		consequences.append(Reactions.CONTENTS_REPORTS[mini(contents_damage, 3)])
 	if not correct_place:
 		consequences.append("Шкаф оставлен не в заказанном месте.")
 	if consequences.is_empty():
@@ -459,6 +589,21 @@ func _requested_zone_phrase() -> String:
 
 
 func _apply_physical_intent(intent: StringName) -> Dictionary:
+	var intent_text := String(intent)
+	if intent_text.ends_with("_fast") or intent_text.ends_with("_careful"):
+		var base_intent := StringName(intent_text.trim_suffix("_fast").trim_suffix("_careful"))
+		if base_intent not in [&"move_left", &"move_kitchen"]:
+			return {"applied": false, "summary": "Выберите место для шкафа."}
+		var move_result := _apply_physical_intent(base_intent)
+		if bool(move_result["applied"]):
+			var mode: Dictionary = Reactions.MOVE_MODES["fast" if intent_text.ends_with("_fast") else "careful"]
+			if world_object["contents_type"] == &"dishes" and int(world_object["contents_damage"]) < int(world_object["contents_damage_limit"]) and randf() < float(mode["contents_damage_chance"]):
+				world_object["contents_damage"] = int(world_object["contents_damage"]) + 1
+				_sync_contents_state()
+				move_result["summary"] += " " + Reactions.CONTENTS_REPORTS[int(world_object["contents_damage"])]
+			else:
+				move_result["summary"] += " Дополнительного ущерба посуде нет."
+		return move_result
 	match intent:
 		&"hold":
 			if int(world_object["mobility"]) <= 0:
@@ -496,15 +641,19 @@ func _diagnose_wardrobe() -> String:
 		return "От шкафа остался пепел, восстановление невозможно."
 	if bool(world_object["burning"]):
 		return "Шкаф горит. До тушения приближаться и ремонтировать его опасно."
+	if bool(world_object["frozen"]):
+		return "Шкаф промёрз. Древесина хрупкая — сначала нужно осторожно отогреть его."
+	if int(world_object["damage"]) > 0 and int(world_object["mobility"]) > 0:
+		return "Ножки целы, но корпус шкафа повреждён. Требуется ремонт."
 	if bool(world_object["anchored"]):
-		return "Шкаф надёжно закреплён к стене. Чары действуют, но сдвинуть его уже не могут."
+		return "Шкаф надёжно закреплён к стене." + (" Чары действуют, но сдвинуть его уже не могут." if int(world_object["magic_level"]) > 0 else "")
 	if int(world_object["mobility"]) <= 0:
 		return "Ножки сломаны, но корпус ещё можно восстановить. Чары при этом никуда не исчезли."
 	if bool(world_object["held"]):
 		return "Грог удерживает шкаф, ножки целы, а оживляющие чары продолжают действовать."
 	if bool(world_object["moving"]):
 		return "Механических поломок нет. Шкаф движется из-за чар, обычный ремонт их не снимет."
-	return "Механическая часть шкафа исправна; оставшаяся проблема связана с магией."
+	return "Механическая часть шкафа исправна." + (" Оставшаяся проблема связана с магией." if int(world_object["magic_level"]) > 0 else "")
 
 
 func _apply_technical_repair() -> Dictionary:
@@ -512,18 +661,19 @@ func _apply_technical_repair() -> Dictionary:
 		return {"applied": false, "summary": "Борис осмотрел пепел: шкаф восстановлению не подлежит."}
 	if bool(world_object["burning"]):
 		return {"applied": false, "summary": "Борис не станет ремонтировать горящий шкаф. Сначала потушите огонь."}
-	if bool(world_object["anchored"]):
+	if bool(world_object["anchored"]) and int(world_object["damage"]) == 0:
 		return {"applied": false, "summary": "Шкаф исправен и уже закреплён к стене."}
-	if int(world_object["mobility"]) > 0:
+	if int(world_object["mobility"]) > 0 and int(world_object["damage"]) == 0:
 		return {"applied": false, "summary": "Ножки шкафа не повреждены — ремонт не требуется."}
+	var had_broken_legs := int(world_object["mobility"]) <= 0
 	world_object["mobility"] = 5
 	world_object["damage"] = maxi(0, int(world_object["damage"]) - 3)
 	world_object["held"] = false
-	world_object["moving"] = int(world_object["magic_level"]) > 0
+	world_object["moving"] = int(world_object["magic_level"]) > 0 and not bool(world_object["anchored"])
 	world_object["noise"] = 5 if bool(world_object["moving"]) else 0
 	return {
 		"applied": true,
-		"summary": "Борис заменил сломанные ножки и укрепил основание. Чары снова заставили шкаф двигаться." if bool(world_object["moving"]) else "Борис заменил сломанные ножки и восстановил шкаф.",
+		"summary": ("Борис заменил сломанные ножки и укрепил основание." if had_broken_legs else "Борис укрепил повреждённый корпус шкафа.") + (" Чары снова заставили шкаф двигаться." if bool(world_object["moving"]) else ""),
 	}
 
 
@@ -544,6 +694,11 @@ func _apply_wall_anchor() -> Dictionary:
 
 
 func _compose_result_message(action_summary: String, action_id: StringName, intent: StringName) -> String:
+	# Diagnosis is complete; thermal actions already describe the fire/temperature.
+	if action_id == &"diagnose":
+		return tr(action_summary)
+	if action_id == &"heat" or action_id == &"freeze":
+		return ("%s %s" % [tr(action_summary), tr(_describe_movement())]).strip_edges()
 	if action_id == &"physical_move" and intent == &"break_legs":
 		var correct_place: bool = world_object["position_zone"] == world_object["requested_zone"]
 		return "Шкаф больше не ходит: ножки сломаны. Он стоит у левой стены, но повреждён." if correct_place else "Шкаф больше не ходит: ножки сломаны. Он повреждён и остался не у левой стены."
@@ -559,16 +714,23 @@ func _compose_result_message(action_summary: String, action_id: StringName, inte
 func _describe_current_hazard() -> String:
 	if bool(world_object["burning"]):
 		return "Шкаф горит; в комнате появилась дополнительная опасность."
+	return _describe_movement()
+
+
+func _describe_movement() -> String:
 	if int(world_object["mobility"]) <= 0:
-		return "Ножки сломаны, поэтому шкаф больше не может ходить."
+		return "Ножки шкафа сломаны." if not bool(world_object.get("movement_seen", false)) else "Ножки сломаны, поэтому шкаф больше не может ходить."
 	if bool(world_object["moving"]):
 		if int(world_object["magic_level"]) > 0:
 			return "Чары всё ещё действуют, поэтому шкаф продолжает ходить."
 		return "Шкаф продолжает двигаться."
-	return "Шкаф больше не движется."
+	return "Шкаф больше не движется." if bool(world_object.get("movement_seen", false)) else ""
 
 
 func _sync_visual_state() -> void:
+	_sync_contents_state()
+	if bool(world_object["moving"]):
+		world_object["movement_seen"] = true
 	if bool(world_object["destroyed"]):
 		world_object["visual_state"] = &"destroyed"
 	elif int(world_object["mobility"]) <= 0:
@@ -577,8 +739,11 @@ func _sync_visual_state() -> void:
 		world_object["visual_state"] = &"idle"
 	elif bool(world_object["moving"]):
 		world_object["visual_state"] = &"walking"
+	elif bool(world_object["frozen"]) and int(world_object["magic_level"]) == 0 and int(world_object["damage"]) == 0:
+		world_object["visual_state"] = &"frozen"
 	else:
 		world_object["visual_state"] = &"idle"
+	world_object["uses_frozen_visual"] = world_object["visual_state"] == &"frozen"
 
 
 func _matches_any_resolution_condition(conditions: PackedStringArray) -> bool:

@@ -1,6 +1,27 @@
 extends Control
 
 const SaveSlotsPanelScript := preload("res://scripts/save_slots_panel.gd")
+var debug_wardrobe_picker: OptionButton
+const DEBUG_WARDROBE_VARIANTS := [&"", &"restless_animation", &"active_fire", &"deep_freeze"]
+
+
+func _toggle_debug_wardrobe_picker() -> void:
+	if not OS.is_debug_build():
+		return
+	if debug_wardrobe_picker == null:
+		debug_wardrobe_picker = OptionButton.new()
+		debug_wardrobe_picker.position = Vector2(72, 710)
+		debug_wardrobe_picker.custom_minimum_size = Vector2(390, 48)
+		debug_wardrobe_picker.add_theme_font_size_override("font_size", 20)
+		debug_wardrobe_picker.add_item("Проверка шкафа: случайный вариант")
+		debug_wardrobe_picker.add_item("Проверка шкафа: ходячий")
+		debug_wardrobe_picker.add_item("Проверка шкафа: горящий")
+		debug_wardrobe_picker.add_item("Проверка шкафа: замёрзший")
+		debug_wardrobe_picker.tooltip_text = "Выбор для следующей новой игры. Загрузка сохранений не меняется."
+		debug_wardrobe_picker.item_selected.connect(func(index: int) -> void: game_state.debug_next_wardrobe_anomaly = DEBUG_WARDROBE_VARIANTS[index])
+		add_child(debug_wardrobe_picker)
+	else:
+		debug_wardrobe_picker.visible = not debug_wardrobe_picker.visible
 
 const TAGLINES: PackedStringArray = [
 	"Спасаем дома, нервы и иногда реальность",
@@ -75,6 +96,17 @@ func _build_interface() -> void:
 	_build_title()
 	_build_navigation()
 	_build_settings()
+	if OS.is_debug_build():
+		var debug_button := Button.new()
+		debug_button.name = "DebugWardrobeButton"
+		debug_button.text = "Проверка шкафа"
+		debug_button.position = Vector2(72, 650)
+		debug_button.custom_minimum_size = Vector2(250, 48)
+		debug_button.add_theme_font_size_override("font_size", 20)
+		debug_button.add_theme_color_override("font_color", COLOR_PARCHMENT)
+		debug_button.add_theme_stylebox_override("normal", _style(COLOR_BUTTON, COLOR_BRASS, 2, 8))
+		debug_button.pressed.connect(_toggle_debug_wardrobe_picker)
+		add_child(debug_button)
 
 
 func _build_title() -> void:

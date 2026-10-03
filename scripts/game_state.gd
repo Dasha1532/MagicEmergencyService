@@ -166,6 +166,8 @@ var generated_jobs: Dictionary = {}
 var world_memory: RefCounted = WorldMemoryScript.new()
 var last_generated_anomaly_id: StringName = &""
 var last_generated_faucet_anomaly_id: StringName = &""
+var debug_next_wardrobe_anomaly: StringName = &""
+var debug_tutorial_bypass_day: int = 0
 var clock_paused: bool = true
 var clock_speed: int = 1
 var _clock_accumulator: float = 0.0
@@ -220,6 +222,10 @@ func get_action_duration(action_id: StringName, intent: StringName = &"") -> int
 		&"antimagic":
 			return 1
 		&"physical_move":
+			if String(intent).ends_with("_fast"):
+				return int(preload("res://data/wardrobe_employee_reactions.gd").MOVE_MODES["fast"]["duration"])
+			if String(intent).ends_with("_careful"):
+				return int(preload("res://data/wardrobe_employee_reactions.gd").MOVE_MODES["careful"]["duration"])
 			return 4 if intent in [&"move_left", &"move_kitchen", &"break_legs"] else 2
 		&"telekinesis":
 			return 1
@@ -683,7 +689,7 @@ func advance_day(days: int = 1) -> void:
 		return
 	day += days
 	time_minutes = 9 * 60
-	if is_tutorial_job_completed():
+	if is_tutorial_job_completed() or debug_tutorial_bypass_day > 0:
 		_update_parallel_job_unlocks()
 	_unlock_gargoyle_job_if_due()
 	_unlock_escaped_ghost_job_if_due()
@@ -937,6 +943,22 @@ func apologize_to_resident(resident_id: String, employee_id: StringName) -> bool
 	if not world_memory.accept_apology(resident_id, String(employee_id), day):
 		return false
 	state_changed.emit()
+	save_autosave()
+	return true
+
+
+func debug_skip_day() -> bool:
+	if not OS.is_debug_build() or not active_job_id.is_empty():
+		return false
+	for job_id: StringName in jobs:
+		if bool(jobs[job_id].get("dispatched", false)) and not completed_job_ids.has(String(job_id)):
+			return false
+	if not is_tutorial_job_completed() and debug_tutorial_bypass_day == 0:
+		debug_tutorial_bypass_day = day
+		_set_job_unlocked(tutorial_job_id, false)
+		tutorial_state = {"version": 1, "status": "skipped", "step": ""}
+	clock_paused = true
+	advance_day()
 	save_autosave()
 	return true
 
@@ -1363,8 +1385,11 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 		"damage_employee_ids": Array(damage_employee_ids),
 		"damage_severity_by_employee": damage_severity_by_employee,
 		"object_destroyed": bool(result.get("object_destroyed", false)),
+		"contents_state": str(result.get("contents_state", "")),
+		"contents_damage": int(result.get("contents_damage", 0)),
 		"restoration": bool(job.get("restoration", false)),
 		"restoration_refused": bool(result.get("restoration_refused", false)),
+		"job_refused": bool(result.get("job_refused", false)),
 		"source_job_id": str(job.get("source_job_id", "")),
 		"summary": summary,
 		"review": str(result.get("review", "")),
@@ -1964,6 +1989,7 @@ func start_new_game() -> void:
 	job_repair_states = {}
 	world_memory.reset()
 	campaign_seed = int(Time.get_unix_time_from_system()) ^ randi()
+	debug_tutorial_bypass_day = 0
 	next_generated_job_index = 0
 	generated_jobs = {}
 	tutorial_state = {"version": 1, "status": "active", "step": "office_welcome"}
@@ -2100,6 +2126,7 @@ func _save_to_path(path: String) -> Error:
 		"job_repair_states": job_repair_states,
 		"tutorial_state": tutorial_state,
 		"campaign_seed": campaign_seed,
+		"debug_tutorial_bypass_day": debug_tutorial_bypass_day,
 		"next_generated_job_index": next_generated_job_index,
 		"generated_jobs": generated_jobs,
 		"world_memory": world_memory.to_data(),
@@ -2175,6 +2202,7 @@ func _load_from_path(path: String) -> Error:
 	_remove_generated_job_entries()
 	generated_jobs = {}
 	campaign_seed = int(save_data.get("campaign_seed", 0))
+	debug_tutorial_bypass_day = int(save_data.get("debug_tutorial_bypass_day", 0)) if OS.is_debug_build() else 0
 	next_generated_job_index = int(save_data.get("next_generated_job_index", 0))
 	var loaded_generated_jobs: Variant = save_data.get("generated_jobs", {})
 	if loaded_generated_jobs is Dictionary:
@@ -2277,7 +2305,7 @@ func _load_from_path(path: String) -> Error:
 		_migrate_legacy_follow_ups_to_world_memory()
 	if migrated_reputation_bonus > 0:
 		reputation += migrated_reputation_bonus
-	if is_tutorial_job_completed():
+	if is_tutorial_job_completed() or debug_tutorial_bypass_day > 0:
 		_update_parallel_job_unlocks()
 	_unlock_gargoyle_job_if_due()
 	_unlock_escaped_ghost_job_if_due()
@@ -2436,11 +2464,19 @@ func _publish_generated_wardrobe_job(seed_value: int) -> bool:
 	var excluded := PackedStringArray()
 	if not last_generated_anomaly_id.is_empty():
 		excluded.append(String(last_generated_anomaly_id))
+	var forced_debug := OS.is_debug_build() and debug_next_wardrobe_anomaly in [&"restless_animation", &"active_fire", &"deep_freeze"]
+	if forced_debug:
+		excluded.clear()
+		for anomaly_id: String in ["restless_animation", "active_fire", "deep_freeze"]:
+			if anomaly_id != String(debug_next_wardrobe_anomaly):
+				excluded.append(anomaly_id)
 	var instance: Dictionary = GeneratedJobGeneratorScript.generate(seed_value, _available_ability_ids(), excluded, _generation_context())
+	debug_next_wardrobe_anomaly = &""
 	if instance.is_empty():
 		return false
-	last_generated_anomaly_id = StringName(str(instance.get("anomaly_id", "")))
-	_save_last_generated_anomaly(last_generated_anomaly_id)
+	if not forced_debug:
+		last_generated_anomaly_id = StringName(str(instance.get("anomaly_id", "")))
+		_save_last_generated_anomaly(last_generated_anomaly_id)
 	_register_generated_job(instance)
 	next_generated_job_index += 1
 	return true
@@ -2461,9 +2497,7 @@ func _publish_generated_tutorial_faucet_job(seed_value: int) -> bool:
 	if instance.is_empty():
 		return false
 	last_generated_faucet_anomaly_id = StringName(str(instance.get("anomaly_id", "")))
-	var config := ConfigFile.new()
-	config.set_value("generator", "last_faucet_anomaly_id", String(last_generated_faucet_anomaly_id))
-	config.save(GENERATOR_HISTORY_PATH)
+	_write_generator_history("last_faucet_anomaly_id", String(last_generated_faucet_anomaly_id))
 	_register_generated_job(instance)
 	next_generated_job_index += 1
 	return true
@@ -2508,9 +2542,14 @@ func _load_last_generated_anomaly() -> StringName:
 func _save_last_generated_anomaly(anomaly_id: StringName) -> void:
 	if anomaly_id.is_empty():
 		return
+	_write_generator_history("last_anomaly_id", String(anomaly_id))
+
+
+func _write_generator_history(key: String, value: String, path: String = GENERATOR_HISTORY_PATH) -> Error:
 	var config := ConfigFile.new()
-	config.set_value("generator", "last_anomaly_id", String(anomaly_id))
-	config.save(GENERATOR_HISTORY_PATH)
+	config.load(path)
+	config.set_value("generator", key, value)
+	return config.save(path)
 
 
 func _register_generated_job(instance: Dictionary, capture_preference: bool = true) -> void:
@@ -2613,10 +2652,11 @@ func _publish_due_restoration_jobs() -> void:
 
 
 func refuse_restoration_job(job_id: StringName) -> bool:
-	if not is_job_available(job_id) or not bool(jobs[job_id].get("restoration", false)) or not get_pending_job_action(job_id).is_empty():
+	if not can_refuse_job(job_id) or not bool(jobs[job_id].get("restoration", false)):
 		return false
 	var refused_job: Dictionary = jobs[job_id]
 	refused_job["base_reward"] = 0
+	refused_job["assigned"] = PackedStringArray()
 	refused_job["overdue"] = false
 	jobs[job_id] = refused_job
 	var result := {"restoration_refused": true, "forfeit_payment": true,
@@ -2624,6 +2664,25 @@ func refuse_restoration_job(job_id: StringName) -> bool:
 		"reputation_change": -int(RESTORATION_PROFILE.base_properties["refusal_penalty"]),
 		"summary": "Служба отказалась от восстановления имущества. Невыплаченная претензия остаётся открытой."}
 	return complete_job(job_id, result)
+
+
+func can_refuse_job(job_id: StringName) -> bool:
+	return is_job_available(job_id) and not is_job_dispatched(job_id) and active_job_id != job_id and get_pending_job_action(job_id).is_empty()
+
+
+func refuse_job(job_id: StringName) -> bool:
+	if not can_refuse_job(job_id):
+		return false
+	if bool(jobs[job_id].get("restoration", false)):
+		return refuse_restoration_job(job_id)
+	# Assignment without dispatch does not constitute a trip or completed work.
+	var job: Dictionary = jobs[job_id]
+	job["assigned"] = PackedStringArray()
+	job["overdue"] = false
+	jobs[job_id] = job
+	return complete_job(job_id, {"job_refused": true, "forfeit_payment": true,
+		"reputation_change": -2, "review": "За устранение проблемы так и не взялись. Придётся искать другую службу.",
+		"summary": "Служба отказалась от заявки до отправки бригады."})
 
 
 func _process_resident_access() -> void:
@@ -2909,6 +2968,8 @@ func _remove_employee_from_all_jobs(employee_id: StringName) -> void:
 
 func _update_parallel_job_unlocks() -> void:
 	var source_day := _job_completed_day(tutorial_job_id)
+	if source_day <= 0 and debug_tutorial_bypass_day > 0:
+		source_day = debug_tutorial_bypass_day
 	var jobs_are_due := source_day > 0 and day > source_day
 	_set_job_unlocked(&"walking_wardrobe", false)
 	_set_job_unlocked(GeneratedJobGeneratorScript.JOB_ID, jobs_are_due)

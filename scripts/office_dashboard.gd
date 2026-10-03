@@ -288,6 +288,7 @@ func _build_detail_panel() -> void:
 	panel.add_child(restoration_refuse_button)
 	var refusal_ui := _build_notice_overlay("ОТКАЗ ОТ ЗАЯВКИ", "Отказ снизит репутацию на 2. Невыплаченная претензия останется открытой.\n\nЗаявка будет закрыта и не появится повторно.", "ОТКАЗАТЬСЯ", "ВЕРНУТЬСЯ", _refuse_restoration)
 	restoration_refuse_dialog = refusal_ui["overlay"]
+	restoration_refuse_dialog.set_meta("body", refusal_ui["body"])
 	var access_ui := _build_notice_overlay("ВХОД В КВАРТИРУ", "", "ПОНЯТНО", "", Callable())
 	access_notice_dialog = access_ui["overlay"]
 	access_notice_body = access_ui["body"]
@@ -392,7 +393,7 @@ func _build_notice_overlay(title_text: String, body_text: String, confirm_text: 
 
 
 func _refuse_restoration() -> void:
-	game_state.refuse_restoration_job(restoration_refuse_job_id)
+	game_state.refuse_job(restoration_refuse_job_id)
 
 
 func _build_employee_panel() -> void:
@@ -461,6 +462,12 @@ func _build_office_hub() -> void:
 	_connect_editable_hotspot($ObjectHotspots/SupplyShop, "ЛАВКА СНАБЖЕНИЯ", "Очень нужные покупки", _open_supply_shop)
 
 	_build_office_menu_button()
+	if OS.is_debug_build():
+		for debug_parent: Control in [hub_layer, dashboard_layer]:
+			var skip_day_button := _button("ТЕСТ: ПРОПУСТИТЬ ДЕНЬ", Vector2(22, 20) if debug_parent == hub_layer else Vector2(625, 164), Vector2(300, 42))
+			skip_day_button.tooltip_text = "Перейти к следующему утру без выполнения заявки с краном и без штрафов. Обновляет автосохранение."
+			skip_day_button.pressed.connect(_debug_skip_day)
+			debug_parent.add_child(skip_day_button)
 	_build_cat_easter_egg()
 
 	var hint := _label("Наводите курсор на предметы. Кота не будите — он занят важным.", 19, COLOR_PARCHMENT)
@@ -2071,6 +2078,12 @@ func _finish_day() -> void:
 		game_state.save_autosave()
 
 
+func _debug_skip_day() -> void:
+	if not game_state.debug_skip_day():
+		var notice: Dictionary = _build_notice_overlay("ПРОПУСК ДНЯ", "Сначала завершите выезд или верните бригаду в офис.", "ПОНЯТНО", "", func() -> void: pass)
+		(notice["overlay"] as Control).visible = true
+
+
 func _refresh_supply_shop() -> void:
 	if supply_purchase_button == null:
 		return
@@ -2528,7 +2541,7 @@ func _refresh_details() -> void:
 	detail_more_button.tooltip_text = tr(str(job["description"]))
 	restoration_payment_label.visible = restoration
 	restoration_payment_label.text = game_state.get_restoration_payment_text(selected_job_id)
-	restoration_refuse_button.visible = restoration
+	restoration_refuse_button.visible = game_state.can_refuse_job(selected_job_id)
 	restoration_refuse_button.position.y = detail_more_button.position.y
 	restoration_payment_label.position.y = 240 if has_preference else 252
 	restoration_payment_label.size.y = 78 if has_preference else 86
@@ -2625,7 +2638,13 @@ func _layout_expanded_details() -> void:
 
 
 func _confirm_restoration_refusal() -> void:
+	if not game_state.can_refuse_job(selected_job_id):
+		return
 	restoration_refuse_job_id = selected_job_id
+	var body: Label = restoration_refuse_dialog.get_meta("body")
+	body.text = tr("Отказ снизит репутацию на 2.\nЗаявка будет закрыта без оплаты.")
+	if bool(game_state.jobs[selected_job_id].get("restoration", false)):
+		body.text = tr("Отказ снизит репутацию на 2. Невыплаченная претензия останется открытой.\n\nЗаявка будет закрыта и не появится повторно.")
 	game_state.set_clock_paused(true)
 	restoration_refuse_dialog.visible = true
 	restoration_refuse_dialog.move_to_front()

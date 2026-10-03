@@ -43,6 +43,36 @@ func _run() -> void:
 	_check(Catalog.has_compatible_vertical_slice(), "Каталог связывает комнату, объект, аномалию и цели")
 
 	var game_state := root.get_node("GameState")
+	var history_test_path := "res://tests/.generator_history_test.cfg"
+	_check(game_state._write_generator_history("last_anomaly_id", "deep_freeze", history_test_path) == OK, "История шкафа записывается")
+	_check(game_state._write_generator_history("last_faucet_anomaly_id", "faucet_freeze", history_test_path) == OK, "История крана записывается")
+	var history_reload := ConfigFile.new()
+	history_reload.load(history_test_path)
+	_check(history_reload.get_value("generator", "last_anomaly_id", "") == "deep_freeze", "Запись крана не стирает историю шкафа после перезапуска")
+	game_state._write_generator_history("last_anomaly_id", "active_fire", history_test_path)
+	history_reload.load(history_test_path)
+	_check(history_reload.get_value("generator", "last_faucet_anomaly_id", "") == "faucet_freeze", "Запись шкафа не стирает историю крана")
+	DirAccess.remove_absolute(history_test_path)
+	_check(load("res://scenes/TitleScreen.tscn") != null, "Главное меню с выбором тестовой заявки загружается")
+	for forced_id: StringName in [&"restless_animation", &"active_fire", &"deep_freeze"]:
+		game_state.debug_next_wardrobe_anomaly = forced_id
+		game_state.start_new_game()
+		_check(str(game_state.generated_jobs[String(Generator.JOB_ID)]["anomaly_id"]) == String(forced_id), "Выбор тестовой заявки создаёт %s" % forced_id)
+		_check(game_state.debug_next_wardrobe_anomaly.is_empty(), "Выбор действует только на одну новую игру")
+	game_state.start_new_game()
+	var debug_money: int = game_state.money
+	var debug_reputation: int = game_state.reputation
+	_check(game_state.debug_skip_day() and game_state.day == 2, "Отладочная кнопка пропускает первый день")
+	_check(game_state.is_job_available(Generator.JOB_ID), "Пропуск открывает шкаф без выполнения крана")
+	_check(game_state.money == debug_money and game_state.reputation == debug_reputation and game_state.job_reports.is_empty(), "Пропуск не начисляет оплату, штрафы и фиктивные отзывы")
+	_check(not game_state.is_tutorial_job_completed(), "Пропуск не выдаёт выполнение крана за настоящую работу")
+	_check(game_state._save_to_path(TEST_SAVE_PATH) == OK and game_state._load_from_path(TEST_SAVE_PATH) == OK, "Тестовый пропуск сохраняется и загружается")
+	_check(game_state.debug_tutorial_bypass_day == 1 and game_state.is_job_available(Generator.JOB_ID), "После загрузки шкаф остаётся доступен без фиктивного завершения крана")
+	game_state.active_job_id = Generator.JOB_ID
+	_check(not game_state.debug_skip_day() and game_state.day == 2, "Пропуск заблокирован во время активного выезда")
+	game_state.active_job_id = &""
+	_check(load("res://scenes/ui/OfficeDashboard.tscn") != null, "Офис с тестовой кнопкой загружается")
+	_check(game_state.debug_skip_day() and game_state.day == 3, "Тестовый пропуск работает и в следующие дни")
 	game_state.start_new_game()
 	var generated_id := Generator.JOB_ID
 	_check(game_state.jobs.has(generated_id) and game_state.generated_jobs.has(String(generated_id)), "Новая игра материализует генеративную заявку шкафа независимо от учебной заявки крана")
@@ -88,6 +118,23 @@ func _run() -> void:
 		DirAccess.remove_absolute(absolute_path)
 	if FileAccess.file_exists(LEGACY_TEST_SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(LEGACY_TEST_SAVE_PATH))
+	game_state.start_new_game()
+	game_state.debug_skip_day()
+	_check(game_state.can_refuse_job(generated_id), "Отказ доступен до отправки бригады")
+	var before_money: int = game_state.money
+	var before_reputation: int = game_state.reputation
+	_check(game_state.refuse_job(generated_id), "Обычная заявка закрывается отказом")
+	_check(game_state.money == before_money and game_state.reputation == before_reputation - 2, "Отказ без оплаты снижает репутацию на 2")
+	_check(not game_state.refuse_job(generated_id) and not game_state.is_job_available(generated_id), "Повторный отказ не списывает репутацию")
+	_check(bool(game_state.job_reports.back().get("job_refused", false)), "Отказ сохраняется как отдельный исход в отчёте")
+	_check(game_state._save_to_path(TEST_SAVE_PATH) == OK and game_state._load_from_path(TEST_SAVE_PATH) == OK, "Состояние после отказа сохраняется и загружается")
+	_check(not game_state.can_refuse_job(generated_id) and bool(game_state.job_reports.back().get("job_refused", false)), "Загрузка не возвращает отклонённую заявку")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE_PATH))
+	_check(game_state.get_action_duration(&"physical_move", &"move_left_fast") == 3 and game_state.get_action_duration(&"physical_move", &"move_left_careful") == 6, "Быстрое и аккуратное перемещение имеют разную длительность")
+	game_state.start_new_game()
+	game_state.debug_skip_day()
+	game_state.jobs[generated_id]["dispatched"] = true
+	_check(not game_state.can_refuse_job(generated_id) and not game_state.refuse_job(generated_id), "После отправки бригады отказ запрещён")
 	_finish()
 
 

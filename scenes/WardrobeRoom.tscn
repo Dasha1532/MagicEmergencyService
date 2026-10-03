@@ -15,6 +15,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ObjectStatusEffects.tscn" id="15_status_effects"]
 [ext_resource type="Texture2D" uid="uid://bkn238x6q58e0" path="res://assets/objects/walking_wardrobe/ash_pile.png" id="16_ash"]
 
+[ext_resource type="Texture2D" path="res://assets/objects/walking_wardrobe/frozen.png" id="17_frozen"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBox_wardrobe_placement"]
 bg_color = Color(0.025, 0.018, 0.012, 0.48)
 border_width_left = 4
@@ -200,6 +202,26 @@ mouse_filter = 2
 texture = ExtResource("4_idle")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="Frozen" type="TextureRect" parent="Wardrobe"]
+visible = false
+z_index = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -142.0
+offset_top = -354.0
+offset_right = 121.0
+offset_bottom = 161.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("17_frozen")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Broken" type="TextureRect" parent="Wardrobe" unique_id=386352566]
 
 [node name="Broken" type="TextureRect" parent="Wardrobe" unique_id=386352566]
 visible = false

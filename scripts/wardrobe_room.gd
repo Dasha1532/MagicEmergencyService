@@ -44,6 +44,10 @@ var action_in_progress: bool = false
 var pending_dialogue_action: StringName = &""
 var pending_dialogue_intent: StringName = &""
 var action_had_intro: bool = false
+var physical_action_ready := false
+var physical_actor_finished := false
+var physical_action: StringName = &""
+var physical_intent: StringName = &""
 var entrance_position: Vector2
 var fire_progression_revision: int = 0
 var wardrobe_steps_player: AudioStreamPlayer
@@ -129,7 +133,12 @@ func _on_long_action_finished(employee_id: StringName) -> void:
 	long_action_pose = &""
 
 
+func _base_move_intent(intent: StringName) -> StringName:
+	return StringName(String(intent).trim_suffix("_fast").trim_suffix("_careful"))
+
+
 func _persistent_pose_for_action(action_id: StringName, intent: StringName) -> StringName:
+	intent = _base_move_intent(intent)
 	if action_id != &"physical_move":
 		return &"work"
 	if intent == &"break_legs":
@@ -239,12 +248,7 @@ func _on_tool_selected(tool_id: StringName) -> void:
 		return
 	selected_tool_id = tool_id
 	if tool_id == &"physical_move":
-		tool_bar.show_intents("Силовая работа", [
-			{"id": &"hold", "label": "Отпустить" if bool(simulation.world_object.get("held", false)) else "Удерживать"},
-			{"id": &"move_left", "label": _move_label(&"left_wall")},
-			{"id": &"move_kitchen", "label": _move_label(&"kitchen_passage")},
-			{"id": &"break_legs", "label": "Сломать ножки"},
-		])
+		tool_bar.show_intents("Силовая работа", simulation.physical_intents())
 		return
 	if tool_id == &"telekinesis":
 		tool_bar.show_intents("Куда переместить?", [
@@ -258,9 +262,8 @@ func _on_tool_selected(tool_id: StringName) -> void:
 
 
 func _move_label(zone_id: StringName) -> String:
-	var requested: bool = zone_id == simulation.world_object["requested_zone"]
 	var label := "К левой стене" if zone_id == &"left_wall" else "В проход на кухню"
-	return "%s %s" % [tr(label), tr("(просьба хозяйки)")] if requested else tr(label)
+	return tr(label)
 
 
 func _on_employee_selected(employee_id: StringName) -> void:
@@ -288,9 +291,22 @@ func _on_wardrobe_selected() -> void:
 	var contextual_actions: Array[Dictionary] = []
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var abilities: PackedStringArray = employee.get("abilities", PackedStringArray())
-	if abilities.has("repair"):
+	if abilities.has("repair") and simulation.needs_anchor():
 		contextual_actions.append({"id": &"anchor", "label": "Закрепить у стены"})
-	tool_bar.show_for_object("Шкаф", _wardrobe_target_global(), {}, contextual_actions)
+	if selected_employee_id == &"grog" and simulation.offers_force_inspection():
+		contextual_actions.append({"id": &"diagnose", "label": "Осмотр"})
+	var hidden_actions := PackedStringArray()
+	if selected_employee_id == &"grog":
+		hidden_actions.append("diagnose")
+	if simulation.physical_intents().is_empty():
+		hidden_actions.append("physical_move")
+	if not simulation.needs_repair():
+		hidden_actions.append("repair")
+	if bool(simulation.world_object.get("destroyed", false)):
+		hidden_actions = PackedStringArray(["repair", "physical_move", "freeze", "heat", "antimagic", "telekinesis"])
+		if selected_employee_id == &"grog":
+			hidden_actions.append("diagnose")
+	tool_bar.show_for_object("Шкаф", _wardrobe_target_global(), {}, contextual_actions, hidden_actions)
 
 
 func _on_context_intent_selected(intent: StringName) -> void:
@@ -309,7 +325,7 @@ func _request_action() -> void:
 		if not repair_hud.show_employee_reaction(selected_employee_id, contextual):
 			_show_feedback(contextual, true)
 		return
-	if selected_employee_id == &"boris" and selected_tool_id == &"repair" and int(simulation.world_object["mobility"]) > 0 and not bool(simulation.world_object["destroyed"]):
+	if selected_employee_id == &"boris" and selected_tool_id == &"repair" and not simulation.needs_repair():
 		if not repair_hud.show_employee_reaction(selected_employee_id, contextual):
 			_show_feedback(contextual, true)
 		return
@@ -342,14 +358,14 @@ func _start_action() -> void:
 		return
 	if employee_actor.visible:
 		var is_physical: bool = game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical"
-		var uses_hold_pose: bool = pending_intent in [&"hold", &"move_left", &"move_kitchen", &"release"]
-		var pushes_from_behind: bool = pending_intent in [&"move_left", &"move_kitchen"]
+		var uses_hold_pose: bool = _base_move_intent(pending_intent) in [&"hold", &"move_left", &"move_kitchen", &"release"]
+		var pushes_from_behind: bool = _base_move_intent(pending_intent) in [&"move_left", &"move_kitchen"]
 		var action_pose: StringName = &"hold" if uses_hold_pose else (&"neutral" if selected_tool_id == &"diagnose" else &"work")
 		if is_physical:
-			var duration: int = game_state.get_action_duration(selected_tool_id, pending_intent)
-			if game_state.start_job_action(game_state.active_job_id, selected_employee_id, selected_tool_id, pending_intent, duration):
-				repair_hud.resume_timed_action(_resolve_action.bind(selected_tool_id, pending_intent))
-				game_state.set_clock_paused(false)
+			physical_action = selected_tool_id
+			physical_intent = pending_intent
+			physical_action_ready = false
+			physical_actor_finished = false
 		employee_actor.play_action(
 			selected_tool_id,
 			_wardrobe_target_global(),
@@ -364,8 +380,32 @@ func _start_action() -> void:
 
 
 func _on_employee_action_impact(action_id: StringName) -> void:
+	if not physical_action.is_empty():
+		var duration: int = game_state.get_action_duration(physical_action, physical_intent)
+		if game_state.start_job_action(game_state.active_job_id, selected_employee_id, physical_action, physical_intent, duration):
+			repair_hud.resume_timed_action(_on_physical_timer_finished)
+			game_state.set_clock_paused(false)
+		else:
+			physical_action = &""
+			_show_feedback("Не удалось начать работу. Попробуйте выбрать действие ещё раз.", true)
+		return
 	if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"magic":
 		_resolve_action(action_id, pending_intent)
+
+
+func _on_physical_timer_finished() -> void:
+	physical_action_ready = true
+	_finish_physical_action()
+
+
+func _finish_physical_action() -> void:
+	if physical_action.is_empty() or not physical_action_ready or not physical_actor_finished:
+		return
+	var action := physical_action
+	var intent := physical_intent
+	physical_action = &""
+	_resolve_action(action, intent)
+	_on_employee_action_finished()
 
 
 func _resume_pending_action() -> void:
@@ -383,6 +423,10 @@ func _resume_pending_action() -> void:
 
 
 func _on_employee_action_finished() -> void:
+	if not physical_action.is_empty():
+		physical_actor_finished = true
+		_finish_physical_action()
+		return
 	action_in_progress = false
 	pending_intent = &""
 	wardrobe.set_interaction_enabled(true)
@@ -398,16 +442,18 @@ func _resolve_action(action_id: StringName, intent: StringName = &"") -> void:
 	var previous_damage: int = int(simulation.world_object.get("damage", 0)) + int(simulation.world_object.get("contents_damage", 0))
 	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, intent)
 	if bool(result.get("applied", false)) and action_id == &"physical_move":
-		if intent in [&"move_left", &"move_kitchen"]:
+		if _base_move_intent(intent) in [&"move_left", &"move_kitchen"]:
 			_play_audio_cue(&"play_wardrobe_move")
 		elif intent == &"break_legs":
 			_play_audio_cue(&"play_heavy_impact")
 			_play_audio_cue(&"play_breaking_wood")
 	_apply_visual_state()
 	_restore_grog_hold_pose_if_needed()
-	var resident_message: String = simulation.get_resident_reaction()
+	var resident_message: String = str(result.get("resident_message", simulation.get_resident_reaction()))
 	var damage_now: int = int(simulation.world_object.get("damage", 0)) + int(simulation.world_object.get("contents_damage", 0))
-	if action_id == &"diagnose":
+	if action_id == &"diagnose" and selected_employee_id == &"grog":
+		repair_hud.show_employee_reaction(selected_employee_id, str(result["message"]), true)
+	elif action_id == &"diagnose":
 		repair_hud.show_dialogue("РЕЗУЛЬТАТ ОСМОТРА", str(result["message"]))
 	elif damage_now > previous_damage and not resident_message.is_empty():
 		repair_hud.show_resident_dialogue(resident_message)
@@ -544,7 +590,7 @@ func _wardrobe_approach_position(intent: StringName) -> Vector2:
 	# Для удержания и толкания ладони совмещаются с правой боковой стенкой.
 	# Для поломки Грог остаётся ближе к передней части и ножкам.
 	var wardrobe_width: float = wardrobe.size.x * wardrobe.scale.x
-	var contact_ratio: float = 0.53 if intent in [&"hold", &"release", &"move_left", &"move_kitchen"] else 0.25
+	var contact_ratio: float = 0.53 if _base_move_intent(intent) in [&"hold", &"release", &"move_left", &"move_kitchen"] else 0.25
 	return Vector2(wardrobe.position.x + wardrobe_width * contact_ratio, physical_approach.position.y)
 
 

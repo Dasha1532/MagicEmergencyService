@@ -443,9 +443,9 @@ func _build_employee_reaction_panel() -> void:
 	close_button.pressed.connect(clear_employee_reaction)
 
 
-func show_employee_reaction(employee_id: StringName, message: String) -> bool:
+func show_employee_reaction(employee_id: StringName, message: String, force: bool = false) -> bool:
 	var normalized_message := message.strip_edges()
-	if not should_show_employee_reaction(employee_id, normalized_message):
+	if normalized_message.is_empty() or (not force and not should_show_employee_reaction(employee_id, normalized_message)):
 		return false
 	var employee: Dictionary = game_state.employees.get(employee_id, {})
 	queued_dialogues.clear()
