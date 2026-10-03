@@ -15,6 +15,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/ToolBar.tscn" id="8_toolbar"]
 [ext_resource type="PackedScene" path="res://scenes/ui/RepairHUD.tscn" id="9_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="10_pause"]
+[ext_resource type="Texture2D" uid="uid://chrmgeu0c11dy" path="res://assets/effects/status/frost.png" id="11_mouth_frost"]
 
 [node name="GargoyleAttic" type="Node2D" unique_id=2057033162]
 script = ExtResource("5_room")
@@ -140,7 +141,6 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Frozen" type="TextureRect" parent="GargoylePlacement" unique_id=375083958]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -153,6 +153,18 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("4_frozen")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MouthFrost" type="TextureRect" parent="GargoylePlacement" unique_id=1285158623]
+z_index = 1
+layout_mode = 0
+offset_left = 34.0
+offset_top = 93.0
+offset_right = 130.0
+offset_bottom = 202.0
+mouse_filter = 2
+texture = ExtResource("11_mouth_frost")
 expand_mode = 1
 stretch_mode = 5
 

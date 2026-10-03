@@ -59,6 +59,16 @@ static func valve_preflight_reason(properties: Dictionary, employee: Dictionary 
 
 # Один контракт переходов для акта, компенсации и памяти: ущерб определяется
 # изменением свойств, а не именем сотрудника или названием заявки.
+static func refusal_reason(action_id: StringName, properties: Dictionary) -> StringName:
+	if not bool(properties.get("frozen", false)):
+		return &""
+	var refusals: Dictionary = properties.get("frozen_action_refusals", {}) as Dictionary
+	var reason := StringName(str(refusals.get(String(action_id), "")))
+	if reason == &"ordinary_ice" and (bool(properties.get("cold_source_active", false)) or (bool(properties.get("moving", false)) and int(properties.get("magic_level", 0)) > 0)):
+		return &""
+	return reason
+
+
 static func action_event(employee_id: StringName, action_id: StringName, before: Dictionary, after: Dictionary, result: Dictionary) -> Dictionary:
 	var changes: Array[Dictionary] = []
 	var damaged_targets: Array[String] = []

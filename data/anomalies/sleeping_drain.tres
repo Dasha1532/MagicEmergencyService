@@ -6,9 +6,15 @@
 script = ExtResource("1")
 id = &"sleeping_drain"
 display_name = "Магический сон водостока"
+generator_enabled = true
+compatible_object_ids = PackedStringArray("drain_gargoyle")
 required_tags = PackedStringArray("animatable", "cloggable", "drainage")
 forbidden_tags = PackedStringArray("damaged")
 initial_effects = PackedStringArray("dormant", "clogged", "flooding")
 objective_ids = PackedStringArray("restore_drainage")
+initial_state = {"awake": false, "clogged": true, "bypass_open": false, "damaged": false, "frozen": false, "magic_level": 3, "damage": 0}
+resolution = {"required_false": PackedStringArray("flooding")}
+solution_plans = [{"abilities": PackedStringArray("repair"), "family": &"mechanical_bypass"}, {"abilities": PackedStringArray("animate"), "family": &"awaken_drain"}]
+presentation = {"card_title": "Восстановить водоотвод на чердаке", "title": "Восстановить водоотвод на чердаке", "objective": "Восстановить водоотвод на чердаке", "description": "Водосточная горгулья уснула и забилась листьями. Дождевая вода уже затапливает чердак.", "danger": "Магия, затопление", "resident_request": "Горгулья уснула прямо во время ливня. На чердаке уже можно разводить уток — разбудите её или хотя бы отведите воду."}
 visual_effects = PackedStringArray("dormant", "flooding")
 weight = 5

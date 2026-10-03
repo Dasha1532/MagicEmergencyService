@@ -216,6 +216,9 @@ func _apply_selected_action() -> void:
 		contextual_actions.append({"id": &"normal_force", "label": "Обычная сила"})
 		contextual_actions.append({"id": &"brute_force", "label": "Грубая сила"})
 	elif selected_employee_id == &"boris":
+		if not simulation.can_employee_start_action(&"repair", employee):
+			hidden_actions.append("repair")
+		contextual_actions = contextual_actions.filter(func(action: Dictionary) -> bool: return simulation.can_employee_start_action(StringName(str(action.get("id", ""))), employee))
 		if not ObjectInteractionRules.is_applicable(&"repair", simulation.world_object):
 			hidden_actions.append("repair")
 		if game_state.has_supply_item(&"thermal_regulator") and simulation.can_install_temperature_regulator() and simulation.can_employee_start_action(&"install_thermal_regulator", employee):

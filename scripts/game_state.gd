@@ -9,7 +9,7 @@ signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 28
+const SAVE_VERSION: int = 29
 const CLIENT_GREETING_PROFILE := preload("res://data/client_relationship_greetings.gd")
 const RESTORATION_PROFILE := preload("res://data/restoration/faucet.tres")
 const RESTORATION_REFUSAL_REVIEW := "Заменить уничтоженный кран отказались. Придётся искать другую службу."
@@ -30,7 +30,7 @@ const DISMISSAL_DEBT_THRESHOLD: int = -800
 const REAL_SECONDS_PER_GAME_MINUTE: float = 3.0
 const DEMO_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle", "escaped_ghost", "frozen_bath"]
 const DEMO_CORE_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle"]
-const HIDDEN_LEGACY_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle", "escaped_ghost", "frozen_bath"]
+const HIDDEN_LEGACY_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "escaped_ghost", "frozen_bath"]
 const SUPPLY_ITEMS: Dictionary = {
 	&"animation_kit": {
 		"name": "Практическое оживление бытовых предметов",
@@ -168,6 +168,7 @@ var last_generated_anomaly_id: StringName = &""
 var last_generated_faucet_anomaly_id: StringName = &""
 var debug_next_wardrobe_anomaly: StringName = &""
 var debug_tutorial_bypass_day: int = 0
+var debug_skipped_job_ids: PackedStringArray = []
 var clock_paused: bool = true
 var clock_speed: int = 1
 var _clock_accumulator: float = 0.0
@@ -841,6 +842,8 @@ func is_job_available(job_id: StringName) -> bool:
 	# но больше не участвуют в генеративном цикле и не показываются игроку.
 	if HIDDEN_LEGACY_JOB_IDS.has(String(job_id)):
 		return false
+	if OS.is_debug_build() and debug_skipped_job_ids.has(String(job_id)):
+		return false
 	return jobs.has(job_id) and bool(jobs[job_id].get("unlocked", false)) and not completed_job_ids.has(String(job_id))
 
 
@@ -953,6 +956,11 @@ func debug_skip_day() -> bool:
 	for job_id: StringName in jobs:
 		if bool(jobs[job_id].get("dispatched", false)) and not completed_job_ids.has(String(job_id)):
 			return false
+	# Пропускаем только доступные этапы, не создавая результатов выполненной работы.
+	for stage_id: StringName in [GeneratedJobGeneratorScript.JOB_ID, &"sleeping_gargoyle"]:
+		if is_job_available(stage_id):
+			debug_skipped_job_ids.append(String(stage_id))
+			jobs[stage_id]["assigned"] = PackedStringArray()
 	if not is_tutorial_job_completed() and debug_tutorial_bypass_day == 0:
 		debug_tutorial_bypass_day = day
 		_set_job_unlocked(tutorial_job_id, false)
@@ -1209,6 +1217,9 @@ func get_job_repair_state(job_id: StringName) -> Dictionary:
 
 
 func set_job_repair_state(job_id: StringName, repair_state: Dictionary) -> void:
+	var inspected: Array = get_job_repair_state(job_id).get("boris_inspected_objects", [])
+	if not inspected.is_empty():
+		repair_state["boris_inspected_objects"] = inspected.duplicate()
 	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
 		return
 	var job: Dictionary = jobs[job_id]
@@ -1382,6 +1393,7 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 		"completed_time": time_minutes,
 		"crew": Array(crew_names),
 		"crew_ids": Array(assigned),
+		"successful_employee_ids": result.get("successful_employee_ids", []),
 		"damage_employee_ids": Array(damage_employee_ids),
 		"damage_severity_by_employee": damage_severity_by_employee,
 		"object_destroyed": bool(result.get("object_destroyed", false)),
@@ -1990,6 +2002,7 @@ func start_new_game() -> void:
 	world_memory.reset()
 	campaign_seed = int(Time.get_unix_time_from_system()) ^ randi()
 	debug_tutorial_bypass_day = 0
+	debug_skipped_job_ids = PackedStringArray()
 	next_generated_job_index = 0
 	generated_jobs = {}
 	tutorial_state = {"version": 1, "status": "active", "step": "office_welcome"}
@@ -2127,6 +2140,7 @@ func _save_to_path(path: String) -> Error:
 		"tutorial_state": tutorial_state,
 		"campaign_seed": campaign_seed,
 		"debug_tutorial_bypass_day": debug_tutorial_bypass_day,
+		"debug_skipped_job_ids": Array(debug_skipped_job_ids),
 		"next_generated_job_index": next_generated_job_index,
 		"generated_jobs": generated_jobs,
 		"world_memory": world_memory.to_data(),
@@ -2203,6 +2217,7 @@ func _load_from_path(path: String) -> Error:
 	generated_jobs = {}
 	campaign_seed = int(save_data.get("campaign_seed", 0))
 	debug_tutorial_bypass_day = int(save_data.get("debug_tutorial_bypass_day", 0)) if OS.is_debug_build() else 0
+	debug_skipped_job_ids = PackedStringArray(save_data.get("debug_skipped_job_ids", [])) if OS.is_debug_build() else PackedStringArray()
 	next_generated_job_index = int(save_data.get("next_generated_job_index", 0))
 	var loaded_generated_jobs: Variant = save_data.get("generated_jobs", {})
 	if loaded_generated_jobs is Dictionary:
@@ -2284,6 +2299,8 @@ func _load_from_path(path: String) -> Error:
 		var active_job: Dictionary = jobs[active_job_id]
 		active_job["dispatched"] = true
 		jobs[active_job_id] = active_job
+	if jobs.has(&"sleeping_gargoyle") and bool(jobs[&"sleeping_gargoyle"].get("unlocked", false)) and not completed_job_ids.has("sleeping_gargoyle"):
+		_set_gargoyle_job_unlocked(true)
 	if not active_job_id.is_empty() and not is_job_available(active_job_id):
 		active_job_id = &""
 	if not is_job_available(selected_job_id):
@@ -2813,7 +2830,12 @@ func _remove_generated_job_entries() -> void:
 		if bool((jobs[job_id] as Dictionary).get("generated", false)):
 			ids_to_remove.append(job_id)
 	for job_id: StringName in ids_to_remove:
-		jobs.erase(job_id)
+		if job_id == &"sleeping_gargoyle":
+			# This stable ID also existed before generated instances were saved.
+			jobs[job_id]["generated"] = false
+			jobs[job_id].erase("generated_instance")
+		else:
+			jobs.erase(job_id)
 
 
 func _generation_context() -> Dictionary:
@@ -3042,7 +3064,7 @@ func _unlock_gargoyle_job() -> void:
 
 
 func _unlock_gargoyle_job_if_due() -> void:
-	if not completed_job_ids.has(String(GeneratedJobGeneratorScript.JOB_ID)):
+	if not completed_job_ids.has(String(GeneratedJobGeneratorScript.JOB_ID)) and not (OS.is_debug_build() and debug_skipped_job_ids.has(String(GeneratedJobGeneratorScript.JOB_ID))):
 		return
 	var portal_is_due := completed_job_ids.has("portal_mirror")
 	if jobs.has(&"portal_mirror"):
@@ -3055,6 +3077,15 @@ func _set_gargoyle_job_unlocked(unlocked: bool) -> void:
 	var job_id := &"sleeping_gargoyle"
 	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
 		return
+	if not bool(jobs[job_id].get("generated", false)):
+		var previous: Dictionary = jobs[job_id].duplicate(true)
+		var instance := GeneratedJobGeneratorScript.generate_gargoyle(campaign_seed, _available_ability_ids(), _generation_context())
+		if instance.is_empty():
+			return
+		_register_generated_job(instance)
+		for key: String in ["assigned", "dispatched", "pending_action", "overdue", "time_left"]:
+			if previous.has(key):
+				jobs[job_id][key] = previous[key]
 	var job: Dictionary = jobs[job_id]
 	job["unlocked"] = unlocked
 	jobs[job_id] = job

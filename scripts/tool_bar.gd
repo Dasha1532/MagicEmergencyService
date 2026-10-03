@@ -33,9 +33,13 @@ var current_object_name: String = "Объект"
 var menu_height: float = 117.0
 var current_action_labels: Dictionary = {}
 var hidden_action_ids: PackedStringArray = PackedStringArray()
+var configured_employee_name: String = ""
+var pending_inspection_object: String = ""
+var pending_inspection_log_size: int = 0
 
 
 func _ready() -> void:
+	get_node("/root/GameState").state_changed.connect(_record_completed_inspection)
 	buttons_container.move_child(%DiagnoseButton, 0)
 	buttons_container.move_child(%RepairButton, 1)
 	for button in buttons:
@@ -57,6 +61,7 @@ func _ready() -> void:
 
 
 func configure_for_employee(employee_name: String, ability_ids: PackedStringArray, core_actions: String) -> void:
+	configured_employee_name = employee_name
 	_clear_temporary_buttons()
 	available_buttons.clear()
 	var available_count: int = 0
@@ -84,6 +89,19 @@ func show_for_object(object_name: String, anchor_position: Vector2, action_label
 	current_object_name = object_name
 	current_action_labels = action_labels.duplicate()
 	hidden_action_ids = hidden_actions.duplicate()
+	if _is_boris():
+		_record_completed_inspection()
+		for action: Array in TOOL_NAMES.values():
+			if not _boris_action_allowed(StringName(action[0])):
+				hidden_action_ids.append(String(action[0]))
+		contextual_actions = contextual_actions.filter(func(action: Dictionary) -> bool: return _boris_action_allowed(StringName(str(action.get("id", "")))))
+		var state: Node = get_node("/root/GameState")
+		var inspected: Array = state.get_job_repair_state(state.active_job_id).get("boris_inspected_objects", [])
+		if not inspected.has(object_name):
+			for action: Array in TOOL_NAMES.values():
+				if action[0] != &"diagnose":
+					hidden_action_ids.append(String(action[0]))
+			contextual_actions = []
 	_show_ability_buttons()
 	_add_contextual_actions(contextual_actions)
 	title_label.text = tr(object_name).to_upper()
@@ -131,7 +149,59 @@ func _resize_for_action_count(action_count: int) -> void:
 func _on_button_pressed(button: Button) -> void:
 	var tool_data: Array = TOOL_NAMES[button.name]
 	current_tool_id = tool_data[0]
+	if _show_state_refusal(current_tool_id):
+		return
+	if _is_boris() and current_tool_id == &"diagnose":
+		var state: Node = get_node("/root/GameState")
+		pending_inspection_object = current_object_name
+		pending_inspection_log_size = state.get_job_repair_state(state.active_job_id).get("action_log", []).size()
 	tool_selected.emit(current_tool_id)
+
+
+func _is_boris() -> bool:
+	var state: Node = get_node("/root/GameState")
+	return configured_employee_name == str(state.employees[&"boris"]["name"]) or configured_employee_name == tr(str(state.employees[&"boris"]["name"]))
+
+
+func _boris_action_allowed(action_id: StringName) -> bool:
+	if action_id == &"diagnose":
+		return true
+	var ancestor: Node = get_parent()
+	while ancestor != null:
+		if "simulation" in ancestor:
+			var sim: Variant = ancestor.get("simulation")
+			if sim != null and "world_object" in sim and not preload("res://scripts/object_interaction_rules.gd").refusal_reason(action_id, sim.world_object).is_empty():
+				return true
+			if sim != null and sim.has_method("can_begin_action"):
+				for method: Dictionary in sim.get_method_list():
+					if str(method["name"]) == "can_begin_action":
+						if (method["args"] as Array).size() > 1:
+							var state: Node = get_node("/root/GameState")
+							return bool(sim.call("can_begin_action", action_id, state.get_employee_with_equipment(&"boris")))
+						return bool(sim.call("can_begin_action", action_id))
+			return true
+		ancestor = ancestor.get_parent()
+	return true
+
+
+func _record_completed_inspection() -> void:
+	if pending_inspection_object.is_empty():
+		return
+	var state: Node = get_node("/root/GameState")
+	var repair_state: Dictionary = state.get_job_repair_state(state.active_job_id)
+	var entries: Array = repair_state.get("action_log", [])
+	if entries.size() <= pending_inspection_log_size:
+		return
+	var entry: Dictionary = entries.back()
+	if str(entry.get("employee_id", "")) != "boris" or str(entry.get("action_id", "")) != "diagnose" or not bool((entry.get("result", {}) as Dictionary).get("applied", false)):
+		pending_inspection_object = ""
+		return
+	var inspected: Array = repair_state.get("boris_inspected_objects", []).duplicate()
+	if not inspected.has(pending_inspection_object):
+		inspected.append(pending_inspection_object)
+	pending_inspection_object = ""
+	repair_state["boris_inspected_objects"] = inspected
+	state.job_repair_states[String(state.active_job_id)] = repair_state
 
 
 func _on_intent_pressed(intent_id: StringName) -> void:
@@ -141,7 +211,29 @@ func _on_intent_pressed(intent_id: StringName) -> void:
 
 func _on_context_action_pressed(action_id: StringName) -> void:
 	current_tool_id = action_id
+	if _show_state_refusal(action_id):
+		return
 	tool_selected.emit(current_tool_id)
+
+
+func _show_state_refusal(action_id: StringName) -> bool:
+	var ancestor: Node = get_parent()
+	while ancestor != null:
+		if "simulation" in ancestor and "repair_hud" in ancestor:
+			var sim: Variant = ancestor.get("simulation")
+			if sim == null or not "world_object" in sim:
+				return false
+			var reason := preload("res://scripts/object_interaction_rules.gd").refusal_reason(action_id, sim.world_object)
+			if reason.is_empty():
+				return false
+			var state: Node = get_node("/root/GameState")
+			for employee_id: StringName in state.employees:
+				if configured_employee_name == str(state.employees[employee_id]["name"]) or configured_employee_name == tr(str(state.employees[employee_id]["name"])):
+					visible = false
+					ancestor.repair_hud.show_employee_reaction(employee_id, preload("res://scripts/employee_reaction_resolver.gd").refusal_for(reason), true)
+					return true
+		ancestor = ancestor.get_parent()
+	return false
 
 
 func _show_ability_buttons() -> void:

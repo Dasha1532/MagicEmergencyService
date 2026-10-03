@@ -296,6 +296,10 @@ func _on_wardrobe_selected() -> void:
 	if selected_employee_id == &"grog" and simulation.offers_force_inspection():
 		contextual_actions.append({"id": &"diagnose", "label": "Осмотр"})
 	var hidden_actions := PackedStringArray()
+	if selected_employee_id == &"boris":
+		if not simulation.can_begin_action(&"repair"):
+			hidden_actions.append("repair")
+		contextual_actions = contextual_actions.filter(func(action: Dictionary) -> bool: return simulation.can_begin_action(StringName(str(action.get("id", "")))))
 	if selected_employee_id == &"grog":
 		hidden_actions.append("diagnose")
 	if simulation.physical_intents().is_empty():

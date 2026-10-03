@@ -43,6 +43,27 @@ static func reaction_for(employee: Dictionary, action_id: StringName, world_obje
 	return ""
 
 
+static var refusal_pools: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/action_refusal_pools.json"))
+static var previous_refusal_indexes: Dictionary = {}
+
+
+static func refusal_for(reason: StringName) -> String:
+	var phrases: Array = refusal_pools.get(String(reason), [])
+	return phrase_from_pool(reason, phrases)
+
+
+static func phrase_from_pool(pool_id: StringName, phrases: Array) -> String:
+	if phrases.is_empty():
+		return ""
+	var candidates: Array[int] = []
+	for index: int in phrases.size():
+		if index != int(previous_refusal_indexes.get(pool_id, -1)) or phrases.size() == 1:
+			candidates.append(index)
+	var selected: int = candidates.pick_random()
+	previous_refusal_indexes[pool_id] = selected
+	return str(phrases[selected])
+
+
 static func no_effect_for(employee_id: StringName) -> String:
 	return {
 		&"liliya": "Похоже, без изменений. Значит, одного температурного воздействия здесь недостаточно.",

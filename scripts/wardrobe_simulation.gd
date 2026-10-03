@@ -15,6 +15,7 @@ const ZONE_NAMES: Dictionary = {
 var world_object: Dictionary = {
 	"instance_id": &"old_quarter_5.hall.wardrobe",
 	"definition_id": &"walking_wardrobe",
+	"frozen_action_refusals": {"physical_move": "frozen_force", "antimagic": "ordinary_ice"},
 	"mass": 8,
 	"durability": 7,
 	"temperature": 2,
@@ -248,6 +249,9 @@ func get_employee_reaction(employee_id: StringName, action_id: StringName, inten
 
 func apply_action(employee_id: StringName, action_id: StringName, intent: StringName = &"") -> Dictionary:
 	action_before = _snapshots()
+	var refusal := ObjectInteractionRulesScript.refusal_reason(action_id, world_object)
+	if not refusal.is_empty():
+		return _record_result(employee_id, action_id, intent, false, EmployeeReactionResolverScript.refusal_for(refusal))
 	var damage_before := int(world_object.get("damage", 0))
 	var contents_damage_before := int(world_object.get("contents_damage", 0))
 	var destroyed_before := bool(world_object.get("destroyed", false))

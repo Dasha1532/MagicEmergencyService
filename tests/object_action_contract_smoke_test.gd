@@ -172,7 +172,12 @@ func _run() -> void:
 	house.selected_employee_id = &"boris"
 	house.tool_bar.configure_for_employee("Борис Медяк", boris["abilities"], "Ремонт")
 	house._apply_selected_action()
-	_check(house.tool_bar.temporary_buttons.size() == 1 and house.tool_bar.temporary_buttons[0].text == "Повернуть вентиль", "Actual hot faucet menu keeps valve")
+	_check(house.tool_bar.temporary_buttons.is_empty() and house.tool_bar.get_node("%DiagnoseButton").visible, "Boris starts with inspection only")
+	house.tool_bar._on_button_pressed(house.tool_bar.get_node("%DiagnoseButton"))
+	house.simulation.apply_action(&"boris", &"diagnose")
+	state.set_job_repair_state(state.active_job_id, house.simulation.get_state())
+	house._apply_selected_action()
+	_check(house.tool_bar.temporary_buttons.is_empty() and not house.tool_bar.get_node("%RepairButton").visible, "Hot metal without protection offers no refused work after inspection")
 	house.selected_tool_id = &"turn_valve"
 	house._begin_selected_action()
 	_check(not house.action_in_progress and not house.repair_hud.is_timed_action_active(), "Refusal does not start movement or work")

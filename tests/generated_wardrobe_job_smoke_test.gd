@@ -73,7 +73,11 @@ func _run() -> void:
 	game_state.active_job_id = &""
 	_check(load("res://scenes/ui/OfficeDashboard.tscn") != null, "Офис с тестовой кнопкой загружается")
 	_check(game_state.debug_skip_day() and game_state.day == 3, "Тестовый пропуск работает и в следующие дни")
+	_check(not game_state.is_job_available(Generator.JOB_ID) and game_state.is_job_available(&"sleeping_gargoyle"), "Второй пропуск заменяет шкаф горгульей")
+	_check(not game_state.completed_job_ids.has(String(Generator.JOB_ID)) and game_state.job_reports.is_empty() and game_state.money == debug_money and game_state.reputation == debug_reputation, "Пропуск шкафа не подделывает выполнение и расчёт")
+	_check(game_state._save_to_path(TEST_SAVE_PATH) == OK and game_state._load_from_path(TEST_SAVE_PATH) == OK and not game_state.is_job_available(Generator.JOB_ID) and game_state.is_job_available(&"sleeping_gargoyle"), "Загрузка сохраняет переход от шкафа к горгулье")
 	game_state.start_new_game()
+	_check(game_state.debug_skipped_job_ids.is_empty(), "Новая игра сбрасывает тестовые пропуски")
 	var generated_id := Generator.JOB_ID
 	_check(game_state.jobs.has(generated_id) and game_state.generated_jobs.has(String(generated_id)), "Новая игра материализует генеративную заявку шкафа независимо от учебной заявки крана")
 	_check(not game_state.is_job_available(generated_id), "В первый обучающий день генеративная карточка скрыта")

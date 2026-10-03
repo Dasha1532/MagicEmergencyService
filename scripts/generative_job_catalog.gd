@@ -9,11 +9,13 @@ static var OBJECTS: Dictionary = _load_definitions(OBJECT_DEFINITIONS_PATH)
 static var ANOMALIES: Dictionary = _load_definitions(ANOMALY_DEFINITIONS_PATH)
 
 static var RESIDENTS: Dictionary = {
+	&"mirabel": {"id": &"mirabel", "name": "Госпожа Мирабель", "portrait": "res://assets/portraits/residents/mirabel.png", "home_id": &"tower_street_8", "preferences": PackedStringArray(["preserve_property"])},
 	&"eleonora": {"id": &"eleonora", "name": "Госпожа Элеонора", "portrait": "res://assets/portraits/residents/eleonora.png", "home_id": &"old_quarter_5", "preferences": PackedStringArray(["tidy", "quiet", "preserve_property"])},
 	&"ragnar": {"id": &"ragnar", "name": "Господин Рагнар", "portrait": "res://assets/portraits/residents/ragnar.png", "home_id": &"old_quarter_5", "preferences": PackedStringArray(["fast_response", "preserve_plumbing"])},
 }
 
 static var ROOMS: Dictionary = {
+	&"mirabel_attic": {"id": &"mirabel_attic", "apartment_id": &"tower_street_8", "address": "Башенная улица, 8", "scene_path": "res://scenes/GargoyleAttic.tscn", "zones": PackedStringArray(["attic"]), "supported_object_ids": PackedStringArray(["drain_gargoyle"]), "supported_effects": PackedStringArray(["dormant", "awake", "clogged", "flooding", "frozen", "damaged"])},
 	&"eleonora_room": {
 		"id": &"eleonora_room", "apartment_id": &"old_quarter_5", "scene_path": "res://scenes/WardrobeRoom.tscn",
 		"zones": PackedStringArray(["entrance", "left_wall", "kitchen_passage"]),
@@ -57,7 +59,7 @@ static var OBJECTIVES: Dictionary = {
 	&"stabilize_temperature": {"required_false": PackedStringArray(["overheated"])},
 	&"stop_flow": {"required_false": PackedStringArray(["lava_flowing"])},
 	&"close_portal": {"required_false": PackedStringArray(["portal_open"])},
-	&"restore_drainage": {"required_false": PackedStringArray(["clogged", "flooding"])},
+	&"restore_drainage": {"required_false": PackedStringArray(["flooding"])},
 	&"contain_spirit": {"required_any": PackedStringArray(["captured", "expelled"])},
 	&"remove_cold_trace": {"required_true": PackedStringArray(["cold_trace_removed"])},
 	&"remove_ice": {"required_true": PackedStringArray(["ice_removed"])},

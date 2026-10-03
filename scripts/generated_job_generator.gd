@@ -140,6 +140,30 @@ static func generate_tutorial_faucet(seed_value: int, available_abilities: Packe
 	return instance
 
 
+static func generate_gargoyle(seed_value: int, abilities: PackedStringArray, world_context: Dictionary = {}) -> Dictionary:
+	var compatible := Catalog.compatible_anomalies(&"mirabel_attic", &"drain_gargoyle")
+	if compatible.is_empty():
+		return {}
+	var anomaly: Dictionary = compatible.front()
+	var initial: Dictionary = (Catalog.OBJECTS[&"drain_gargoyle"]["base_properties"] as Dictionary).duplicate(true)
+	initial.merge(anomaly["initial_state"], true)
+	initial["definition_id"] = &"drain_gargoyle"
+	initial["instance_id"] = "tower_street_8.attic.drain_gargoyle"
+	var presentation: Dictionary = (anomaly["presentation"] as Dictionary).duplicate(true)
+	presentation["card_title"] = str(presentation["title"])
+	var instance := {"schema_version": 1, "generator_version": GENERATOR_VERSION, "seed": seed_value,
+		"instance_id": "sleeping_gargoyle", "resident_id": &"mirabel", "apartment_id": &"tower_street_8", "room_id": &"mirabel_attic",
+		"object_definition_id": &"drain_gargoyle", "anomaly_id": anomaly["id"], "simulation_type": &"drain_gargoyle",
+		"scene_path": "res://scenes/GargoyleAttic.tscn", "urgency": "Срочно", "initial_time": 80, "base_reward": 580,
+		"initial_state": initial, "objective_ids": Array(anomaly["objective_ids"]), "presentation": presentation}
+	_attach_world_context(instance, "tower_street_8.attic.drain_gargoyle", world_context)
+	var plans := find_safe_plans(instance, abilities, world_context)
+	if plans.is_empty():
+		return {}
+	instance["validated_safe_plans"] = plans
+	return instance
+
+
 static func generate_faucet_consequence(event: Dictionary, available_abilities: PackedStringArray, world_context: Dictionary) -> Dictionary:
 	var anomaly_id := StringName(str((event.get("payload", {}) as Dictionary).get("anomaly_id", event.get("event_type", ""))))
 	if not Catalog.ANOMALIES.has(anomaly_id):

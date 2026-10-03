@@ -17,13 +17,17 @@ var selected_employee_id: StringName = &""
 var action_in_progress: bool = false
 var pending_dialogue_action: StringName = &""
 var action_had_intro: bool = false
+var physical_action: StringName = &""
+var physical_timer_finished := false
+var physical_actor_finished := false
 
 
 func _ready() -> void:
-	if game_state.active_job_id != &"sleeping_gargoyle":
+	if game_state.active_job_id.is_empty() or game_state.get_job_repair_scene(game_state.active_job_id) != "res://scenes/GargoyleAttic.tscn":
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 		return
 	simulation = GargoyleSimulationScript.new()
+	simulation.initialize_from_job(game_state.jobs[game_state.active_job_id])
 	var saved_state: Dictionary = game_state.get_job_repair_state(game_state.active_job_id)
 	if not saved_state.is_empty():
 		simulation.load_state(saved_state)
@@ -81,28 +85,33 @@ func _configure_employee_actor() -> bool:
 func _on_gargoyle_selected() -> void:
 	if action_in_progress:
 		return
-	if simulation.is_terminal():
-		tool_bar.visible = false
-		var terminal_message := "Горгулья уже повреждена. Вода уходит через образовавшийся пролом; дополнительные действия не требуются."
-		if bool(simulation.world_object.get("awake", false)):
-			terminal_message = "Горгулья уже оживлена и исправно отводит воду. Дополнительные действия не требуются."
-		repair_hud.show_system_message(terminal_message, true)
-		return
 	if selected_employee_id.is_empty():
 		repair_hud.show_system_message("Сначала выберите сотрудника из бригады.", true)
 		return
 	var employee: Dictionary = game_state.employees[selected_employee_id]
+	var hidden := PackedStringArray()
+	var contextual_actions: Array = []
+	if selected_employee_id != &"boris":
+		var has_work := false
+		for ability: String in employee["abilities"]:
+			if ability != "diagnose" and simulation.available_actions().has(ability):
+				has_work = true
+		if not has_work:
+			contextual_actions.append({"id": &"diagnose", "label": "Осмотр"})
+	for action: String in ["diagnose", "repair", "physical_move", "telekinesis", "animate", "antimagic", "freeze", "heat"]:
+		if not simulation.available_actions().has(action):
+			hidden.append(action)
 	tool_bar.configure_for_employee(str(employee["name"]), employee["abilities"], str(employee["core_actions"]))
 	tool_bar.show_for_object("Водосточная горгулья", gargoyle.target_global_position(), {
 		&"diagnose": "Осмотреть водосток",
 		&"repair": "Открыть обходной канал",
-		&"physical_move": "Выбить засор силой",
+		&"physical_move": "Выбить засор силой" if bool(simulation.world_object["clogged"]) else "Проломить водосток",
 		&"telekinesis": "Вытащить листья",
 		&"animate": "Разбудить горгулью",
 		&"antimagic": "Подавить чары",
 		&"freeze": "Заморозить воду",
 		&"heat": "Нагреть камень",
-	})
+	}, contextual_actions, hidden)
 
 
 func _on_tool_selected(action_id: StringName) -> void:
@@ -117,7 +126,8 @@ func _on_tool_selected(action_id: StringName) -> void:
 	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
 	var contextual: String = simulation.get_employee_reaction(selected_employee_id, action_id)
 	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, &"", contextual)
-	if not reaction.is_empty() and repair_hud.show_employee_reaction(selected_employee_id, reaction):
+	var has_variant_pool := selected_employee_id == &"liliya" and action_id in [&"freeze", &"heat"]
+	if not reaction.is_empty() and repair_hud.show_employee_reaction(selected_employee_id, reaction, has_variant_pool):
 		pending_dialogue_action = action_id
 		return
 	action_had_intro = false
@@ -140,11 +150,20 @@ func _begin_action(action_id: StringName) -> void:
 	var is_physical: bool = game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical"
 	var approach := physical_approach.position if is_physical else Vector2.INF
 	if is_physical:
-		repair_hud.start_timed_action(selected_employee_id, action_id, _resolve_action.bind(action_id))
+		physical_action = action_id
+		physical_timer_finished = false
+		physical_actor_finished = false
 	employee_actor.play_action(action_id, gargoyle.target_global_position(), approach)
 
 
 func _on_action_impact(action_id: StringName) -> void:
+	if not physical_action.is_empty():
+		if game_state.start_job_action(game_state.active_job_id, selected_employee_id, physical_action, &"", game_state.get_action_duration(physical_action)):
+			repair_hud.resume_timed_action(_on_physical_timer_finished)
+			game_state.set_clock_paused(false)
+		else:
+			physical_action = &""
+		return
 	if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"magic":
 		_resolve_action(action_id)
 
@@ -161,13 +180,15 @@ func _resolve_action(action_id: StringName) -> void:
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 	_apply_visual_state()
 	var resident_reaction: String = simulation.get_resident_reaction(action_id)
-	if action_id == &"diagnose":
+	if action_id == &"diagnose" and selected_employee_id in [&"grog", &"nika", &"felix"]:
+		repair_hud.show_employee_reaction(selected_employee_id, str(result["message"]), true)
+	elif action_id == &"diagnose":
 		repair_hud.show_dialogue("РЕЗУЛЬТАТ ОСМОТРА", str(result["message"]))
 	elif int(simulation.world_object.get("damage", 0)) > previous_damage and not resident_reaction.is_empty():
 		repair_hud.show_resident_dialogue(resident_reaction)
 	elif not bool(result.get("applied", false)):
 		_show_failed_action(result)
-	elif action_id == &"repair" and not resident_reaction.is_empty():
+	elif (action_id in [&"repair", &"animate"] or (action_id == &"antimagic" and was_awake)) and not resident_reaction.is_empty():
 		repair_hud.show_resident_dialogue(resident_reaction)
 	elif not action_had_intro or action_id in [&"heat", &"antimagic"]:
 		repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
@@ -190,23 +211,48 @@ func _resume_pending_action() -> void:
 		return
 	selected_employee_id = StringName(str(pending.get("employee_id", "")))
 	_configure_employee_actor()
-	repair_hud.resume_timed_action(_resolve_action.bind(StringName(str(pending.get("action_id", "")))))
+	action_in_progress = true
+	gargoyle.set_interaction_enabled(false)
+	var action := StringName(str(pending.get("action_id", "")))
+	repair_hud.resume_timed_action(func() -> void:
+		_resolve_action(action)
+		_on_action_finished()
+	)
 
 
 func _on_action_finished() -> void:
+	if not physical_action.is_empty():
+		physical_actor_finished = true
+		_finish_physical_action()
+		return
 	action_in_progress = false
-	gargoyle.set_interaction_enabled(not simulation.is_terminal())
+	gargoyle.set_interaction_enabled(true)
+
+
+func _on_physical_timer_finished() -> void:
+	physical_timer_finished = true
+	_finish_physical_action()
+
+
+func _finish_physical_action() -> void:
+	if physical_action.is_empty() or not physical_timer_finished or not physical_actor_finished:
+		return
+	var action := physical_action
+	physical_action = &""
+	_resolve_action(action)
+	_on_action_finished()
 
 
 func _apply_visual_state() -> void:
 	gargoyle.show_state(simulation.visual_state())
+	$GargoylePlacement/MouthFrost.visible = bool(simulation.world_object.get("frozen", false)) and bool(simulation.world_object.get("clogged", false)) and simulation.visual_state() == &"frozen"
 	var water_state: StringName = simulation.flooding_state()
 	flooding.visible = water_state == &"water"
-	frozen_flooding.visible = water_state == &"frozen"
+	frozen_flooding.visible = bool(simulation.world_object.get("room_frozen", false))
 	# Звук следует за видимыми протечками, а не за листьями в пасти:
 	# после телекинетической очистки вода всё ещё течёт до ремонта или оживления.
 	_set_audio_loop(&"set_running_water_playing", water_state == &"water")
-	gargoyle.set_interaction_enabled(not simulation.is_terminal() and not action_in_progress)
+	gargoyle.set_interaction_enabled(not action_in_progress)
 	if repair_hud.has_method("set_completion_ready"):
 		repair_hud.call("set_completion_ready", simulation.is_resolved())
 

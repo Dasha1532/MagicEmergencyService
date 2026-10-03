@@ -33,6 +33,11 @@ const SYSTEMIC_ANOMALIES: Array[Dictionary] = [
 ]
 
 const OBJECT_DEFINITIONS: Dictionary = {
+	"tower_street_8.attic.drain_gargoyle": {
+		"definition_id": "drain_gargoyle",
+		"property_keys": ["awake", "clogged", "bypass_open", "damaged", "damage", "frozen", "room_frozen", "magic_level", "flooding", "clog_removed_before_damage", "visual_state"],
+		"significant_keys": ["awake", "clogged", "bypass_open", "damaged", "damage", "frozen", "room_frozen", "magic_level", "flooding"],
+	},
 	"old_quarter_5.bathroom.bath": {
 		"definition_id": "bath",
 		"property_keys": ["contains_ice", "damaged"],
@@ -146,6 +151,8 @@ func to_data() -> Dictionary:
 
 
 func instance_id_for_job(job_id: StringName, definition_id: StringName = &"") -> String:
+	if definition_id == &"drain_gargoyle" or job_id == &"sleeping_gargoyle":
+		return "tower_street_8.attic.drain_gargoyle"
 	if definition_id == &"lava_faucet" or job_id == &"lava_leak" or String(job_id).begins_with("generated_faucet"):
 		return "old_quarter_5.bathroom.lava_faucet"
 	if definition_id in [&"walking_wardrobe", &"wardrobe"] or job_id in [&"walking_wardrobe", &"generated_wardrobe_1"]:
@@ -637,11 +644,20 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 	var successful_restoration := bool(report.get("restoration", false)) and not bool(report.get("restoration_refused", false))
 	var successful_work := rating >= 4 and not overdue and claim_amount == 0 and (not bool(report.get("payment_forfeited", false)) or successful_restoration)
 	var involved_employee_ids: Array[String] = damage_employee_ids.duplicate()
-	if damage_employee_ids.is_empty() and not destroyed_with_claim and successful_work:
+	var helpful_ids: Array[String] = []
+	if not overdue and not bool(report.get("payment_forfeited", false)):
+		for employee_id: Variant in report.get("successful_employee_ids", []):
+			var helpful_id := str(employee_id)
+			if not damage_employee_ids.has(helpful_id) and not helpful_ids.has(helpful_id):
+				helpful_ids.append(helpful_id)
+				if not involved_employee_ids.has(helpful_id):
+					involved_employee_ids.append(helpful_id)
+	if helpful_ids.is_empty() and damage_employee_ids.is_empty() and not destroyed_with_claim and successful_work:
 		var crew_ids: Variant = report.get("crew_ids", [])
 		if crew_ids is Array or crew_ids is PackedStringArray:
 			for employee_id: Variant in crew_ids:
-				involved_employee_ids.append(str(employee_id))
+				if not involved_employee_ids.has(str(employee_id)):
+					involved_employee_ids.append(str(employee_id))
 	if involved_employee_ids.is_empty():
 		return newly_banned_ids
 
@@ -649,17 +665,18 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 		var relation: Dictionary = get_or_create_relation(resident_id, emp_id)
 		var damage_jobs: Dictionary = relation.get("damage_jobs", {}) as Dictionary
 		var severity_by_actor: Dictionary = report.get("damage_severity_by_employee", {}) as Dictionary
-		var actor_destroyed := int(severity_by_actor.get(emp_id, 2 if destroyed_with_claim else 1)) >= 2
+		var actor_damaged := damage_employee_ids.has(emp_id)
+		var actor_destroyed := actor_damaged and int(severity_by_actor.get(emp_id, 2 if destroyed_with_claim else 1)) >= 2
 		var damage_level := 2 if actor_destroyed else 1
 		var damage_job_id := str(report.get("job_id", ""))
-		if not damage_employee_ids.is_empty() and not damage_job_id.is_empty():
+		if actor_damaged and not damage_job_id.is_empty():
 			if int(damage_jobs.get(damage_job_id, 0)) >= damage_level:
 				continue
 			damage_jobs[damage_job_id] = damage_level
 			relation["damage_jobs"] = damage_jobs
 		var previous_access_status := str(relation.get("access_status", "allowed"))
 		var memories: Array = relation["memories"]
-		if not damage_employee_ids.is_empty():
+		if actor_damaged:
 			relation["last_damage_job_id"] = str(report.get("job_id", ""))
 			relation["preference_weight"] = 0
 			if int(relation.get("apology_count", 0)) > 0:
@@ -676,7 +693,7 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 				"claim_amount": claim_amount,
 			})
 			relation["access_status"] = "banned"
-		elif not damage_employee_ids.is_empty():
+		elif actor_damaged:
 			relation["professional_trust"] = int(relation.get("professional_trust", 0)) - 15
 			relation["personal_affinity"] = int(relation.get("personal_affinity", 0)) - 5
 			memories.append({
@@ -688,7 +705,7 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 				relation["access_status"] = "banned"
 			elif str(relation.get("access_status", "allowed")) != "banned":
 				relation["access_status"] = "warned"
-		elif successful_work:
+		elif successful_work or helpful_ids.has(emp_id):
 			relation["professional_trust"] = int(relation.get("professional_trust", 0)) + 10
 			relation["personal_affinity"] = int(relation.get("personal_affinity", 0)) + 2
 			memories.append({

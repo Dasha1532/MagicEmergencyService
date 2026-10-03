@@ -50,6 +50,7 @@ var access_notice: Control
 var access_notice_text: Label
 var employee_detail_labels: Dictionary = {}
 var shown_employee_reactions: Dictionary = {}
+var last_spoken_employee_message: String = ""
 @onready var game_state: Node = get_node("/root/GameState")
 
 
@@ -444,10 +445,12 @@ func _build_employee_reaction_panel() -> void:
 
 
 func show_employee_reaction(employee_id: StringName, message: String, force: bool = false) -> bool:
+	last_spoken_employee_message = ""
 	var normalized_message := message.strip_edges()
 	if normalized_message.is_empty() or (not force and not should_show_employee_reaction(employee_id, normalized_message)):
 		return false
 	var employee: Dictionary = game_state.employees.get(employee_id, {})
+	last_spoken_employee_message = normalized_message
 	queued_dialogues.clear()
 	_display_dialogue(str(employee.get("name", "Сотрудник")), normalized_message, false, _cropped_portrait(employee))
 	return true
@@ -465,6 +468,8 @@ func should_show_employee_reaction(employee_id: StringName, message: String) -> 
 
 
 func show_dialogue(speaker: String, message: String) -> void:
+	if speaker in ["РЕЗУЛЬТАТ", "РЕЗУЛЬТАТ ОСМОТРА", "ВНИМАНИЕ"] and result_repeats_employee_message(message):
+		return
 	if employee_reaction_panel == null or employee_reaction_label == null or message.is_empty():
 		return
 	queued_dialogues.clear()
@@ -480,6 +485,8 @@ func show_resident_dialogue(message: String) -> void:
 
 
 func queue_dialogue(speaker: String, message: String, is_warning: bool = false) -> void:
+	if speaker in ["РЕЗУЛЬТАТ", "РЕЗУЛЬТАТ ОСМОТРА", "ВНИМАНИЕ"] and result_repeats_employee_message(message):
+		return
 	if message.is_empty():
 		return
 	if employee_reaction_panel.visible and not employee_reaction_label.text.is_empty():
@@ -571,7 +578,22 @@ func _display_dialogue(speaker: String, message: String, is_warning: bool, portr
 
 
 func show_system_message(message: String, is_warning: bool = false) -> void:
+	if result_repeats_employee_message(message):
+		return
 	queue_dialogue("ВНИМАНИЕ" if is_warning else "РЕЗУЛЬТАТ", message, is_warning)
+
+
+func result_repeats_employee_message(message: String) -> bool:
+	if last_spoken_employee_message.is_empty():
+		return false
+	return _normalize_result_message(message) == _normalize_result_message(last_spoken_employee_message)
+
+
+func _normalize_result_message(message: String) -> String:
+	var normalized := message.to_lower().strip_edges()
+	for punctuation: String in [".", "!", "?", "«", "»", "\"", "\n", "\r"]:
+		normalized = normalized.replace(punctuation, " " )
+	return " ".join(normalized.split(" ", false))
 
 
 func clear_employee_reaction() -> void:
