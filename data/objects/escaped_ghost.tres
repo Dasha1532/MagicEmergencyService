@@ -1,14 +1,189 @@
-[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" format=3 uid="uid://ckacpu711l71o"]
 
-[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+[ext_resource type="Script" uid="uid://bj1hd4uslofrl" path="res://scripts/definitions/object_definition.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 id = &"escaped_ghost"
 display_name = "Привидение"
 tags = PackedStringArray("spirit", "incorporeal", "magic_conductor", "portal_linked")
-base_properties = {"anchored": false, "damage": 0, "durability": 0, "magic_level": 7, "mass": 0, "movable": true, "replacement_value": 0, "temperature": null}
+base_properties = {
+"action_refusal_rules": [{
+"actions": ["diagnose", "antimagic", "trap", "freeze", "heat", "animate", "physical_move", "telekinesis"],
+"equals": {
+"ghost_present": false
+},
+"message": "Привидения в комнате больше нет."
+}, {
+"actions": ["antimagic"],
+"equals": {
+"mirror_state": "covered"
+},
+"message": "Путь обратно закрыт полотном. Сначала нужно открыть зеркало."
+}, {
+"actions": ["antimagic"],
+"equals": {
+"mirror_state": "closed"
+},
+"message": "Портал уже закрыт."
+}, {
+"actions": ["antimagic"],
+"equals": {
+"mirror_state": "destroyed"
+},
+"message": "Зеркало уже разбито."
+}, {
+"actions": ["trap"],
+"equals": {
+"trap_ready": false
+},
+"message": "Сначала нужно установить ловушку."
+}, {
+"actions": ["install_trap"],
+"equals": {
+"has_trap": false
+},
+"message": "В бригаде нет ловушки. Её можно купить в лавке снаряжения."
+}, {
+"actions": ["install_trap"],
+"equals": {
+"trap_packed": false
+},
+"message": "Ловушка уже установлена."
+}],
+"anchored": false,
+"completion_payments": {
+"captured_closed": {
+"compensation_cost": 0,
+"reputation_change": 0,
+"reward_adjustment": -50
+},
+"captured_covered": {
+"compensation_cost": 0,
+"reputation_change": 0,
+"reward_adjustment": -100
+},
+"destroyed": {
+"compensation_cost": 300,
+"reputation_change": -2,
+"reward_adjustment": -200
+},
+"returned": {
+"compensation_cost": 0,
+"reputation_change": 1,
+"reward_adjustment": 0
+}
+},
+"damage": 0,
+"durability": 0,
+"initial_state": {
+"cold_aura": false,
+"definition_id": "portal_mirror",
+"frame_damage": 0,
+"ghost_inspected": false,
+"ghost_state": "calm",
+"initial_cold_aura": false,
+"magic_level": 9,
+"mirror_inspected": false,
+"mirror_state": "covered",
+"resident_intro_seen": false,
+"source_frame_damage": 0,
+"stable": false,
+"temperature": 2,
+"trap_state": "packed"
+},
+"magic_level": 7,
+"mass": 0,
+"movable": true,
+"object_actions": {
+"animate": {
+"effects": {
+"ghost_state": "angry"
+},
+"message": "Заклинание прошло сквозь бестелесное привидение. Оно разозлилось и теперь мечется по комнате.",
+"warning": true
+},
+"antimagic": {
+"effects": {
+"ghost_state": "expelled"
+},
+"execution": "transfer",
+"message": "Привидение направлено обратно в портал. Теперь портал нужно закрыть."
+},
+"diagnose": {
+"effects": {
+"ghost_inspected": true
+},
+"message": "Привидение связано с зеркалом остаточным магическим следом. Его можно вернуть в портал или изолировать в служебной ловушке."
+},
+"freeze": {
+"effects": {
+"ghost_state": "angry"
+},
+"message": "Заклинание прошло сквозь бестелесное привидение. Оно разозлилось и теперь мечется по комнате.",
+"warning": true
+},
+"heat": {
+"effects": {
+"ghost_state": "angry"
+},
+"message": "Заклинание прошло сквозь бестелесное привидение. Оно разозлилось и теперь мечется по комнате.",
+"warning": true
+},
+"install_trap": {
+"effects": {
+"trap_state": "installed"
+},
+"employee_ids": ["boris"],
+"message": "Ловушка установлена и готова к захвату привидения."
+},
+"physical_move": {
+"applied": false,
+"effects": {
+"ghost_state": "angry"
+},
+"execution": "impact",
+"message": "Грог попытался схватить привидение, но руки прошли насквозь. Привидение возмутилось.",
+"warning": true
+},
+"telekinesis": {
+"applied": false,
+"effects": {
+"ghost_state": "angry"
+},
+"message": "Телекинез не удерживает бестелесную цель. Привидение вырвалось и заметалось быстрее.",
+"warning": true
+},
+"trap": {
+"effects": {
+"ghost_state": "captured",
+"trap_state": "occupied"
+},
+"execution": "transfer",
+"label": "Затянуть в ловушку",
+"message": "Ловушка втянула привидение и запечатала его внутри."
+}
+},
+"replacement_value": 0,
+"resolution_rules": [{
+"mirror_state": "destroyed"
+}, {
+"ghost_state": "captured",
+"mirror_state": "covered"
+}, {
+"ghost_state": "captured",
+"mirror_state": "closed"
+}, {
+"ghost_state": "expelled",
+"mirror_state": "closed"
+}],
+"temperature": null,
+"trap_reimbursement": 250
+}
 supported_effects = PackedStringArray("calm", "angry", "captured", "expelled")
 scene_path = "res://scenes/GhostMirrorRoom.tscn"
-visual_states = {&"angry": "res://assets/objects/escaped_ghost/angry.png", &"calm": "res://assets/objects/escaped_ghost/calm.png"}
+visual_states = {
+"angry": "res://assets/objects/escaped_ghost/angry.png",
+"calm": "res://assets/objects/escaped_ghost/calm.png"
+}
 hidden_states = PackedStringArray("captured", "expelled")

@@ -1,0 +1,153 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" format=3 uid="uid://dfghnwjht11p5"]
+
+[ext_resource type="Script" uid="uid://bj1hd4uslofrl" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"haunted_portal_mirror"
+display_name = "Зеркало"
+tags = PackedStringArray("mirror", "portal_capable")
+base_properties = {
+"action_refusal_rules": [{
+"actions": ["physical_move"],
+"equals": {
+"mirror_state": "destroyed"
+},
+"message": "Зеркало уже разбито."
+}, {
+"actions": ["uncover"],
+"equals": {
+"covered": false
+},
+"message": "Полотно уже снято."
+}, {
+"actions": ["antimagic"],
+"equals": {
+"has_antimagic": false
+},
+"message": "Закрыть портал может только специалист по магической изоляции."
+}, {
+"actions": ["antimagic"],
+"equals": {
+"mirror_state": "covered"
+},
+"message": "Портал сейчас скрыт полотном."
+}, {
+"actions": ["antimagic"],
+"equals": {
+"mirror_state": "closed"
+},
+"message": "Портал уже закрыт."
+}, {
+"actions": ["antimagic"],
+"equals": {
+"mirror_state": "destroyed"
+},
+"message": "Зеркало уже разбито."
+}, {
+"actions": ["antimagic"],
+"equals": {
+"ghost_present": true
+},
+"message": "Сначала нужно вернуть привидение в портал."
+}, {
+"actions": ["cover"],
+"equals": {
+"mirror_state": "destroyed"
+},
+"message": "Зеркало разбито. Воздействовать больше не на что."
+}, {
+"actions": ["cover"],
+"equals": {
+"mirror_state": "closed"
+},
+"message": "Портал уже закрыт. Зеркало выглядит обычным."
+}, {
+"actions": ["cover"],
+"equals": {
+"covered": true
+},
+"message": "Защитное полотно уже закреплено на раме."
+}, {
+"actions": ["cover"],
+"equals": {
+"protective_cloth_available": false
+},
+"message": "Могу закрыть зеркало защитным полотном, но у нас его нет. Полотно можно купить в лавке снабжения."
+}],
+"anchored": true,
+"damage": 0,
+"durability": 3,
+"magic_level": 1,
+"mass": 6,
+"movable": false,
+"object_actions": {
+"antimagic": {
+"effects": {
+"cold_aura": false,
+"magic_level": 0,
+"mirror_state": "closed"
+},
+"message": "Портал закрыт. Зеркало снова стало обычным."
+},
+"cover": {
+"effects": {
+"mirror_state": "covered"
+},
+"employee_ids": ["boris", "grog", "nika"],
+"message": "Портал закрыт плотным защитным полотном, закреплённым механическими зажимами. Это временная изоляция: портал остаётся открытым под тканью."
+},
+"diagnose": {
+"effects": {
+"mirror_inspected": true
+},
+"message": "Зеркало связано с привидением. Снятое полотно откроет путь обратно; после возвращения привидения портал нужно закрыть."
+},
+"physical_move": {
+"conditional_effects": [{
+"effects": {
+"ghost_state": "expelled"
+},
+"equals": {
+"ghost_present": true
+}
+}],
+"effects": {
+"cold_aura": false,
+"magic_level": 0,
+"mirror_state": "destroyed"
+},
+"message": "Грог разбил зеркало. Портал разрушен, и связь с привидением оборвалась.",
+"warning": true
+},
+"uncover": {
+"effects": {
+"mirror_state": "open"
+},
+"employee_ids": ["boris", "grog", "nika"],
+"message": "Полотно снято и возвращено на склад. Портал снова открыт.",
+"variants": [{
+"equals": {
+"ghost_state": "calm"
+},
+"message": "Полотно снято и возвращено на склад. Портал снова открыт; теперь привидение можно вернуть внутрь."
+}, {
+"equals": {
+"ghost_state": "angry"
+},
+"message": "Полотно снято и возвращено на склад. Портал снова открыт; теперь привидение можно вернуть внутрь."
+}]
+}
+},
+"replacement_value": 680,
+"shared_mirror_actions": ["freeze", "heat", "telekinesis", "repair"],
+"temperature": 2
+}
+supported_effects = PackedStringArray("covered", "open", "closed", "destroyed")
+scene_path = "res://scenes/GhostMirrorRoom.tscn"
+visual_states = {
+"closed": "res://assets/objects/portal_mirror/closed.png",
+"covered": "res://assets/objects/portal_mirror/covered.png",
+"destroyed": "res://assets/objects/portal_mirror/destroyed.png",
+"open": "res://assets/objects/portal_mirror/open.png"
+}

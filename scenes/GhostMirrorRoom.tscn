@@ -19,8 +19,8 @@
 [ext_resource type="Texture2D" uid="uid://xgshsrdoylbc" path="res://assets/objects/portal_mirror/heat_damaged.png" id="17_heat_damaged"]
 [ext_resource type="Texture2D" uid="uid://dlqhfn28mtd6n" path="res://assets/objects/portal_mirror/closed_heat_damaged.png" id="18_closed_heat_damaged"]
 [ext_resource type="Texture2D" uid="uid://c1v5emvj8tt5k" path="res://assets/objects/portal_mirror/covered_heat_damaged.png" id="19_covered_heat_damaged"]
-
 [ext_resource type="PackedScene" path="res://scenes/LunnopuhCage.tscn" id="20_cage"]
+[ext_resource type="Texture2D" uid="uid://bm32teyeprmnu" path="res://assets/objects/lunnopuh_table/table.png" id="21_table"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mirror_open"]
 atlas = ExtResource("7_open")
@@ -177,6 +177,9 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = 102.0
+offset_right = -205.0
+offset_bottom = -144.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
@@ -225,6 +228,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 69.0
+offset_top = 31.0
+offset_right = -70.0
+offset_bottom = -21.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
@@ -232,13 +239,26 @@ mouse_default_cursor_shape = 2
 [node name="Target" type="Marker2D" parent="GhostPlacement" unique_id=1904215176]
 position = Vector2(270, 270)
 
-[node name="LunnopuhCagePlacement" parent="." instance=ExtResource("20_cage")]
-z_index = 6
-offset_left = 1005.0
-offset_top = 615.0
-offset_right = 1225.0
-offset_bottom = 835.0
-visible = false
+[node name="LunnopuhTablePlacement" type="Node2D" parent="." unique_id=2059930996]
+z_index = 21
+position = Vector2(1320, 310)
+
+[node name="Table" type="TextureRect" parent="LunnopuhTablePlacement" unique_id=1466415237]
+offset_left = 53.0
+offset_top = 334.0
+offset_right = 280.0
+offset_bottom = 580.0
+mouse_filter = 2
+texture = ExtResource("21_table")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LunnopuhCagePlacement" parent="LunnopuhTablePlacement" unique_id=1188090307 instance=ExtResource("20_cage")]
+anchors_preset = 0
+offset_left = 66.0
+offset_top = 228.0
+offset_right = 261.0
+offset_bottom = 421.0
 
 [node name="TrapPlacement" type="Control" parent="." unique_id=593165209]
 z_index = 6
@@ -249,6 +269,9 @@ offset_top = 555.0
 offset_right = 1285.0
 offset_bottom = 810.0
 mouse_filter = 2
+
+[node name="PhysicalApproach" type="Marker2D" parent="TrapPlacement" unique_id=1990993048]
+position = Vector2(-220, -350)
 
 [node name="Empty" type="TextureRect" parent="TrapPlacement" unique_id=581736775]
 layout_mode = 1
@@ -263,11 +286,14 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Occupied" type="TextureRect" parent="TrapPlacement" unique_id=700602329]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 22.0
+offset_top = 40.0
+offset_right = -10.0
+offset_bottom = 15.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -282,18 +308,20 @@ offset_right = 601.0
 offset_bottom = 886.0
 
 [node name="PhysicalApproach" type="Marker2D" parent="." unique_id=519139089]
-position = Vector2(570, 270)
+position = Vector2(570, 205)
 
 [node name="MirrorPhysicalApproach" type="Marker2D" parent="." unique_id=1366514804]
-position = Vector2(1030, 245)
+position = Vector2(1030, 205)
 
 [node name="Interface" type="CanvasLayer" parent="." unique_id=2088634256]
 
 [node name="ToolBar" parent="Interface" unique_id=958659045 instance=ExtResource("13_toolbar")]
 
 [node name="RepairHUD" parent="Interface" unique_id=1123226003 instance=ExtResource("14_hud")]
-offset_left = -5.0
-offset_right = -5.0
+offset_left = 12.0
+offset_top = 57.0
+offset_right = 12.0
+offset_bottom = 57.0
 
 [node name="PauseMenu" parent="." unique_id=17673649 instance=ExtResource("15_pause")]
 show_default_menu_button = false

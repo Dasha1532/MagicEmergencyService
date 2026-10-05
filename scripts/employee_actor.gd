@@ -161,7 +161,7 @@ func play_action(
 		idle_tween.pause()
 	rotation = 0.0
 	scale = Vector2(-1.0 if horizontal_flip else 1.0, 1.0)
-	if action_style == &"magic":
+	if action_style == &"magic" and physical_pose != &"activate":
 		await _show_action_pose(work_pose)
 		await _play_magic_impact(action_id, target_global_position)
 	else:
@@ -174,8 +174,11 @@ func play_action(
 			selected_pose = hold_pose
 		elif physical_pose == &"heat_protected" and heat_protected_work_pose.texture != null:
 			selected_pose = heat_protected_work_pose
-		elif physical_pose == &"neutral":
+		elif physical_pose in [&"neutral", &"activate"]:
 			selected_pose = neutral_pose
+		elif physical_pose == &"catch" and catch_texture != null:
+			specific_pose.texture = catch_texture
+			selected_pose = specific_pose
 		var action_pose := _pose_for_action(action_id)
 		if action_pose != work_pose:
 			selected_pose = action_pose

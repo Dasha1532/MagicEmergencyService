@@ -9,7 +9,7 @@ signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 31
+const SAVE_VERSION: int = 32
 const CLIENT_GREETING_PROFILE := preload("res://data/client_relationship_greetings.gd")
 const RESTORATION_PROFILE := preload("res://data/restoration/faucet.tres")
 const RESTORATION_REFUSAL_REVIEW := "Заменить уничтоженный кран отказались. Придётся искать другую службу."

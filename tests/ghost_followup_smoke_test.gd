@@ -47,7 +47,7 @@ func _run() -> void:
 	_check(room.get_node("MirrorPlacement/CoveredHeatDamaged").visible, "В начале продолжения показано полотно на оплавленной раме")
 	_check(not game_state.has_supply_item(&"protective_cloth"), "Оставленное в первой заявке полотно не лежит на складе")
 	room.selected_target = &"mirror"
-	room.selected_employee_id = &"felix"
+	room.selected_employee_id = &"boris"
 	room._resolve_action(&"uncover")
 	_check(game_state.has_supply_item(&"protective_cloth"), "Снятое в заявке с призраком полотно возвращается на склад")
 	_check("возвращено на склад" in str(room.simulation.action_log[-1]["result"]["message"]), "Сообщение поясняет возврат полотна")
@@ -73,8 +73,9 @@ func _run() -> void:
 	_check(not felix_route.can_return_ghost_to_portal(), "Феликс не начинает изгнание, пока зеркало закрыто полотном")
 	_check(not felix_route.can_close_portal(), "Феликс не начинает закрытие, пока привидение находится в комнате")
 	var refused: Dictionary = felix_route.uncover_mirror(&"boris", false)
-	_check(not bool(refused["applied"]), "Без Феликса сотрудники не снимают полотно")
-	_check(StringName(felix_route.world_object["mirror_state"]) == &"covered", "После отказа зеркало остаётся накрытым")
+	_check(bool(refused["applied"]), "Полотно можно снять без специалиста по антимагии")
+	_check(StringName(felix_route.world_object["mirror_state"]) == &"open", "После снятия зеркало открыто")
+	felix_route.perform(&"mirror", &"boris", &"cover", {"protective_cloth_available": true})
 	var uncover_result: Dictionary = felix_route.uncover_mirror(&"nika", true)
 	_check(bool(uncover_result["applied"]) and not str(uncover_result["message"]).contains("Феликс"), "При наличии антимагии можно снять полотно без упоминания конкретного сотрудника")
 	_check(felix_route.can_return_ghost_to_portal(), "После снятия полотна Феликс может начать изгнание")

@@ -33,6 +33,8 @@ const SYSTEMIC_ANOMALIES: Array[Dictionary] = [
 ]
 
 const OBJECT_DEFINITIONS: Dictionary = {
+	"portal_mirror_room.escaped_ghost": {"definition_id": "escaped_ghost", "property_keys": ["state", "inspected", "damage"], "significant_keys": ["state", "damage"]},
+	"portal_mirror_room.ghost_trap": {"definition_id": "ghost_trap", "property_keys": ["state", "damage"], "significant_keys": ["state", "damage"]},
 	"portal_mirror_room.lunnopuh": {
 		"definition_id": "lunnopuh", "property_keys": ["state", "inspected", "damage", "position_offset_x", "position_offset_y"], "significant_keys": ["state", "damage"],
 	},
@@ -162,7 +164,7 @@ func to_data() -> Dictionary:
 
 
 func instance_id_for_job(job_id: StringName, definition_id: StringName = &"") -> String:
-	if definition_id == &"portal_mirror" or job_id == &"portal_mirror":
+	if definition_id == &"portal_mirror" or job_id in [&"portal_mirror", &"escaped_ghost"]:
 		return "portal_mirror_room.portal_mirror"
 	if definition_id == &"drain_gargoyle" or job_id == &"sleeping_gargoyle":
 		return "tower_street_8.attic.drain_gargoyle"
