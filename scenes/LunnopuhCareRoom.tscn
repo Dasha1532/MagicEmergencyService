@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/GhostMirrorRoom.tscn" id="1_room"]
+[ext_resource type="Script" path="res://scripts/lunnopuh_care_room.gd" id="2_script"]
+[ext_resource type="PackedScene" path="res://scenes/Lunnopuh.tscn" id="3_pet"]
+
+[node name="LunnopuhCareRoom" instance=ExtResource("1_room")]
+script = ExtResource("2_script")
+
+[node name="GhostPlacement" parent="." index="2"]
+visible = false
+
+[node name="LunnopuhTablePlacement" parent="." index="3"]
+visible = true
+
+[node name="LunnopuhTransfer" parent="." instance=ExtResource("3_pet")]
+visible = false
+z_index = 22
+
+[node name="PetApproach" type="Marker2D" parent="."]
+position = Vector2(1110, 205)
+
+[node name="Exit" type="Marker2D" parent="."]
+position = Vector2(-530, 205)

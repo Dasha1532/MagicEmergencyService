@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"lunnopuh_care"
+display_name = "Забота о Лунопухе"
+tags = PackedStringArray("creature", "movable")
+base_properties = {
+"mass": 1, "durability": 3, "temperature": 2, "magic_level": 1, "damage": 0, "anchored": false, "movable": true, "replacement_value": 0,
+"follow_up_delay_days": 1,
+"base_reward": 300,
+"initial_state": {"lunnopuh_state": "caged", "cage_state": "occupied", "lunnopuh_inspected": false, "inspected": false, "resident_intro_seen": false, "portal_silhouette": false},
+"resolution": {"allowed_values": {"lunnopuh_state": ["returned", "transferred"]}, "required_false": ["portal_open"], "alternative_true": ["covered", "destroyed"]},
+"request_open": "Лунопух ничего не ест и жалобно скулит. Мне его очень жаль. Наверное, ему нужен родной мир. Пожалуйста, верните его домой или отвезите туда, где о нём смогут позаботиться",
+"request_closed": "Лунопух ничего не ест и жалобно скулит. Боюсь, я не умею о нём заботиться. Пожалуйста, отвезите его туда, где ему смогут помочь",
+"diagnosis_open": "Здешнюю еду не трогает. Возможно, она ему не подходит. Можно вернуть его в родной мир или передать специалистам по магическим существам",
+"diagnosis_closed": "Здешнюю еду не трогает. Возможно, она ему не подходит. Лучше передать его специалистам по магическим существам",
+"closed_antimagic_refusal": "Антимагия ему не поможет. Лучше передать его тем, кто умеет заботиться о магических существах",
+"object_actions": {
+"diagnose": {"employee_ids": ["boris"], "label": "Осмотреть", "reaction": "Посмотрю, что с ним. Может, поймём, почему он отказывается от еды", "effects": {"lunnopuh_inspected": true}},
+"return_lunnopuh": {"employee_ids": ["nika"], "label": "Вернуть домой", "reaction": "Аккуратно подхвачу его и направлю домой", "effects": {"lunnopuh_state": "returned", "cage_state": "installed"}, "message": "Лунопух вернулся в свой мир. Портал ещё нужно закрыть или изолировать."},
+"transport_lunnopuh": {"employee_ids": ["boris", "grog"], "label": "Отвезти в приют", "reactions": {"boris": "Отвезу его в приют для магических существ. Там смогут подобрать ему корм и уход", "grog": "Клетку понесу осторожно. Доставим его тем, кто умеет заботиться о таких зверьках"}, "effects": {"lunnopuh_state": "transferred", "cage_state": "in_transit"}, "message": "Лунопух передан специалистам приюта для магических существ."}
+},
+"reviews": {"returned": "Мне будет его не хватать, но теперь он дома. Спасибо, что помогли ему вернуться", "transferred": "Жаль с ним расставаться, но там о нём смогут позаботиться. Спасибо, что помогли Лунопуху"}
+}
+supported_effects = PackedStringArray("caged", "returned", "transferred")
+scene_path = "res://scenes/LunnopuhCareRoom.tscn"
+visual_states = {"caged": "res://assets/objects/lunnopuh_cage/occupied.png"}
+hidden_states = PackedStringArray("returned", "transferred")

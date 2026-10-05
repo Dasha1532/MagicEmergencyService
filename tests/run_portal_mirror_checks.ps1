@@ -1,6 +1,6 @@
 ﻿param(
     [string]$GodotPath = 'C:\Godot\Godot_v4.7.2-stable_win64_console.exe',
-    [string[]]$TestNames = @('generated_mirror_test', 'lunnopuh_assets_test', 'portal_mirror_properties_test', 'protective_cloth_smoke_test', 'ghost_followup_smoke_test', 'ghost_properties_test', 'ghost_interaction_animation_test', 'ghost_mirror_reopen_test')
+    [string[]]$TestNames = @('generated_mirror_test', 'lunnopuh_assets_test', 'portal_mirror_properties_test', 'protective_cloth_smoke_test', 'ghost_followup_smoke_test', 'ghost_properties_test', 'ghost_interaction_animation_test', 'ghost_mirror_reopen_test', 'lunnopuh_care_test')
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot

@@ -68,6 +68,11 @@ base_properties = {
 "reputation_change": -2,
 "reward_adjustment": -200
 },
+"returned_covered": {
+"compensation_cost": 0,
+"reputation_change": 0,
+"reward_adjustment": -100
+},
 "returned": {
 "compensation_cost": 0,
 "reputation_change": 1,
@@ -173,6 +178,9 @@ base_properties = {
 }, {
 "ghost_state": "captured",
 "mirror_state": "closed"
+}, {
+"ghost_state": "expelled",
+"mirror_state": "covered"
 }, {
 "ghost_state": "expelled",
 "mirror_state": "closed"

@@ -223,7 +223,7 @@ func _on_lunnopuh_selected() -> void:
 		if not supported.has(action):
 			hidden.append(action)
 	tool_bar.configure_for_employee(str(employee["name"]), employee["abilities"], str(employee["core_actions"]))
-	tool_bar.show_for_object("Лунопух", _selected_target_position(), {&"diagnose": "Осмотреть", &"freeze": "Заморозить", &"heat": "Нагреть"}, contextual_actions, hidden)
+	tool_bar.show_for_object("Лунопух", _selected_target_position(), {&"diagnose": "Осмотреть", &"freeze": "Заморозить", &"heat": "Нагреть", &"antimagic": "Применить антимагию"}, contextual_actions, hidden)
 
 
 func _lunnopuh_missing_cage_reaction() -> String:

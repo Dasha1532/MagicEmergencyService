@@ -9,7 +9,7 @@ signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 32
+const SAVE_VERSION: int = 33
 const CLIENT_GREETING_PROFILE := preload("res://data/client_relationship_greetings.gd")
 const RESTORATION_PROFILE := preload("res://data/restoration/faucet.tres")
 const RESTORATION_REFUSAL_REVIEW := "Заменить уничтоженный кран отказались. Придётся искать другую службу."
@@ -497,6 +497,21 @@ var jobs: Dictionary = {
 		"repair_scene": "res://scenes/GargoyleAttic.tscn",
 		"assigned": PackedStringArray(),
 	},
+	&"lunnopuh_care": {
+		"title": "Лунопух тоскует в клетке",
+		"objective": "Вернуть Лунопуха домой или передать в приют\nЗакрыть или изолировать портал",
+		"address": "Верхний город, 12",
+		"resident": "Госпожа Селеста",
+		"resident_portrait": "res://assets/portraits/residents/selesta.png",
+		"resident_portrait_region": Rect2(0, 0, 1024, 1536),
+		"description": "Лунопух ничего не ест и жалобно скулит. Селеста просит найти для него подходящий дом.",
+		"urgency": "Обычная", "initial_time": 110, "time_left": 110,
+		"unlocked": false, "overdue": false, "dispatched": false,
+		"danger": "Магическое существо",
+		"base_reward": preload("res://data/objects/lunnopuh_care.tres").base_properties["base_reward"],
+		"repair_scene": "res://scenes/LunnopuhCareRoom.tscn",
+		"assigned": PackedStringArray(),
+	},
 	&"escaped_ghost": {
 		"title": "Привидение выбралось из зеркала",
 		"objective": "Изгнать или поймать привидение",
@@ -597,6 +612,7 @@ func hire_employee(employee_id: StringName) -> bool:
 	employee["status"] = employee["idle_status"]
 	employees[employee_id] = employee
 	_record_financial_event(&"hire", -hire_cost, str(employee["name"]), {"employee_id": String(employee_id)})
+	_unlock_lunnopuh_care_job_if_due()
 	state_changed.emit()
 	return true
 
@@ -713,6 +729,7 @@ func advance_day(days: int = 1) -> void:
 		_update_parallel_job_unlocks()
 	_unlock_gargoyle_job_if_due()
 	_unlock_escaped_ghost_job_if_due()
+	_unlock_lunnopuh_care_job_if_due()
 	_unlock_frozen_bath_job_if_due()
 	_publish_due_world_consequences()
 	_publish_due_restoration_jobs()
@@ -836,6 +853,8 @@ func get_employee_job(employee_id: StringName) -> StringName:
 	for job_id: StringName in jobs:
 		var assigned: PackedStringArray = jobs[job_id]["assigned"]
 		if assigned.has(String(employee_id)):
+			if str(get_job_repair_state(job_id).get("world_object", {}).get("transport_employee_id", "")) == String(employee_id):
+				continue
 			return job_id
 	return &""
 
@@ -1291,6 +1310,16 @@ func begin_job(job_id: StringName) -> bool:
 	return true
 
 
+func begin_employee_delivery(employee_id: StringName) -> void:
+	var employee: Dictionary = employees[employee_id]
+	employee["arrival_until"] = 0
+	employee["return_until"] = time_minutes + 2 * TRAVEL_TIME_MINUTES
+	employees[employee_id] = employee
+	_update_employee_statuses()
+	state_changed.emit()
+	save_autosave()
+
+
 func leave_active_job() -> void:
 	active_job_id = &""
 	state_changed.emit()
@@ -1306,6 +1335,8 @@ func recall_job(job_id: StringName) -> bool:
 	var memory_context: Dictionary = world_memory.job_contexts.get(String(job_id), {}) as Dictionary
 	memory_context["current_visit_ban_exemptions"] = []
 	for employee_id: String in job["assigned"]:
+		if str(get_job_repair_state(job_id).get("world_object", {}).get("transport_employee_id", "")) == employee_id:
+			continue
 		var employee: Dictionary = employees[StringName(employee_id)]
 		employee["arrival_until"] = 0
 		employee["return_until"] = time_minutes + TRAVEL_TIME_MINUTES
@@ -1379,6 +1410,8 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 		if employees.has(employee_key):
 			crew_names.append(str(employees[employee_key]["name"]))
 	for employee_id: String in assigned:
+		if str(get_job_repair_state(job_id).get("world_object", {}).get("transport_employee_id", "")) == employee_id:
+			continue
 		var returning_employee: Dictionary = employees[StringName(employee_id)]
 		returning_employee["arrival_until"] = 0
 		returning_employee["return_until"] = time_minutes + TRAVEL_TIME_MINUTES
@@ -1475,7 +1508,7 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 	var source_deferred_event_id := str(job.get("source_deferred_event_id", ""))
 	if not source_deferred_event_id.is_empty():
 		world_memory.set_event_status(source_deferred_event_id, "resolved", {"resolved_job_id": String(completed_id)})
-	if completed_id in [&"frozen_bath", &"escaped_ghost"]:
+	if completed_id in [&"frozen_bath", &"escaped_ghost", &"lunnopuh_care"]:
 		world_memory.set_consequence_status(completed_id, "resolved")
 	if pending_job_report.is_empty():
 		pending_job_report = completed_report.duplicate(true)
@@ -1616,6 +1649,8 @@ func get_demo_required_job_ids() -> PackedStringArray:
 		var follow_up_id := str((follow_up as Dictionary).get("type", ""))
 		if follow_up_id in ["escaped_ghost", "frozen_bath"] and not required.has(follow_up_id):
 			required.append(follow_up_id)
+	if (world_memory.has_consequence(&"lunnopuh_care") or completed_job_ids.has("lunnopuh_care")) and not required.has("lunnopuh_care"):
+		required.append("lunnopuh_care")
 	return required
 
 
@@ -2370,6 +2405,7 @@ func _load_from_path(path: String) -> Error:
 		_update_parallel_job_unlocks()
 	_unlock_gargoyle_job_if_due()
 	_unlock_escaped_ghost_job_if_due()
+	_unlock_lunnopuh_care_job_if_due()
 	_unlock_frozen_bath_job_if_due()
 	if not is_job_available(selected_job_id):
 		selected_job_id = _first_available_job_id()
@@ -2489,6 +2525,7 @@ func _load_from_path(path: String) -> Error:
 	_migrate_restoration_trust()
 	_migrate_job_preferences()
 	loading_game = false
+	_unlock_lunnopuh_care_job_if_due()
 	if is_tutorial_job_completed() or debug_tutorial_bypass_day > 0:
 		_update_parallel_job_unlocks()
 	state_changed.emit()
@@ -3191,6 +3228,69 @@ func _set_gargoyle_job_unlocked(unlocked: bool) -> void:
 	jobs[job_id] = job
 
 
+func _unlock_lunnopuh_care_job_if_due() -> void:
+	var job_id := &"lunnopuh_care"
+	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
+		return
+	_migrate_legacy_lunnopuh_care()
+	var job: Dictionary = jobs[job_id]
+	var payload: Dictionary = world_memory.consequence_payload(job_id)
+	var mirror: Dictionary = payload.duplicate(true)
+	mirror.merge((world_memory.objects.get("portal_mirror_room.portal_mirror", {}) as Dictionary).get("properties", {}), true)
+	job["object_initial_state"] = mirror
+	if bool(job.get("dispatched", false)):
+		jobs[job_id] = job
+		return
+	var ghost_pending: bool = world_memory.has_consequence(&"escaped_ghost") and not completed_job_ids.has("escaped_ghost")
+	var due_day: int = world_memory.consequence_due_day(job_id)
+	if completed_job_ids.has("escaped_ghost"):
+		due_day = maxi(due_day, _job_completed_day(&"escaped_ghost") + 1)
+	var allowed := PackedStringArray()
+	for employee_id: StringName in [&"boris", &"grog", &"nika"]:
+		if bool(employees.get(employee_id, {}).get("available", false)) and not is_employee_banned_for_job(employee_id, job_id):
+			allowed.append(String(employee_id))
+	var can_transport := allowed.has("boris") or allowed.has("grog")
+	var can_return := allowed.has("nika") and bool(mirror.get("portal_open", false)) and not bool(mirror.get("destroyed", false))
+	job["unlocked"] = not payload.is_empty() and due_day > 0 and day >= due_day and not ghost_pending and str(mirror.get("lunnopuh_state", "absent")) == "caged" and (can_transport or can_return)
+	if bool(job["unlocked"]):
+		job["object_initial_state"] = mirror
+		job["source_job_id"] = "escaped_ghost" if completed_job_ids.has("escaped_ghost") else "portal_mirror"
+		job["objective"] = "Вернуть Лунопуха домой или передать в приют\nЗакрыть или изолировать портал" if bool(mirror.get("portal_open", false)) else "Передать Лунопуха в приют для магических существ"
+		world_memory.set_consequence_status(job_id, "claimed")
+	jobs[job_id] = job
+
+
+func _migrate_legacy_lunnopuh_care() -> void:
+	# Older saves already contain the retained pet in the mirror snapshot or action report.
+	if completed_job_ids.has("lunnopuh_care") or world_memory.has_consequence(&"lunnopuh_care"):
+		return
+	var mirror: Dictionary = (world_memory.objects.get("portal_mirror_room.portal_mirror", {}) as Dictionary).get("properties", {}).duplicate(true)
+	var has_current_pet := mirror.has("lunnopuh_state")
+	var source_day := 0
+	var source_id := &"portal_mirror"
+	for report_value: Variant in job_reports:
+		if not report_value is Dictionary:
+			continue
+		var report: Dictionary = report_value
+		if str(report.get("job_id", "")) not in ["portal_mirror", "escaped_ghost"]:
+			continue
+		source_day = maxi(source_day, int(report.get("completed_day", 0)))
+		source_id = StringName(str(report["job_id"]))
+		if not has_current_pet:
+			var source: Dictionary = report.get("follow_up", {}).duplicate(true)
+			if str(source.get("type", "")) == "escaped_ghost":
+				source.merge({"portal_open": true, "covered": true, "destroyed": false, "damage": int(source.get("frame_damage", 0))}, true)
+			for entry: Dictionary in report.get("actions", []):
+				for change: Dictionary in entry.get("object_changes", []):
+					if str(change.get("target_instance_id", "")) == "portal_mirror_room.portal_mirror":
+						source.merge(change.get("after", {}), true)
+			if source.has("lunnopuh_state"):
+				mirror.merge(source, true)
+	if source_day <= 0 or str(mirror.get("lunnopuh_state", "absent")) != "caged":
+		return
+	world_memory.queue_consequence(&"retained_creature_care", &"lunnopuh_care", "portal_mirror_room.portal_mirror", source_id, source_day + 1, 540, 40, mirror, "chain.portal_mirror.lunnopuh_care", "legacy_unknown", 1)
+
+
 func _unlock_escaped_ghost_job_if_due() -> void:
 	_migrate_legacy_follow_ups_to_world_memory()
 	var source_day: int = int(world_memory.consequence_due_day(&"escaped_ghost")) - 1
@@ -3253,6 +3353,8 @@ func _first_available_job_id() -> StringName:
 
 
 func _update_employee_statuses() -> void:
+	if not loading_game:
+		_unlock_lunnopuh_care_job_if_due()
 	for employee_id: StringName in EMPLOYEE_ORDER:
 		var employee: Dictionary = employees[employee_id]
 		if not employee["available"]:
@@ -3270,7 +3372,7 @@ func _update_employee_statuses() -> void:
 		var pending_action: Dictionary = get_pending_job_action(job_id)
 		employee["status"] = employee["idle_status"]
 		if int(employee.get("return_until", 0)) > time_minutes:
-			employee["status"] = tr("Возвращается, прибудет в %s") % _format_minutes(int(employee["return_until"]))
+			employee["status"] = tr("В пути, вернётся в офис в %s") % _format_minutes(int(employee["return_until"]))
 		elif not job_id.is_empty() and int(employee.get("arrival_until", 0)) > time_minutes:
 			employee["status"] = tr("В пути, прибудет в %s") % _format_minutes(int(employee["arrival_until"]))
 		elif not job_id.is_empty() and str(pending_action.get("employee_id", "")) == String(employee_id):

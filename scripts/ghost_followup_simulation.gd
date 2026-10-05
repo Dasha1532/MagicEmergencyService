@@ -204,7 +204,7 @@ func get_completion_result() -> Dictionary:
 	if not is_resolved():
 		return {}
 	var result := _completion_result()
-	var outcome := "destroyed" if str(world_object["mirror_state"]) == "destroyed" else "captured_closed" if str(world_object["ghost_state"]) == "captured" and str(world_object["mirror_state"]) == "closed" else "captured_covered" if str(world_object["ghost_state"]) == "captured" else "returned"
+	var outcome := "destroyed" if str(world_object["mirror_state"]) == "destroyed" else "captured_closed" if str(world_object["ghost_state"]) == "captured" and str(world_object["mirror_state"]) == "closed" else "captured_covered" if str(world_object["ghost_state"]) == "captured" else "returned_covered" if str(world_object["mirror_state"]) == "covered" else "returned"
 	result.merge(GHOST.base_properties["completion_payments"][outcome], true)
 	result["expense_reimbursement"] = int(GHOST.base_properties["trap_reimbursement"]) if str(world_object["trap_state"]) == "occupied" else 0
 	result["credit_helpful_work_on_damage"] = true
@@ -266,6 +266,16 @@ func _completion_result() -> Dictionary:
 			"expense_reimbursement": 250,
 			"compensation_cost": 0,
 			"reputation_change": 0,
+			"actions": action_log.duplicate(true),
+		}
+	if StringName(world_object["mirror_state"]) == &"covered":
+		var mirror := shared_mirror()
+		var isolation: Dictionary = mirror._completion_from_properties()
+		return {
+			"summary": "Привидение возвращено в портал. Зеркало осталось временно изолировано полотном." + (" Рама зеркала осталась деформированной после нагрева." if int(world_object.get("frame_damage", 0)) > 0 else ""),
+			"review": isolation["review"],
+			"consequences": ["Привидение возвращено в портал.", "Портал остаётся временно закрыт полотном."] + (["Рама зеркала осталась деформированной после нагрева."] if int(world_object.get("frame_damage", 0)) > 0 else []),
+			"expense_reimbursement": 0,
 			"actions": action_log.duplicate(true),
 		}
 	var frame_damaged := int(world_object.get("frame_damage", 0)) > 0

@@ -164,7 +164,7 @@ func to_data() -> Dictionary:
 
 
 func instance_id_for_job(job_id: StringName, definition_id: StringName = &"") -> String:
-	if definition_id == &"portal_mirror" or job_id in [&"portal_mirror", &"escaped_ghost"]:
+	if definition_id == &"portal_mirror" or job_id in [&"portal_mirror", &"escaped_ghost", &"lunnopuh_care"]:
 		return "portal_mirror_room.portal_mirror"
 	if definition_id == &"drain_gargoyle" or job_id == &"sleeping_gargoyle":
 		return "tower_street_8.attic.drain_gargoyle"
@@ -246,6 +246,12 @@ func finalize_job(job_id: StringName, result: Dictionary, day: int, time_minutes
 			day + 1, time_minutes, 50, follow_up as Dictionary,
 			"chain.%s" % String(job_id), "", 1
 		)
+	# A retained living creature creates a care request from its actual properties.
+	var mirror_id := "portal_mirror_room.portal_mirror"
+	if instance_id_for_job(job_id) == mirror_id:
+		var properties: Dictionary = (objects.get(mirror_id, {}) as Dictionary).get("properties", {})
+		if str(properties.get("lunnopuh_state", "absent")) == "caged":
+			queue_consequence(&"retained_creature_care", &"lunnopuh_care", mirror_id, job_id, day + int(preload("res://data/objects/lunnopuh_care.tres").base_properties["follow_up_delay_days"]), time_minutes, 40, properties, "chain.portal_mirror.lunnopuh_care", "", 1)
 	_evaluate_systemic_consequences(job_id, result, day, time_minutes)
 	_job_event_counts.erase(String(job_id))
 	job_contexts.erase(String(job_id))
