@@ -124,6 +124,7 @@ func _build_job_header() -> void:
 	add_child(panel)
 
 	job_title_label = _label(job.get("objective", job.get("title", "Ремонт")), 20, COLOR_GOLD)
+	job_title_label.text = job_title_label.text.replace("; закрыть или изолировать портал", "\nЗакрыть или изолировать портал")
 	job_title_label.position = Vector2(18, 4)
 	job_title_label.size = Vector2(614, 32)
 	job_title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -134,6 +135,12 @@ func _build_job_header() -> void:
 	job_time_label.size = Vector2(614, 24)
 	job_time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	panel.add_child(job_time_label)
+	if str(job_title_label.text).length() > 55:
+		job_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		job_title_label.add_theme_font_size_override("font_size", 18)
+		job_title_label.size = Vector2(614, 52)
+		job_time_label.position.y = 56
+		panel.size.y = 84
 
 
 func _build_clock_controls() -> void:
@@ -191,7 +198,7 @@ func resume_timed_action(completion: Callable) -> void:
 
 func set_job_title(title: String) -> void:
 	if job_title_label != null:
-		job_title_label.text = title
+		job_title_label.text = title.replace("; закрыть или изолировать портал", "\nЗакрыть или изолировать портал")
 
 
 func _refresh_job_time() -> void:

@@ -11,6 +11,8 @@ const COLOR_GOLD := Color(0.96, 0.68, 0.28)
 @onready var closeup_background: TextureRect = $RoomCloseup
 @onready var fireplace_glow: Node2D = $FireplaceGlow
 @onready var portal_mirror: Control = $PortalMirror
+@onready var lunnopuh_cage: Control = $CagePlacement
+@onready var lunnopuh: TextureRect = $LunnopuhPlacement
 @onready var employee_actor: Control = $EmployeeActor
 @onready var physical_approach: Marker2D = $PhysicalApproach
 @onready var back_to_house_button: Button = $Interface/BackToHouseButton
@@ -18,12 +20,17 @@ const COLOR_GOLD := Color(0.96, 0.68, 0.28)
 @onready var repair_hud: Control = $Interface/RepairHUD
 @onready var game_state: Node = get_node("/root/GameState")
 
+const LunnopuhDefinition := preload("res://data/objects/lunnopuh.tres")
+var selected_object_id: StringName = &"portal_mirror"
+
+var lunnopuh_home_position := Vector2.ZERO
+var lunnopuh_motion: Tween
+var returning_creature: bool = false
 var simulation: PortalMirrorSimulation
 var selected_employee_id: StringName = &""
 var action_in_progress: bool = false
 var pending_dialogue_action: StringName = &""
-var action_had_intro: bool = false
-var freeze_resident_reaction_shown: bool = false
+var last_action_intro: String = ""
 var pending_physical_action: StringName = &""
 var physical_timer_finished: bool = false
 var physical_impact_reached: bool = false
@@ -33,7 +40,9 @@ func _ready() -> void:
 	if game_state.active_job_id != &"portal_mirror":
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 		return
+	lunnopuh_home_position = lunnopuh.position
 	simulation = PortalMirrorSimulationScript.new()
+	simulation.initialize_from_job(game_state.jobs.get(game_state.active_job_id, {}))
 	var saved_state: Dictionary = game_state.get_job_repair_state(game_state.active_job_id)
 	if not saved_state.is_empty():
 		simulation.load_state(saved_state)
@@ -47,8 +56,12 @@ func _ready() -> void:
 	repair_hud.long_action_finished.connect(_on_long_action_finished)
 	repair_hud.dialogue_finished.connect(_on_pre_action_dialogue_finished)
 	portal_mirror.selected.connect(_on_mirror_selected)
+	lunnopuh.selected.connect(_on_lunnopuh_selected)
+	lunnopuh_cage.selected.connect(_on_lunnopuh_selected)
 	tool_bar.tool_selected.connect(_on_tool_selected)
+	tool_bar.intent_selected.connect(_on_lunnopuh_intent_selected)
 	employee_actor.action_impact.connect(_on_action_impact)
+	employee_actor.physical_target_reached.connect(_on_lunnopuh_approach_finished)
 	employee_actor.action_finished.connect(_on_action_finished)
 	selected_employee_id = repair_hud.get_selected_employee_id()
 	_apply_visual_state()
@@ -71,6 +84,7 @@ func _open_room() -> void:
 	closeup_background.visible = true
 	closeup_background.modulate = Color(1, 1, 1, 0)
 	portal_mirror.visible = true
+	_apply_visual_state()
 	fireplace_glow.visible = true
 	employee_actor.visible = _configure_employee_actor()
 	var tween: Tween = create_tween()
@@ -93,6 +107,8 @@ func _show_house_overview(animated: bool = true) -> void:
 	room_placement.visible = true
 	fireplace_glow.visible = false
 	portal_mirror.visible = false
+	lunnopuh_cage.visible = false
+	lunnopuh.visible = false
 	employee_actor.visible = false
 	room_hotspot.disabled = false
 	back_to_house_button.visible = false
@@ -111,6 +127,10 @@ func _show_house_overview(animated: bool = true) -> void:
 
 
 func _on_employee_selected(employee_id: StringName) -> void:
+	if action_in_progress or not pending_dialogue_action.is_empty():
+		if employee_id != selected_employee_id:
+			repair_hud.call("_select_employee", selected_employee_id)
+		return
 	selected_employee_id = employee_id
 	tool_bar.visible = false
 	_configure_employee_actor()
@@ -127,18 +147,26 @@ func _configure_employee_actor() -> bool:
 
 
 func _on_mirror_selected() -> void:
-	if action_in_progress:
+	if action_in_progress or not pending_dialogue_action.is_empty():
 		return
 	if selected_employee_id.is_empty():
 		repair_hud.show_system_message("Сначала выберите сотрудника из бригады.", true)
 		return
+	selected_object_id = &"portal_mirror"
+	simulation.interaction_target = selected_object_id
 	var employee: Dictionary = game_state.employees[selected_employee_id]
 	var contextual_actions: Array[Dictionary] = []
-	if selected_employee_id == &"boris":
+	if selected_employee_id == &"boris" and bool(simulation.world_object.get("inspected", false)) and not bool(simulation.world_object["destroyed"]):
 		if bool(simulation.world_object.get("covered", false)):
 			contextual_actions.append({"id": &"uncover", "label": "Снять защитное полотно"})
 		else:
 			contextual_actions.append({"id": &"cover", "label": "Закрыть защитным полотном"})
+		if game_state.has_supply_item(&"lunnopuh_cage") and str(simulation.world_object.get("cage_state", "packed")) == "packed":
+			contextual_actions.append({"id": &"install_cage", "label": "Установить клетку"})
+	var hidden := PackedStringArray(["animate"])
+	for action: String in ["diagnose", "repair", "physical_move", "telekinesis", "antimagic", "freeze", "heat", "cover", "uncover"]:
+		if not simulation.available_actions(selected_employee_id).has(action):
+			hidden.append(action)
 	tool_bar.configure_for_employee(str(employee["name"]), employee["abilities"], str(employee["core_actions"]))
 	tool_bar.show_for_object("Зеркало", portal_mirror.target_global_position(), {
 		&"diagnose": "Осмотреть",
@@ -147,7 +175,83 @@ func _on_mirror_selected() -> void:
 		&"antimagic": "Закрыть портал",
 		&"freeze": "Заморозить",
 		&"heat": "Нагреть",
-	}, contextual_actions, PackedStringArray(["repair", "animate"]))
+	}, contextual_actions, hidden)
+
+
+func _on_lunnopuh_selected() -> void:
+	if action_in_progress or not pending_dialogue_action.is_empty():
+		return
+	if str(simulation.world_object.get("lunnopuh_state", "absent")) not in ["free", "caged"]:
+		return
+	if selected_employee_id.is_empty():
+		repair_hud.show_system_message("Сначала выберите сотрудника из бригады.", true)
+		return
+	selected_object_id = &"lunnopuh"
+	simulation.interaction_target = selected_object_id
+	var employee: Dictionary = game_state.employees[selected_employee_id]
+	var supported := PackedStringArray()
+	for action: String in simulation.lunnopuh_actions(selected_employee_id):
+		if PackedStringArray(employee["abilities"]).has(action):
+			supported.append(action)
+	if selected_employee_id == &"grog":
+		supported.erase("physical_move")
+	var contextual_actions: Array[Dictionary] = []
+	for action: String in simulation.lunnopuh_actions(selected_employee_id):
+		var profile: Dictionary = (LunnopuhDefinition.base_properties.get("object_actions", {}) as Dictionary).get(action, {})
+		if action == "install_cage" and (not game_state.has_supply_item(&"lunnopuh_cage") or str(simulation.world_object.get("cage_state", "packed")) != "packed"):
+			continue
+		if action in ["catch_hand", "catch_into_cage"]:
+			var catch_action := "catch_into_cage" if str(simulation.world_object.get("cage_state", "packed")) == "installed" else "catch_hand"
+			if action != catch_action:
+				continue
+		if action in ["catch_lunnopuh", "return_lunnopuh"]:
+			continue
+		if profile.is_empty():
+			continue
+		var compatible := true
+		for ability: String in profile.get("abilities", []):
+			if not PackedStringArray(employee["abilities"]).has(ability):
+				compatible = false
+		if compatible:
+			contextual_actions.append({"id": StringName(action), "label": str(profile["label"])})
+	if supported.is_empty() and contextual_actions.is_empty():
+		tool_bar.visible = false
+		repair_hud.show_system_message("У выбранного сотрудника пока нет действий с лунопухом.", false)
+		return
+	var hidden := PackedStringArray()
+	for action: String in ["diagnose", "repair", "physical_move", "telekinesis", "antimagic", "animate", "freeze", "heat"]:
+		if not supported.has(action):
+			hidden.append(action)
+	tool_bar.configure_for_employee(str(employee["name"]), employee["abilities"], str(employee["core_actions"]))
+	tool_bar.show_for_object("Лунопух", _selected_target_position(), {&"diagnose": "Осмотреть", &"freeze": "Заморозить", &"heat": "Нагреть"}, contextual_actions, hidden)
+
+
+func _lunnopuh_missing_cage_reaction() -> String:
+	if game_state.has_supply_item(&"lunnopuh_cage") or str(simulation.world_object.get("cage_state", "packed")) != "packed":
+		return ""
+	if not bool(simulation.world_object.get("portal_open", false)) or bool(simulation.world_object.get("destroyed", false)):
+		return str(LunnopuhDefinition.base_properties.get("missing_cage_closed_portal_reaction", ""))
+	return str((LunnopuhDefinition.base_properties.get("missing_cage_reactions", {}) as Dictionary).get("nika", ""))
+
+
+func _lunnopuh_telekinesis_choices() -> Array:
+	var choices: Array = []
+	if str(simulation.world_object.get("lunnopuh_state", "absent")) == "free" and (game_state.has_supply_item(&"lunnopuh_cage") or str(simulation.world_object.get("cage_state", "packed")) == "installed"):
+		choices.append({"id": &"catch_lunnopuh", "label": "Посадить в клетку"})
+	if bool(simulation.lunnopuh_properties().get("portal_available", false)):
+		choices.append({"id": &"return_lunnopuh", "label": "Отправить в портал"})
+	return choices
+
+
+func _on_lunnopuh_intent_selected(intent_id: StringName) -> void:
+	if selected_object_id == &"lunnopuh":
+		_on_tool_selected(intent_id)
+
+
+func _selected_target_position() -> Vector2:
+	if selected_object_id == &"lunnopuh":
+		return lunnopuh_cage.target_global_position() if str(simulation.world_object.get("lunnopuh_state", "absent")) == "caged" else lunnopuh.target_global_position()
+	return portal_mirror.target_global_position()
 
 
 func _on_tool_selected(action_id: StringName) -> void:
@@ -159,30 +263,53 @@ func _on_tool_selected(action_id: StringName) -> void:
 	if not game_state.can_employee_work_on_job(selected_employee_id, game_state.active_job_id):
 		repair_hud.show_system_message(tr("Сотрудник ещё едет на объект. %s.") % tr(str(game_state.employees[selected_employee_id]["status"])), true)
 		return
-	var employee: Dictionary = game_state.employees.get(selected_employee_id, {})
-	var contextual: String = simulation.get_employee_reaction(selected_employee_id, action_id)
-	if selected_employee_id == &"boris" and action_id == &"cover" and not game_state.has_supply_item(&"protective_cloth"):
-		pending_dialogue_action = &""
-		tool_bar.visible = false
-		repair_hud.show_employee_reaction(selected_employee_id, "Могу закрыть зеркало защитным полотном, но у нас его нет. Полотно можно купить в лавке снабжения.")
-		return
-	if selected_employee_id == &"felix" and action_id == &"antimagic" and not bool(simulation.world_object["portal_open"]):
-		pending_dialogue_action = &""
-		tool_bar.visible = false
-		if not repair_hud.show_employee_reaction(selected_employee_id, contextual):
-			repair_hud.show_system_message(contextual, true)
+	if selected_object_id == &"lunnopuh":
+		if str(simulation.world_object.get("lunnopuh_state", "absent")) not in ["free", "caged"]:
 			return
-	if selected_employee_id == &"felix" and action_id == &"antimagic" and bool(simulation.world_object.get("covered", false)):
-		pending_dialogue_action = &""
+		if action_id == &"telekinesis":
+			var missing_cage_reply := _lunnopuh_missing_cage_reaction()
+			if not missing_cage_reply.is_empty():
+				repair_hud.show_employee_reaction(selected_employee_id, missing_cage_reply)
+			var choices := _lunnopuh_telekinesis_choices()
+			if choices.is_empty():
+				tool_bar.hide()
+			else:
+				tool_bar.show_intents("Телекинез", choices)
+			return
+		if action_id == &"physical_move":
+			tool_bar.show_intents("Силовая работа", [{"id": &"catch_hand", "label": "Поймать руками"}, {"id": &"catch_into_cage", "label": "Загнать в клетку"}])
+			return
 		tool_bar.visible = false
-		if not repair_hud.show_employee_reaction(selected_employee_id, contextual):
-			repair_hud.show_system_message(contextual, true)
+		if not simulation.lunnopuh_actions(selected_employee_id).has(String(action_id)):
+			return
+		var creature_refusal := simulation.lunnopuh_refusal(action_id, game_state.has_supply_item(&"lunnopuh_cage"))
+		if not creature_refusal.is_empty():
+			if action_id in [&"freeze", &"heat", &"animate", &"antimagic"]:
+				repair_hud.show_employee_reaction(selected_employee_id, creature_refusal)
+			elif action_id in [&"install_cage", &"catch_lunnopuh", &"catch_into_cage"] and not game_state.has_supply_item(&"lunnopuh_cage"):
+				var replies: Dictionary = LunnopuhDefinition.base_properties.get("missing_cage_reactions", {})
+				repair_hud.show_employee_reaction(selected_employee_id, str(replies.get(String(selected_employee_id), creature_refusal)))
+			else:
+				repair_hud.show_system_message(creature_refusal, true)
+			return
+		last_action_intro = simulation.lunnopuh_reaction(action_id)
+		if not last_action_intro.is_empty() and repair_hud.show_employee_reaction(selected_employee_id, last_action_intro):
+			pending_dialogue_action = action_id
+			return
+		_begin_action(action_id)
 		return
-	var reaction: String = EmployeeReactionResolverScript.reaction_for(employee, action_id, simulation.world_object, &"", contextual)
+	if not simulation.available_actions(selected_employee_id).has(String(action_id)):
+		return
+	var contextual: String = simulation.get_employee_reaction(selected_employee_id, action_id, game_state.has_supply_item(&"protective_cloth"))
+	var reaction: String = contextual
+	last_action_intro = reaction
+	if not simulation.refusal_message(action_id, game_state.has_supply_item(&"protective_cloth")).is_empty():
+		tool_bar.visible = false
+		repair_hud.show_employee_reaction(selected_employee_id, reaction)
+		return
 	if not reaction.is_empty() and repair_hud.show_employee_reaction(selected_employee_id, reaction):
 		pending_dialogue_action = action_id
 		return
-	action_had_intro = false
 	_begin_action(action_id)
 
 
@@ -191,43 +318,93 @@ func _on_pre_action_dialogue_finished() -> void:
 		return
 	var action_id := pending_dialogue_action
 	pending_dialogue_action = &""
-	action_had_intro = true
 	_begin_action(action_id)
 
 
 func _begin_action(action_id: StringName) -> void:
-	# Повторно проверяем состояние после реплики: сохранённый или запоздавший
-	# сигнал диалога не должен запускать уже недопустимое заклинание.
-	if action_id == &"antimagic" and (not bool(simulation.world_object.get("portal_open", true)) or bool(simulation.world_object.get("covered", false))):
-		pending_dialogue_action = &""
-		action_had_intro = false
+	if selected_object_id == &"lunnopuh" and (not simulation.lunnopuh_actions(selected_employee_id).has(String(action_id)) or not simulation.lunnopuh_refusal(action_id, game_state.has_supply_item(&"lunnopuh_cage")).is_empty()):
 		return
+	if selected_object_id != &"lunnopuh" and (not simulation.available_actions(selected_employee_id).has(String(action_id)) or not simulation.refusal_message(action_id, game_state.has_supply_item(&"protective_cloth")).is_empty()):
+		return
+	simulation.pending_actor_action = {"employee_id": String(selected_employee_id), "action_id": String(action_id), "target_id": String(selected_object_id)}
+	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+	game_state.save_autosave()
 	action_in_progress = true
 	portal_mirror.set_interaction_enabled(false)
 	tool_bar.visible = false
 	var is_physical: bool = game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"physical"
-	var approach := physical_approach.position if is_physical else Vector2.INF
+	var target_position: Vector2 = lunnopuh_cage.target_global_position() if action_id == &"install_cage" else _selected_target_position()
+	var approach := _lunnopuh_approach_position(action_id) if is_physical and (selected_object_id == &"lunnopuh" or action_id == &"install_cage") else physical_approach.position if is_physical else Vector2.INF
 	if is_physical:
 		pending_physical_action = action_id
-		# Один удар по зеркалу выполняется сразу в момент попадания анимации
+		# Удар не требует длительной работы; состояние меняется после анимации
 		# и не расходует две игровые минуты на условную долгую работу.
 		physical_timer_finished = _is_instant_physical_action(action_id)
 		physical_impact_reached = false
-		if not physical_timer_finished:
-			repair_hud.start_timed_action(selected_employee_id, action_id, _on_physical_timer_finished.bind(action_id))
-	employee_actor.play_action(action_id, portal_mirror.target_global_position(), approach)
+
+	if selected_object_id == &"lunnopuh" and action_id in [&"return_lunnopuh", &"catch_lunnopuh"]:
+		employee_actor.set_persistent_work_pose(true)
+	var attempt_pose: StringName = &"neutral" if action_id in [&"catch_hand", &"catch_into_cage"] else &"work"
+	employee_actor.play_action(action_id, target_position, approach, attempt_pose)
+
+
+func _lunnopuh_approach_position(action_id: StringName) -> Vector2:
+	if action_id == &"install_cage" or str(simulation.world_object.get("lunnopuh_state", "absent")) == "caged":
+		return $LunnopuhRoutes/CageApproach.position
+	return $LunnopuhRoutes/LeftApproach.position if float(simulation.world_object.get("lunnopuh_offset_x", 0.0)) != 0.0 else $LunnopuhRoutes/RightApproach.position
 
 
 func _is_instant_physical_action(action_id: StringName) -> bool:
-	return action_id == &"physical_move"
+	return action_id in [&"physical_move", &"catch_hand", &"catch_into_cage"]
+
+
+func _on_lunnopuh_approach_finished(action_id: StringName) -> void:
+	if selected_object_id == &"lunnopuh" and action_id in [&"catch_hand", &"catch_into_cage"] and not bool(simulation.world_object.get("lunnopuh_escape_pending", false)):
+		var escape_position: Vector2 = to_local($LunnopuhRoutes/EscapeLeft.global_position) - Vector2(lunnopuh.size.x * 0.5, lunnopuh.size.y)
+		simulation.escape_lunnopuh(escape_position.x - lunnopuh_home_position.x, escape_position.y - lunnopuh_home_position.y)
+		_apply_visual_state(true)
+		game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+		game_state.save_autosave()
 
 
 func _on_action_impact(action_id: StringName) -> void:
+	if selected_object_id == &"lunnopuh" and action_id in [&"return_lunnopuh", &"catch_lunnopuh"]:
+		_animate_lunnopuh_transfer(action_id)
+		return
 	if game_state.employees[selected_employee_id].get("actor_action_style", &"magic") == &"magic":
 		_resolve_timed_action(action_id)
 	else:
-		physical_impact_reached = true
-		_try_resolve_physical_action(action_id)
+		if not _is_instant_physical_action(action_id):
+			repair_hud.start_timed_action(selected_employee_id, action_id, _on_physical_timer_finished.bind(action_id))
+
+
+func _animate_lunnopuh_return() -> void:
+	_animate_lunnopuh_transfer(&"return_lunnopuh")
+
+
+func _animate_lunnopuh_transfer(action_id: StringName) -> void:
+	if returning_creature:
+		return
+	returning_creature = true
+	if lunnopuh_motion != null and lunnopuh_motion.is_valid():
+		lunnopuh_motion.kill()
+	if action_id == &"return_lunnopuh" and str(simulation.world_object.get("lunnopuh_state", "absent")) == "caged":
+		lunnopuh_cage.show_state(&"installed")
+		lunnopuh.position = to_local(lunnopuh_cage.target_global_position()) - lunnopuh.size * 0.5
+		lunnopuh.modulate.a = 1.0
+		lunnopuh.visible = true
+	lunnopuh_motion = create_tween()
+	var target: Vector2 = lunnopuh_cage.target_global_position() if action_id == &"catch_lunnopuh" else portal_mirror.target_global_position()
+	var destination := to_local(target) - lunnopuh.size * 0.5
+	lunnopuh_motion.tween_property(lunnopuh, "position", lunnopuh.position + Vector2(0, -75), 0.35)
+	lunnopuh_motion.tween_property(lunnopuh, "position", destination, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	lunnopuh_motion.tween_property(lunnopuh, "modulate:a", 0.0, 0.3)
+	await lunnopuh_motion.finished
+	employee_actor.set_persistent_work_pose(false)
+	returning_creature = false
+	_resolve_timed_action(action_id)
+	action_in_progress = false
+	portal_mirror.set_interaction_enabled(true)
 
 
 func _on_physical_timer_finished(action_id: StringName) -> void:
@@ -242,24 +419,44 @@ func _try_resolve_physical_action(action_id: StringName) -> void:
 	physical_timer_finished = false
 	physical_impact_reached = false
 	_resolve_timed_action(action_id)
+	action_in_progress = false
+	portal_mirror.set_interaction_enabled(true)
 
 
 func _resolve_timed_action(action_id: StringName) -> void:
+	simulation.pending_actor_action = {}
+	if selected_object_id == &"lunnopuh":
+		simulation.world_object["cage_available"] = game_state.has_supply_item(&"lunnopuh_cage")
+		var creature_result := simulation.apply_lunnopuh_action(selected_employee_id, action_id)
+		game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
+		game_state.save_autosave()
+		_apply_visual_state()
+		if action_id == &"diagnose":
+			repair_hud.queue_dialogue("Результат осмотра", str(creature_result["message"]), bool(creature_result["warning"]))
+		else:
+			var after_reaction := simulation.lunnopuh_reaction(action_id, true, selected_employee_id)
+			if not after_reaction.is_empty():
+				repair_hud.show_employee_reaction(selected_employee_id, after_reaction)
+			elif str(creature_result["message"]) != last_action_intro:
+				repair_hud.show_system_message(str(creature_result["message"]), bool(creature_result["warning"]))
+		return
 	var portal_was_open := bool(simulation.world_object.get("portal_open", true))
 	var previous_damage := int(simulation.world_object.get("damage", 0))
-	var result: Dictionary = simulation.apply_action(selected_employee_id, action_id, game_state.has_supply_item(&"protective_cloth"))
+	var result: Dictionary = simulation.install_cage(selected_employee_id, game_state.has_supply_item(&"lunnopuh_cage")) if action_id == &"install_cage" else simulation.apply_action(selected_employee_id, action_id, game_state.has_supply_item(&"protective_cloth"))
 	if bool(result.get("applied", false)) and action_id == &"cover":
 		game_state.consume_supply_item(&"protective_cloth")
 	elif bool(result.get("applied", false)) and action_id == &"uncover":
 		game_state.return_supply_item(&"protective_cloth")
 	if bool(result.get("applied", false)):
-		if action_id == &"physical_move":
+		if action_id == &"install_cage":
+			_play_audio_cue(&"play_trap_install")
+		elif action_id == &"physical_move":
 			_play_audio_cue(&"play_heavy_impact")
 			_play_audio_cue(&"play_mirror_shatter")
 		elif action_id == &"antimagic" and portal_was_open and not bool(simulation.world_object.get("portal_open", true)):
 			_play_audio_cue(&"play_portal_close")
 	game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
-	if action_id in [&"cover", &"uncover"] and bool(result.get("applied", false)):
+	if action_id in [&"cover", &"uncover", &"install_cage"] and bool(result.get("applied", false)):
 		game_state.save_autosave()
 	_apply_visual_state()
 	var resident_reaction: String = simulation.get_resident_reaction(action_id)
@@ -278,8 +475,9 @@ func _resolve_timed_action(action_id: StringName) -> void:
 	elif not bool(result.get("applied", false)):
 		_show_failed_action(result)
 	elif action_id == &"freeze":
-		if not freeze_resident_reaction_shown and not resident_reaction.is_empty():
-			freeze_resident_reaction_shown = true
+		if not bool(simulation.world_object.get("freeze_reaction_seen", false)) and not resident_reaction.is_empty():
+			simulation.world_object["freeze_reaction_seen"] = true
+			game_state.set_job_repair_state(game_state.active_job_id, simulation.get_state())
 			repair_hud.show_resident_dialogue(resident_reaction)
 		else:
 			repair_hud.clear_all_dialogues()
@@ -287,11 +485,10 @@ func _resolve_timed_action(action_id: StringName) -> void:
 		repair_hud.show_resident_dialogue(resident_reaction)
 	elif action_id == &"antimagic" and bool(result.get("applied", false)) and not resident_reaction.is_empty():
 		repair_hud.show_resident_dialogue(resident_reaction)
-	elif not action_had_intro:
+	elif str(result.get("message", "")) != last_action_intro:
 		repair_hud.show_system_message(str(result["message"]), bool(result["warning"]))
 	else:
 		repair_hud.clear_all_dialogues()
-	action_had_intro = false
 
 
 func _should_show_resident_damage_reaction(action_id: StringName, result: Dictionary, previous_damage: int, current_damage: int, resident_reaction: String) -> bool:
@@ -305,6 +502,9 @@ func _should_show_resident_damage_reaction(action_id: StringName, result: Dictio
 
 func _show_failed_action(result: Dictionary) -> void:
 	var message := str(result.get("message", ""))
+	if message == last_action_intro:
+		repair_hud.clear_all_dialogues()
+		return
 	if message.begins_with("Действие не изменило"):
 		repair_hud.show_employee_reaction(selected_employee_id, EmployeeReactionResolverScript.no_effect_for(selected_employee_id))
 	else:
@@ -318,12 +518,22 @@ func _play_audio_cue(method: StringName) -> void:
 
 
 func _resume_pending_action() -> void:
+	selected_object_id = StringName(str(simulation.pending_actor_action.get("target_id", "portal_mirror")))
+	simulation.interaction_target = selected_object_id
 	var pending: Dictionary = game_state.get_pending_job_action(game_state.active_job_id)
 	if pending.is_empty():
+		pending = simulation.pending_actor_action.duplicate(true)
+		if pending.is_empty():
+			return
+		selected_employee_id = StringName(str(pending.get("employee_id", "")))
+		_configure_employee_actor()
+		_begin_action(StringName(str(pending.get("action_id", ""))))
 		return
 	selected_employee_id = StringName(str(pending.get("employee_id", "")))
 	_configure_employee_actor()
 	var action_id := StringName(str(pending.get("action_id", "")))
+	action_in_progress = true
+	portal_mirror.set_interaction_enabled(false)
 	pending_physical_action = action_id
 	physical_timer_finished = false
 	# После загрузки уже начатого действия не повторяем путь сотрудника с начала.
@@ -332,19 +542,43 @@ func _resume_pending_action() -> void:
 
 
 func _on_action_finished() -> void:
+	if pending_physical_action in [&"catch_hand", &"catch_into_cage"] and lunnopuh_motion != null and lunnopuh_motion.is_running():
+		await lunnopuh_motion.finished
+	if returning_creature:
+		return
+	if not pending_physical_action.is_empty():
+		physical_impact_reached = true
+		_try_resolve_physical_action(pending_physical_action)
+		if not pending_physical_action.is_empty():
+			return
 	action_in_progress = false
 	portal_mirror.set_interaction_enabled(true)
 
 
-func _apply_visual_state() -> void:
-	portal_mirror.show_state(simulation.visual_state(), bool(simulation.world_object["cold_aura"]))
+func _apply_visual_state(animate_creature: bool = false) -> void:
+	portal_mirror.show_state(simulation.visual_state(), bool(simulation.world_object["cold_aura"]), bool(simulation.world_object.get("portal_silhouette", false)))
+	var creature_state := str(simulation.world_object.get("lunnopuh_state", "absent"))
+	lunnopuh.visible = creature_state == "free"
+	if creature_state == "free":
+		lunnopuh.modulate.a = 1.0
+	var destination := lunnopuh_home_position + Vector2(float(simulation.world_object.get("lunnopuh_offset_x", 0.0)), float(simulation.world_object.get("lunnopuh_offset_y", 0.0)))
+	if lunnopuh_motion != null and lunnopuh_motion.is_valid():
+		lunnopuh_motion.kill()
+	if animate_creature and lunnopuh.visible:
+		lunnopuh_motion = create_tween()
+		lunnopuh_motion.tween_property(lunnopuh, "position", destination, 1.1).set_trans(Tween.TRANS_SINE)
+	else:
+		lunnopuh.position = destination
+	lunnopuh_cage.show_state(&"occupied" if creature_state == "caged" else StringName(str(simulation.world_object.get("cage_state", "packed"))))
 	if repair_hud.has_method("set_completion_ready"):
 		repair_hud.call("set_completion_ready", simulation.is_resolved())
 
 
 func _attempt_complete_job() -> void:
+	if action_in_progress or repair_hud.is_timed_action_active():
+		return
 	if not simulation.is_resolved():
-		repair_hud.show_system_message("Работу нельзя завершить: портал всё ещё открыт.", true)
+		repair_hud.show_system_message("Работу нельзя завершить: портал нужно закрыть или изолировать, а свободного лунопуха — поймать либо вернуть в его мир." if str(simulation.world_object.get("lunnopuh_state", "absent")) == "free" else "Работу нельзя завершить: портал всё ещё открыт.", true)
 		return
 	if game_state.complete_active_job(simulation.get_completion_result()):
 		get_tree().change_scene_to_file("res://scenes/main.tscn")

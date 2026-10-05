@@ -9,12 +9,14 @@ static var OBJECTS: Dictionary = _load_definitions(OBJECT_DEFINITIONS_PATH)
 static var ANOMALIES: Dictionary = _load_definitions(ANOMALY_DEFINITIONS_PATH)
 
 static var RESIDENTS: Dictionary = {
+	&"Госпожа Селеста": {"id": &"Госпожа Селеста", "name": "Госпожа Селеста", "portrait": "res://assets/portraits/residents/selesta.png", "home_id": &"upper_city_12", "preferences": PackedStringArray(["preserve_property"])},
 	&"mirabel": {"id": &"mirabel", "name": "Госпожа Мирабель", "portrait": "res://assets/portraits/residents/mirabel.png", "home_id": &"tower_street_8", "preferences": PackedStringArray(["preserve_property"])},
 	&"eleonora": {"id": &"eleonora", "name": "Госпожа Элеонора", "portrait": "res://assets/portraits/residents/eleonora.png", "home_id": &"old_quarter_5", "preferences": PackedStringArray(["tidy", "quiet", "preserve_property"])},
 	&"ragnar": {"id": &"ragnar", "name": "Господин Рагнар", "portrait": "res://assets/portraits/residents/ragnar.png", "home_id": &"old_quarter_5", "preferences": PackedStringArray(["fast_response", "preserve_plumbing"])},
 }
 
 static var ROOMS: Dictionary = {
+	&"selesta_room": {"id": &"selesta_room", "apartment_id": &"upper_city_12", "address": "Верхний город, 12", "scene_path": "res://scenes/PortalMirrorHouse.tscn", "zones": PackedStringArray(["living_room"]), "supported_object_ids": PackedStringArray(["portal_mirror"]), "supported_effects": PackedStringArray(["portal_open", "cold_aura"])},
 	&"mirabel_attic": {"id": &"mirabel_attic", "apartment_id": &"tower_street_8", "address": "Башенная улица, 8", "scene_path": "res://scenes/GargoyleAttic.tscn", "zones": PackedStringArray(["attic"]), "supported_object_ids": PackedStringArray(["drain_gargoyle"]), "supported_effects": PackedStringArray(["dormant", "awake", "clogged", "flooding", "frozen", "damaged"])},
 	&"eleonora_room": {
 		"id": &"eleonora_room", "apartment_id": &"old_quarter_5", "scene_path": "res://scenes/WardrobeRoom.tscn",
@@ -52,6 +54,7 @@ static var EFFECTS: Dictionary = {
 }
 
 static var OBJECTIVES: Dictionary = {
+	&"contain_creature": {"allowed_values": {"lunnopuh_state": PackedStringArray(["caged", "returned"])}},
 	&"stop_uncontrolled_motion": {"required_false": PackedStringArray(["moving", "burning", "held"])},
 	&"clear_requested_zone": {"property_matches": PackedStringArray(["position_zone", "requested_zone"])},
 	&"extinguish_fire": {"required_false": PackedStringArray(["burning"])},

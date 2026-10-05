@@ -1,6 +1,8 @@
 extends Control
 
 const SaveSlotsPanelScript := preload("res://scripts/save_slots_panel.gd")
+var debug_mirror_picker: OptionButton
+const DEBUG_MIRROR_VARIANTS := [&"", &"open_portal", &"portal_silhouette", &"escaped_lunnopuh"]
 var debug_wardrobe_picker: OptionButton
 const DEBUG_WARDROBE_VARIANTS := [&"", &"restless_animation", &"active_fire", &"deep_freeze"]
 
@@ -22,6 +24,23 @@ func _toggle_debug_wardrobe_picker() -> void:
 		add_child(debug_wardrobe_picker)
 	else:
 		debug_wardrobe_picker.visible = not debug_wardrobe_picker.visible
+
+func _toggle_debug_mirror_picker() -> void:
+	if not OS.is_debug_build():
+		return
+	if debug_mirror_picker == null:
+		debug_mirror_picker = OptionButton.new()
+		debug_mirror_picker.position = Vector2(480, 710)
+		debug_mirror_picker.custom_minimum_size = Vector2(445, 48)
+		debug_mirror_picker.add_theme_font_size_override("font_size", 20)
+		for label: String in ["Зеркало: случайный вариант", "Зеркало: обычный портал", "Зеркало: силуэт", "Зеркало: лунопух"]:
+			debug_mirror_picker.add_item(label)
+		debug_mirror_picker.tooltip_text = "Выбор для новой игры. Вариант с лунопухом требует нанятую Нику без запрета Селесты. Сохранённые заявки не меняются."
+		debug_mirror_picker.item_selected.connect(func(index: int) -> void: game_state.debug_next_mirror_anomaly = DEBUG_MIRROR_VARIANTS[index])
+		add_child(debug_mirror_picker)
+	else:
+		debug_mirror_picker.visible = not debug_mirror_picker.visible
+
 
 const TAGLINES: PackedStringArray = [
 	"Спасаем дома, нервы и иногда реальность",
@@ -107,6 +126,15 @@ func _build_interface() -> void:
 		debug_button.add_theme_stylebox_override("normal", _style(COLOR_BUTTON, COLOR_BRASS, 2, 8))
 		debug_button.pressed.connect(_toggle_debug_wardrobe_picker)
 		add_child(debug_button)
+		var mirror_debug_button := debug_button.duplicate() as Button
+		mirror_debug_button.name = "DebugMirrorButton"
+		mirror_debug_button.text = "Проверка зеркала"
+		mirror_debug_button.position = Vector2(350, 650)
+		# Соединения исходной кнопки не копируем в другое меню.
+		for connection: Dictionary in mirror_debug_button.pressed.get_connections():
+			mirror_debug_button.pressed.disconnect(connection["callable"])
+		mirror_debug_button.pressed.connect(_toggle_debug_mirror_picker)
+		add_child(mirror_debug_button)
 
 
 func _build_title() -> void:

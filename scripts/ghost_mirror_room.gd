@@ -6,6 +6,7 @@ const GhostSimulationScript := preload("res://scripts/ghost_followup_simulation.
 @onready var mirror: Control = $MirrorPlacement
 @onready var empty_trap: TextureRect = $TrapPlacement/Empty
 @onready var occupied_trap: TextureRect = $TrapPlacement/Occupied
+@onready var lunnopuh_cage: Control = $LunnopuhCagePlacement
 @onready var employee_actor: Control = $EmployeeActor
 @onready var physical_approach: Marker2D = $PhysicalApproach
 @onready var mirror_physical_approach: Marker2D = $MirrorPhysicalApproach
@@ -234,6 +235,10 @@ func _save_state() -> void:
 
 
 func _apply_visual_state() -> void:
+	var pet_caged := str(simulation.world_object.get("lunnopuh_state", "absent")) == "caged"
+	lunnopuh_cage.show_state(&"occupied" if pet_caged else &"packed")
+	lunnopuh_cage.get_node("InteractionButton").disabled = true
+	$TrapPlacement.position = Vector2(760, 555) if pet_caged else Vector2(1050, 555)
 	var ghost_state := StringName(simulation.world_object["ghost_state"])
 	ghost.show_state(ghost_state)
 	mirror.show_state(simulation.mirror_visual_state())

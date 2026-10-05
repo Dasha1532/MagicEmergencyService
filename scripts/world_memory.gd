@@ -33,6 +33,17 @@ const SYSTEMIC_ANOMALIES: Array[Dictionary] = [
 ]
 
 const OBJECT_DEFINITIONS: Dictionary = {
+	"portal_mirror_room.lunnopuh": {
+		"definition_id": "lunnopuh", "property_keys": ["state", "inspected", "damage", "position_offset_x", "position_offset_y"], "significant_keys": ["state", "damage"],
+	},
+	"portal_mirror_room.lunnopuh_cage": {
+		"definition_id": "lunnopuh_cage", "property_keys": ["state", "damage"], "significant_keys": ["state", "damage"],
+	},
+	"portal_mirror_room.portal_mirror": {
+		"definition_id": "portal_mirror",
+		"property_keys": ["portal_open", "covered", "cold_aura", "stable", "destroyed", "damage", "magic_level", "temperature", "visual_state", "portal_silhouette", "cage_state", "lunnopuh_state"],
+		"significant_keys": ["portal_open", "covered", "cold_aura", "destroyed", "damage", "magic_level"],
+	},
 	"tower_street_8.attic.drain_gargoyle": {
 		"definition_id": "drain_gargoyle",
 		"property_keys": ["awake", "clogged", "bypass_open", "damaged", "damage", "frozen", "room_frozen", "magic_level", "flooding", "clog_removed_before_damage", "visual_state"],
@@ -151,6 +162,8 @@ func to_data() -> Dictionary:
 
 
 func instance_id_for_job(job_id: StringName, definition_id: StringName = &"") -> String:
+	if definition_id == &"portal_mirror" or job_id == &"portal_mirror":
+		return "portal_mirror_room.portal_mirror"
 	if definition_id == &"drain_gargoyle" or job_id == &"sleeping_gargoyle":
 		return "tower_street_8.attic.drain_gargoyle"
 	if definition_id == &"lava_faucet" or job_id == &"lava_leak" or String(job_id).begins_with("generated_faucet"):
@@ -645,7 +658,7 @@ func evaluate_crew_relations(report: Dictionary) -> Array[String]:
 	var successful_work := rating >= 4 and not overdue and claim_amount == 0 and (not bool(report.get("payment_forfeited", false)) or successful_restoration)
 	var involved_employee_ids: Array[String] = damage_employee_ids.duplicate()
 	var helpful_ids: Array[String] = []
-	if not overdue and not bool(report.get("payment_forfeited", false)):
+	if not overdue and (not bool(report.get("payment_forfeited", false)) or bool(report.get("credit_helpful_work_on_damage", false))):
 		for employee_id: Variant in report.get("successful_employee_ids", []):
 			var helpful_id := str(employee_id)
 			if not damage_employee_ids.has(helpful_id) and not helpful_ids.has(helpful_id):

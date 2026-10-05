@@ -9,7 +9,7 @@ signal coins_spent(amount: int)
 
 const STARTING_EMPLOYEES: PackedStringArray = ["liliya", "grog", "boris"]
 const EMPLOYEE_ORDER: PackedStringArray = ["liliya", "grog", "boris", "nika", "felix"]
-const SAVE_VERSION: int = 29
+const SAVE_VERSION: int = 31
 const CLIENT_GREETING_PROFILE := preload("res://data/client_relationship_greetings.gd")
 const RESTORATION_PROFILE := preload("res://data/restoration/faucet.tres")
 const RESTORATION_REFUSAL_REVIEW := "Заменить уничтоженный кран отказались. Придётся искать другую службу."
@@ -30,8 +30,17 @@ const DISMISSAL_DEBT_THRESHOLD: int = -800
 const REAL_SECONDS_PER_GAME_MINUTE: float = 3.0
 const DEMO_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle", "escaped_ghost", "frozen_bath"]
 const DEMO_CORE_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "sleeping_gargoyle"]
-const HIDDEN_LEGACY_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "portal_mirror", "escaped_ghost", "frozen_bath"]
+const HIDDEN_LEGACY_JOB_IDS: PackedStringArray = ["lava_leak", "walking_wardrobe", "frozen_bath"]
 const SUPPLY_ITEMS: Dictionary = {
+	&"lunnopuh_cage": {
+		"name": "Переносная клетка",
+		"catalog_name": "Переносная клетка",
+		"category": "Полевое снаряжение",
+		"price": 250,
+		"icon": "res://assets/objects/lunnopuh_cage/empty.png",
+		"description": "Переносная магическая клетка, подойдёт для поимки маленького животного.",
+		"reusable": true,
+	},
 	&"animation_kit": {
 		"name": "Практическое оживление бытовых предметов",
 		"catalog_name": "Практическое оживление",
@@ -167,6 +176,7 @@ var world_memory: RefCounted = WorldMemoryScript.new()
 var last_generated_anomaly_id: StringName = &""
 var last_generated_faucet_anomaly_id: StringName = &""
 var debug_next_wardrobe_anomaly: StringName = &""
+var debug_next_mirror_anomaly: StringName = &""
 var debug_tutorial_bypass_day: int = 0
 var debug_skipped_job_ids: PackedStringArray = []
 var clock_paused: bool = true
@@ -277,6 +287,7 @@ var employees: Dictionary = {
 		"portrait": "res://assets/portraits/employees/grog.png",
 		"actor_neutral_pose": "res://assets/characters/employees/grog/full_body.png",
 		"actor_work_pose": "res://assets/characters/employees/grog/work_pose.png",
+		"actor_catch_pose": "res://assets/characters/employees/grog/catch_pose.png",
 		"actor_walk_pose": "res://assets/characters/employees/grog/walk_pose_1.png",
 		"actor_walk_pose_alt": "res://assets/characters/employees/grog/walk_pose_2.png",
 		"actor_walk_pose_faces_right": true,
@@ -305,6 +316,8 @@ var employees: Dictionary = {
 		"actor_walk_pose": "res://assets/characters/employees/boris/walk_pose_1.png",
 		"actor_walk_pose_alt": "res://assets/characters/employees/boris/walk_pose_2.png",
 		"actor_work_pose": "res://assets/characters/employees/boris/work_pose.png",
+		"actor_catch_pose": "res://assets/characters/employees/boris/catch_pose.png",
+		"actor_inspect_pose": "res://assets/characters/employees/boris/inspect_pose.png",
 		"actor_heat_protected_work_pose": "res://assets/characters/employees/boris/heat_gloves_work_pose.png",
 		"actor_action_style": &"physical",
 		"status": "Свободен",
@@ -446,6 +459,8 @@ var jobs: Dictionary = {
 	},
 	&"portal_mirror": {
 		"title": "В зеркале открылся портал",
+		"object_initial_state": preload("res://data/anomalies/open_portal.tres").initial_state,
+		"object_goal": preload("res://data/anomalies/open_portal.tres").resolution,
 		"objective": "Закрыть портал в зеркале",
 		"address": "Верхний город, 12",
 		"resident": "Госпожа Селеста",
@@ -522,6 +537,10 @@ var jobs: Dictionary = {
 		"assigned": PackedStringArray(),
 	},
 }
+
+
+var loading_game: bool = false
+var legacy_mirror_job: Dictionary = jobs[&"portal_mirror"].duplicate(true)
 
 
 func assign_employee(employee_id: StringName, job_id: StringName) -> void:
@@ -1218,8 +1237,11 @@ func get_job_repair_state(job_id: StringName) -> Dictionary:
 
 func set_job_repair_state(job_id: StringName, repair_state: Dictionary) -> void:
 	var inspected: Array = get_job_repair_state(job_id).get("boris_inspected_objects", [])
-	if not inspected.is_empty():
-		repair_state["boris_inspected_objects"] = inspected.duplicate()
+	var merged_inspected: Array = (repair_state.get("boris_inspected_objects", []) as Array).duplicate()
+	for object_name: Variant in inspected:
+		if not merged_inspected.has(object_name):
+			merged_inspected.append(object_name)
+	repair_state["boris_inspected_objects"] = merged_inspected
 	if not jobs.has(job_id) or completed_job_ids.has(String(job_id)):
 		return
 	var job: Dictionary = jobs[job_id]
@@ -1325,6 +1347,24 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 		result["forfeit_payment"] = not _restoration_is_paid(job)
 		result["expense_reimbursement"] = int(SUPPLY_ITEMS[&"replacement_faucet"]["price"]) if _restoration_is_paid(job) else 0
 		job["base_reward"] = int(RESTORATION_PROFILE.base_properties["installation_fee"]) if _restoration_is_paid(job) else 0
+	for retained_item: Variant in result.get("retained_supply_items", []):
+		consume_supply_item(StringName(str(retained_item)))
+	for returned_item: Variant in result.get("returned_supply_items", []):
+		return_supply_item(StringName(str(returned_item)))
+	var completion_updates: Dictionary = result.get("completion_object_updates", {})
+	if not completion_updates.is_empty():
+		var final_repair_state := get_job_repair_state(job_id).duplicate(true)
+		var final_object: Dictionary = final_repair_state.get("world_object", {})
+		final_object.merge(completion_updates, true)
+		final_repair_state["world_object"] = final_object
+		var final_related: Dictionary = final_repair_state.get("related_objects", {})
+		var related_updates: Dictionary = result.get("completion_related_updates", {})
+		for instance_id: Variant in related_updates:
+			var related_object: Dictionary = final_related.get(instance_id, {})
+			related_object.merge(related_updates[instance_id], true)
+			final_related[instance_id] = related_object
+		final_repair_state["related_objects"] = final_related
+		set_job_repair_state(job_id, final_repair_state)
 	var base_reward: int = int(job.get("base_reward", 0))
 	var overdue: bool = bool(job.get("overdue", false))
 	var reward_adjustment: int = int(result.get("reward_adjustment", 0)) - (OVERDUE_PAYMENT_PENALTY if overdue else 0)
@@ -1394,6 +1434,7 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 		"crew": Array(crew_names),
 		"crew_ids": Array(assigned),
 		"successful_employee_ids": result.get("successful_employee_ids", []),
+		"credit_helpful_work_on_damage": bool(result.get("credit_helpful_work_on_damage", false)),
 		"damage_employee_ids": Array(damage_employee_ids),
 		"damage_severity_by_employee": damage_severity_by_employee,
 		"object_destroyed": bool(result.get("object_destroyed", false)),
@@ -2140,6 +2181,7 @@ func _save_to_path(path: String) -> Error:
 		"tutorial_state": tutorial_state,
 		"campaign_seed": campaign_seed,
 		"debug_tutorial_bypass_day": debug_tutorial_bypass_day,
+		"debug_next_mirror_anomaly": String(debug_next_mirror_anomaly) if OS.is_debug_build() else "",
 		"debug_skipped_job_ids": Array(debug_skipped_job_ids),
 		"next_generated_job_index": next_generated_job_index,
 		"generated_jobs": generated_jobs,
@@ -2210,6 +2252,7 @@ func _load_from_path(path: String) -> Error:
 	var version := int(save_data.get("version", 0))
 	if version <= 0 or version > SAVE_VERSION:
 		return ERR_FILE_UNRECOGNIZED
+	loading_game = true
 	var loaded_world_memory: Variant = save_data.get("world_memory", {})
 	var world_memory_data: Dictionary = loaded_world_memory as Dictionary if loaded_world_memory is Dictionary else {}
 	world_memory.load_data(world_memory_data)
@@ -2217,6 +2260,7 @@ func _load_from_path(path: String) -> Error:
 	generated_jobs = {}
 	campaign_seed = int(save_data.get("campaign_seed", 0))
 	debug_tutorial_bypass_day = int(save_data.get("debug_tutorial_bypass_day", 0)) if OS.is_debug_build() else 0
+	debug_next_mirror_anomaly = StringName(str(save_data.get("debug_next_mirror_anomaly", ""))) if OS.is_debug_build() else &""
 	debug_skipped_job_ids = PackedStringArray(save_data.get("debug_skipped_job_ids", [])) if OS.is_debug_build() else PackedStringArray()
 	next_generated_job_index = int(save_data.get("next_generated_job_index", 0))
 	var loaded_generated_jobs: Variant = save_data.get("generated_jobs", {})
@@ -2444,6 +2488,9 @@ func _load_from_path(path: String) -> Error:
 	_evaluate_dismissal()
 	_migrate_restoration_trust()
 	_migrate_job_preferences()
+	loading_game = false
+	if is_tutorial_job_completed() or debug_tutorial_bypass_day > 0:
+		_update_parallel_job_unlocks()
 	state_changed.emit()
 	return OK
 
@@ -2495,6 +2542,41 @@ func _publish_generated_wardrobe_job(seed_value: int) -> bool:
 		last_generated_anomaly_id = StringName(str(instance.get("anomaly_id", "")))
 		_save_last_generated_anomaly(last_generated_anomaly_id)
 	_register_generated_job(instance)
+	next_generated_job_index += 1
+	return true
+
+
+func _publish_generated_mirror_job() -> bool:
+	if loading_game:
+		return false
+	var job_id := &"portal_mirror"
+	if completed_job_ids.has(String(job_id)) or not jobs.has(job_id):
+		return false
+	var previous: Dictionary = jobs[job_id].duplicate(true)
+	# Уже опубликованную или начатую заявку прежнего формата не заменяем.
+	if generated_jobs.has(String(job_id)) or bool(previous.get("unlocked", false)) or bool(previous.get("dispatched", false)) or not get_job_repair_state(job_id).is_empty():
+		_set_job_unlocked(job_id, true)
+		return true
+	var excluded := PackedStringArray()
+	var history := ConfigFile.new()
+	if history.load(GENERATOR_HISTORY_PATH) == OK:
+		var last := str(history.get_value("generator", "last_mirror_anomaly_id", ""))
+		if not last.is_empty():
+			excluded.append(last)
+	var forced := OS.is_debug_build() and not debug_next_mirror_anomaly.is_empty()
+	if forced:
+		excluded.clear()
+		for anomaly: Dictionary in GeneratedJobGeneratorScript.Catalog.compatible_anomalies(&"selesta_room", &"portal_mirror"):
+			if StringName(str(anomaly["id"])) != debug_next_mirror_anomaly:
+				excluded.append(String(anomaly["id"]))
+	var instance := GeneratedJobGeneratorScript.generate_mirror(campaign_seed ^ 0x345BA, _available_ability_ids(), _generation_context(), excluded)
+	if instance.is_empty() or (forced and StringName(str(instance["anomaly_id"])) != debug_next_mirror_anomaly):
+		return false
+	debug_next_mirror_anomaly = &""
+	_register_generated_job(instance)
+	_set_job_unlocked(job_id, true)
+	if not forced:
+		_write_generator_history("last_mirror_anomaly_id", str(instance["anomaly_id"]))
 	next_generated_job_index += 1
 	return true
 
@@ -2825,12 +2907,13 @@ func _sanitize_internal_faucet_check_text(report: Dictionary) -> void:
 
 
 func _remove_generated_job_entries() -> void:
+	jobs[&"portal_mirror"] = legacy_mirror_job.duplicate(true)
 	var ids_to_remove: Array[StringName] = []
 	for job_id: StringName in jobs:
 		if bool((jobs[job_id] as Dictionary).get("generated", false)):
 			ids_to_remove.append(job_id)
 	for job_id: StringName in ids_to_remove:
-		if job_id == &"sleeping_gargoyle":
+		if job_id in [&"sleeping_gargoyle", &"portal_mirror"]:
 			# This stable ID also existed before generated instances were saved.
 			jobs[job_id]["generated"] = false
 			jobs[job_id].erase("generated_instance")
@@ -2844,6 +2927,20 @@ func _generation_context() -> Dictionary:
 	for resident_id: StringName in GeneratedJobGeneratorScript.Catalog.RESIDENTS:
 		client_capabilities[String(resident_id)] = _available_ability_ids(String(resident_id))
 	context["client_capabilities"] = client_capabilities
+	var admitted_employees: Dictionary = {}
+	for resident_id: StringName in GeneratedJobGeneratorScript.Catalog.RESIDENTS:
+		var admitted := PackedStringArray()
+		for employee_id: StringName in employees:
+			if bool(employees[employee_id].get("available", false)) and str(world_memory.get_relation(String(resident_id), String(employee_id)).get("access_status", "allowed")) != "banned":
+				admitted.append(String(employee_id))
+		admitted_employees[String(resident_id)] = admitted
+	context["admitted_employees"] = admitted_employees
+	context["owned_items"] = owned_supply_items.duplicate()
+	context["money"] = money
+	var item_prices: Dictionary = {}
+	for item_id: StringName in SUPPLY_ITEMS:
+		item_prices[String(item_id)] = int(SUPPLY_ITEMS[item_id]["price"])
+	context["item_prices"] = item_prices
 	return context
 
 
@@ -2996,7 +3093,10 @@ func _update_parallel_job_unlocks() -> void:
 	_set_job_unlocked(&"walking_wardrobe", false)
 	_set_job_unlocked(GeneratedJobGeneratorScript.JOB_ID, jobs_are_due)
 	var frozen_bath_delays_portal := _has_follow_up(&"frozen_bath") and day <= source_day + 1
-	_set_job_unlocked(&"portal_mirror", jobs_are_due and not frozen_bath_delays_portal)
+	if jobs_are_due and not frozen_bath_delays_portal:
+		_publish_generated_mirror_job()
+	else:
+		_set_job_unlocked(&"portal_mirror", false)
 	print_wardrobe_diagnostic("update_parallel_job_unlocks")
 
 

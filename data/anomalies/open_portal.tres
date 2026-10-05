@@ -1,14 +1,48 @@
-[gd_resource type="Resource" script_class="GenerativeAnomalyDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="GenerativeAnomalyDefinition" format=3 uid="uid://doysbl16win6e"]
 
-[ext_resource type="Script" path="res://scripts/definitions/anomaly_definition.gd" id="1"]
+[ext_resource type="Script" uid="uid://beeg4224elwsa" path="res://scripts/definitions/anomaly_definition.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 id = &"open_portal"
 display_name = "Открытый портал"
+generator_enabled = true
+compatible_object_ids = PackedStringArray("portal_mirror")
 required_tags = PackedStringArray("portal_capable")
 forbidden_tags = PackedStringArray("destroyed")
 initial_effects = PackedStringArray("portal_open", "cold_aura")
 objective_ids = PackedStringArray("close_portal")
+initial_state = {
+"cold_aura": true,
+"covered": false,
+"destroyed": false,
+"magic_level": 9,
+"portal_open": true,
+"stable": false,
+"temperature": 2
+}
+resolution = {
+"alternative_true": PackedStringArray("covered"),
+"required_false": PackedStringArray("portal_open")
+}
+solution_plans = Array[Dictionary]([{
+"abilities": PackedStringArray("antimagic"),
+"family": &"close_channel"
+}, {
+"abilities": PackedStringArray("diagnose", "repair"),
+"family": &"temporary_isolation",
+"required_employee_ids": PackedStringArray("boris"),
+"required_items": PackedStringArray("protective_cloth")
+}])
 visual_effects = PackedStringArray("portal_open", "cold_aura")
+presentation = {
+"card_title": "Портал в зеркале",
+"danger": "Магия, портал",
+"description": "Старинное зеркало превратилось в нестабильный портал. Из отражения доносятся голоса, а магическое поле в комнате усиливается.",
+"objective": "Закрыть портал в зеркале",
+"resident_request": "Из зеркала тянет ледяным холодом. Пожалуйста, остановите это — в комнате уже невозможно находиться.",
+"title": "В зеркале открылся портал"
+}
 weight = 5
+scene_path = "res://scenes/PortalMirrorHouse.tscn"
+simulation_type = &"portal_mirror"

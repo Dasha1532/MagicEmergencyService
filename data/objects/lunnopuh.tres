@@ -1,0 +1,119 @@
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" format=3 uid="uid://j2beto071yhe"]
+
+[ext_resource type="Script" uid="uid://bj1hd4uslofrl" path="res://scripts/definitions/object_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"lunnopuh"
+display_name = "Лунопух"
+tags = PackedStringArray("creature", "movable")
+base_properties = {
+"action_refusal_rules": [{
+"actions": ["antimagic"],
+"equals": {},
+"message": "Антимагия закрывает портал, но зверька домой не отправит. Его нужно поймать или направить обратно в открытый портал"
+}, {
+"actions": ["animate"],
+"equals": {},
+"message": "Он уже живой. Оживление тут не поможет. Лучше поймать его в клетку или вернуть в портал"
+}, {
+"actions": ["catch_into_cage"],
+"equals": {
+"cage_ready": false
+},
+"message": "Сначала установите пустую клетку."
+}, {
+"actions": ["install_cage"],
+"equals": {
+"cage_available": false
+},
+"message": "Клетки нет в снаряжении бригады. Её можно купить в лавке снабжения."
+}, {
+"actions": ["install_cage"],
+"equals": {
+"cage_packed": false
+},
+"message": "Клетка уже установлена."
+}, {
+"actions": ["catch_lunnopuh"],
+"equals": {
+"cage_ready": false
+},
+"message": "Сначала установите пустую клетку."
+}, {
+"actions": ["return_lunnopuh"],
+"equals": {
+"portal_available": false
+},
+"message": "Для возвращения лунопуха нужен открытый портал без полотна."
+}, {
+"actions": ["freeze"],
+"equals": {},
+"message": "Он живой. Замораживать его не буду — можем покалечить. Лучше поймать в клетку или направить обратно в портал"
+}, {
+"actions": ["heat"],
+"equals": {},
+"message": "Огнём по живому зверьку? Нет. Нам нужно его поймать, а не обжечь"
+}],
+"anchored": false,
+"damage": 0,
+"durability": 3,
+"magic_level": 1,
+"mass": 1,
+"missing_cage_closed_portal_reaction": "Я могу его подхватить и посадить в клетку, но клетки у нас нет",
+"missing_cage_reactions": {
+"nika": "Я могу его подхватить, но посадить пока некуда. Нужна клетка. Или могу направить его сразу в портал"
+},
+"movable": true,
+"object_actions": {
+"catch_hand": {
+"abilities": PackedStringArray(),
+"employee_ids": PackedStringArray("boris", "grog"),
+"label": "Поймать зверька",
+"reaction_after": "Шустрый. Пока я подхожу, он уже на другом конце комнаты. Руками его не поймать",
+"reaction_after_by_employee": {
+"grog": "Быстрый. Только руку протянул — уже убежал. Не поймать"
+},
+"states": PackedStringArray("free")
+},
+"catch_into_cage": {
+"abilities": PackedStringArray(),
+"employee_ids": PackedStringArray("boris", "grog"),
+"label": "Загнать в клетку",
+"reaction_after": "Пробежал мимо клетки. Так его не загнать",
+"reaction_after_by_employee": {
+"grog": "Опять убежал. В клетку не попал"
+},
+"states": PackedStringArray("free")
+},
+"catch_lunnopuh": {
+"abilities": PackedStringArray("telekinesis"),
+"employee_ids": PackedStringArray("nika"),
+"label": "Направить в клетку",
+"reaction": "Подниму его аккуратно и направлю в клетку.",
+"states": PackedStringArray("free")
+},
+"install_cage": {
+"abilities": PackedStringArray("repair"),
+"employee_ids": PackedStringArray("boris"),
+"label": "Установить клетку",
+"states": PackedStringArray("free")
+},
+"return_lunnopuh": {
+"abilities": PackedStringArray("telekinesis"),
+"employee_ids": PackedStringArray("nika"),
+"label": "Направить в портал",
+"states": PackedStringArray("free", "caged")
+}
+},
+"replacement_value": 0,
+"supported_actions": PackedStringArray("diagnose", "freeze", "heat", "animate", "antimagic", "telekinesis", "physical_move"),
+"temperature": 2
+}
+supported_effects = PackedStringArray("free", "caged", "returned", "absent")
+scene_path = "res://scenes/Lunnopuh.tscn"
+visual_states = {
+&"caged": "res://assets/objects/lunnopuh_cage/occupied.png",
+&"free": "res://assets/objects/lunnopuh/free.png"
+}
+hidden_states = PackedStringArray("returned", "absent")

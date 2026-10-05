@@ -34,6 +34,8 @@ func get_resident_request() -> String:
 
 func apply_source_follow_up(follow_up: Dictionary) -> void:
 	world_object["frame_damage"] = maxi(0, int(follow_up.get("frame_damage", 0)))
+	world_object["lunnopuh_state"] = str(follow_up.get("lunnopuh_state", "absent"))
+	world_object["cage_state"] = str(follow_up.get("cage_state", "packed"))
 
 
 func mirror_visual_state() -> StringName:

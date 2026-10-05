@@ -1,13 +1,81 @@
-[gd_resource type="Resource" script_class="GenerativeObjectDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="GenerativeObjectDefinition" format=3 uid="uid://212xw5aiet6w"]
 
-[ext_resource type="Script" path="res://scripts/definitions/object_definition.gd" id="1"]
+[ext_resource type="Script" uid="uid://bj1hd4uslofrl" path="res://scripts/definitions/object_definition.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 id = &"portal_mirror"
 display_name = "Портальное зеркало"
 tags = PackedStringArray("mirror", "glass", "fragile", "anchored", "portal_capable", "magic_conductor", "freezable")
-base_properties = {"anchored": true, "damage": 0, "durability": 3, "magic_level": 0, "mass": 6, "movable": false, "replacement_value": 680, "temperature": 2}
+base_properties = {
+"action_refusal_rules": [{
+"actions": ["freeze", "heat", "physical_move", "telekinesis", "antimagic", "cover", "uncover", "repair"],
+"equals": {
+"destroyed": true
+},
+"message": "Зеркало разбито. Воздействовать больше не на что."
+}, {
+"actions": ["antimagic"],
+"equals": {
+"portal_open": false
+},
+"message": "Портал уже закрыт. Второй раз закрывать его не стану — так недолго открыть обратно."
+}, {
+"actions": ["freeze", "heat", "physical_move", "telekinesis", "cover", "uncover", "repair"],
+"equals": {
+"portal_open": false
+},
+"message": "Портал уже закрыт. Зеркало выглядит обычным."
+}, {
+"actions": ["antimagic"],
+"equals": {
+"covered": true
+},
+"message": "Сначала снимите полотно. Я должен видеть границы портала, чтобы закрыть его, а не запечатать ткань вместе с ним."
+}, {
+"actions": ["telekinesis"],
+"equals": {
+"portal_open": true
+},
+"message": "Активный портал удерживает зеркало на месте. Телекинез не может безопасно его сдвинуть."
+}, {
+"actions": ["cover"],
+"equals": {
+"protective_cloth_available": false
+},
+"message": "Могу закрыть зеркало защитным полотном, но у нас его нет. Полотно можно купить в лавке снабжения."
+}, {
+"actions": ["repair"],
+"equals": {},
+"message": "Такую раму нельзя восстановить на выезде: потребуется мастерская или изготовление замены."
+}],
+"anchored": true,
+"cloth_reimbursement": 50,
+"cold_cover_payment_penalty": 150,
+"compensation_value": 300,
+"credit_helpful_work_on_damage": true,
+"damage": 0,
+"durability": 3,
+"frame_damage_payment_penalty": 350,
+"magic_level": 0,
+"mass": 6,
+"movable": false,
+"replacement_value": 680,
+"supported_actions": PackedStringArray("diagnose", "freeze", "heat", "physical_move", "telekinesis", "antimagic"),
+"temperature": 2,
+"temperature_step": 5,
+"warm_cover_payment_penalty": 80
+}
 supported_effects = PackedStringArray("portal_open", "cold_aura", "covered", "heat_damaged", "closed", "destroyed")
 scene_path = "res://scenes/PortalMirrorHouse.tscn"
-visual_states = {&"closed": "res://assets/objects/portal_mirror/closed.png", &"closed_heat_damaged": "res://assets/objects/portal_mirror/closed_heat_damaged.png", &"covered": "res://assets/objects/portal_mirror/covered.png", &"covered_heat_damaged": "res://assets/objects/portal_mirror/covered_heat_damaged.png", &"destroyed": "res://assets/objects/portal_mirror/destroyed.png", &"heat_damaged": "res://assets/objects/portal_mirror/heat_damaged.png", &"open": "res://assets/objects/portal_mirror/open.png"}
+visual_states = {
+&"closed": "res://assets/objects/portal_mirror/closed.png",
+&"closed_heat_damaged": "res://assets/objects/portal_mirror/closed_heat_damaged.png",
+&"covered": "res://assets/objects/portal_mirror/covered.png",
+&"covered_heat_damaged": "res://assets/objects/portal_mirror/covered_heat_damaged.png",
+&"destroyed": "res://assets/objects/portal_mirror/destroyed.png",
+&"heat_damaged": "res://assets/objects/portal_mirror/heat_damaged.png",
+&"open": "res://assets/objects/portal_mirror/open.png",
+&"silhouette": "res://assets/objects/portal_mirror/silhouette.png",
+&"silhouette_heat_damaged": "res://assets/objects/portal_mirror/silhouette_heat_damaged.png"
+}

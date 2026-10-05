@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="GenerativeAnomalyDefinition" format=3 uid="uid://do13ejxpyj1di"]
+
+[ext_resource type="Script" uid="uid://beeg4224elwsa" path="res://scripts/definitions/anomaly_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"escaped_lunnopuh"
+display_name = "Лунопух из портала"
+generator_enabled = true
+compatible_object_ids = PackedStringArray("portal_mirror")
+required_tags = PackedStringArray("portal_capable")
+forbidden_tags = PackedStringArray("destroyed")
+initial_effects = PackedStringArray("portal_open")
+objective_ids = PackedStringArray("close_portal", "contain_creature")
+initial_state = {
+"cage_state": "packed",
+"cold_aura": false,
+"covered": false,
+"destroyed": false,
+"initial_cold_aura": false,
+"lunnopuh_state": "free",
+"magic_level": 9,
+"portal_open": true,
+"portal_silhouette": false,
+"stable": false,
+"temperature": 2
+}
+resolution = {
+"allowed_values": {
+"lunnopuh_state": PackedStringArray("caged", "returned")
+},
+"alternative_true": PackedStringArray("covered"),
+"required_false": PackedStringArray("portal_open")
+}
+solution_plans = Array[Dictionary]([{
+"abilities": PackedStringArray("telekinesis", "antimagic"),
+"family": &"guide_home_and_close",
+"required_employee_ids": PackedStringArray("nika")
+}, {
+"abilities": PackedStringArray("telekinesis", "diagnose", "repair"),
+"family": &"guide_home_and_cover",
+"required_employee_ids": PackedStringArray("nika", "boris"),
+"required_items": PackedStringArray("protective_cloth")
+}, {
+"abilities": PackedStringArray("telekinesis", "diagnose", "repair", "antimagic"),
+"family": &"capture_and_close",
+"required_employee_ids": PackedStringArray("nika", "boris"),
+"required_items": PackedStringArray("lunnopuh_cage")
+}, {
+"abilities": PackedStringArray("telekinesis", "diagnose", "repair"),
+"family": &"capture_and_cover",
+"required_employee_ids": PackedStringArray("nika", "boris"),
+"required_items": PackedStringArray("lunnopuh_cage", "protective_cloth")
+}])
+visual_effects = PackedStringArray("portal_open")
+presentation = {
+"card_title": "Лунопух из портала",
+"danger": "Магия, портал",
+"description": "Из зеркального портала выбрался небольшой неизвестный зверёк. Он бегает по гостиной; портал остаётся открытым.",
+"objective": "Поймать лунопуха или вернуть в его мир; закрыть или изолировать портал",
+"resident_request": "Из зеркала выбрался этот зверёк. Такой милый — я даже назвала его Лунопухом! Хотела бы оставить его себе, но он носится по комнате, а я боюсь за мебель. Поймайте его, пожалуйста. Если не получится — отправьте домой и закройте портал",
+"title": "Из зеркала выбрался лунопух"
+}
+weight = 5
+scene_path = "res://scenes/PortalMirrorHouse.tscn"
+simulation_type = &"portal_mirror"

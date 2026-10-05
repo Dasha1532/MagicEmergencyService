@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="GenerativeAnomalyDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/definitions/anomaly_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"portal_silhouette"
+display_name = "Силуэт в портале"
+required_tags = PackedStringArray("portal_capable")
+forbidden_tags = PackedStringArray("destroyed")
+initial_effects = PackedStringArray("portal_open")
+objective_ids = PackedStringArray("close_portal")
+visual_effects = PackedStringArray("portal_open")
+weight = 5
+
+initial_state = {"portal_open": true, "cold_aura": false, "initial_cold_aura": false, "magic_level": 9, "temperature": 2, "covered": false, "stable": false, "destroyed": false, "portal_silhouette": true, "lunnopuh_state": "absent", "cage_state": "packed"}
+resolution = {"required_false": PackedStringArray("portal_open"), "alternative_true": PackedStringArray("covered")}
+
+generator_enabled = true
+compatible_object_ids = PackedStringArray("portal_mirror")
+scene_path = "res://scenes/PortalMirrorHouse.tscn"
+simulation_type = &"portal_mirror"
+solution_plans = [{"abilities": PackedStringArray("antimagic"), "family": &"close_channel"}, {"abilities": PackedStringArray("diagnose", "repair"), "required_employee_ids": PackedStringArray("boris"), "required_items": PackedStringArray("protective_cloth"), "family": &"temporary_isolation"}]
+presentation = {"title": "Силуэт в зеркале пугает Селесту", "card_title": "Силуэт в портале", "objective": "Закрыть или изолировать портал с силуэтом", "description": "В зеркале появился портал. За его поверхностью стоит тёмный силуэт и наблюдает за комнатой.", "danger": "Магия, портал", "resident_request": "В зеркале открылся портал, а внутри кто-то стоит и смотрит на меня. Я боюсь оставаться в комнате. Пожалуйста, закройте его"}

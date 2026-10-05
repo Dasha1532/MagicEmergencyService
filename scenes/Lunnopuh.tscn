@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://c83fackellfwa"]
+
+[ext_resource type="Texture2D" uid="uid://dauqyoer5yyte" path="res://assets/objects/lunnopuh/free.png" id="1_free"]
+[ext_resource type="Script" uid="uid://cvl3r06ms1rxk" path="res://scripts/lunnopuh.gd" id="2_script"]
+
+[node name="Lunnopuh" type="TextureRect" unique_id=1016312930]
+offset_right = 190.0
+offset_bottom = 190.0
+mouse_filter = 2
+texture = ExtResource("1_free")
+expand_mode = 1
+stretch_mode = 5
+script = ExtResource("2_script")
+
+[node name="InteractionButton" type="Button" parent="." unique_id=489248347]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+flat = true
+
+[node name="Target" type="Marker2D" parent="." unique_id=1455632525]
+position = Vector2(56, 82)

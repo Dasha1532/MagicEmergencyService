@@ -3,7 +3,7 @@ extends RefCounted
 
 const Catalog := preload("res://scripts/generative_job_catalog.gd")
 
-const GENERATOR_VERSION: int = 3
+const GENERATOR_VERSION: int = 4
 const JOB_ID: StringName = &"generated_wardrobe_1"
 const TUTORIAL_FAUCET_JOB_ID: StringName = &"generated_faucet_tutorial_1"
 const REQUESTED_ZONES: PackedStringArray = ["left_wall"]
@@ -137,6 +137,34 @@ static func generate_tutorial_faucet(seed_value: int, available_abilities: Packe
 	instance["validated_safe_plans"] = find_safe_plans(instance, available_abilities, world_context)
 	if (instance["validated_safe_plans"] as Array).is_empty():
 		return {}
+	return instance
+
+
+static func generate_mirror(seed_value: int, abilities: PackedStringArray, world_context: Dictionary = {}, excluded: PackedStringArray = PackedStringArray(), instance_id: String = "portal_mirror") -> Dictionary:
+	if _world_object_is_terminal("portal_mirror_room.portal_mirror", world_context):
+		return {}
+	var candidates := Catalog.compatible_anomalies(&"selesta_room", &"portal_mirror")
+	candidates = candidates.filter(func(anomaly: Dictionary) -> bool: return not find_safe_plans({"anomaly_id": anomaly["id"], "resident_id": "Госпожа Селеста"}, abilities, world_context).is_empty())
+	if candidates.size() > 1:
+		var fresh: Array[Dictionary] = candidates.filter(func(anomaly: Dictionary) -> bool: return not excluded.has(String(anomaly["id"])))
+		if not fresh.is_empty():
+			candidates = fresh
+	if candidates.is_empty():
+		return {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var anomaly: Dictionary = candidates[rng.randi_range(0, candidates.size() - 1)]
+	var initial: Dictionary = (anomaly["initial_state"] as Dictionary).duplicate(true)
+	initial["generated_anomaly_id"] = anomaly["id"]
+	initial["generated_resolution"] = (anomaly["resolution"] as Dictionary).duplicate(true)
+	initial["generated_resident_request"] = str(anomaly["presentation"]["resident_request"])
+	var instance := {"schema_version": 1, "generator_version": GENERATOR_VERSION, "seed": seed_value,
+		"instance_id": instance_id, "resident_id": &"Госпожа Селеста", "apartment_id": &"upper_city_12", "room_id": &"selesta_room",
+		"object_definition_id": &"portal_mirror", "anomaly_id": anomaly["id"], "simulation_type": &"portal_mirror",
+		"scene_path": "res://scenes/PortalMirrorHouse.tscn", "urgency": "Срочно", "initial_time": 65, "base_reward": 600,
+		"initial_state": initial, "objective_ids": Array(anomaly["objective_ids"]), "presentation": (anomaly["presentation"] as Dictionary).duplicate(true)}
+	_attach_world_context(instance, "portal_mirror_room.portal_mirror", world_context)
+	instance["validated_safe_plans"] = find_safe_plans(instance, abilities, world_context)
 	return instance
 
 
@@ -277,8 +305,30 @@ static func find_safe_plans(instance: Dictionary, abilities: PackedStringArray, 
 			if not abilities.has(ability):
 				accessible = false
 				break
+		var admitted: PackedStringArray = PackedStringArray((world_context.get("admitted_employees", {}) as Dictionary).get(resident_id, []))
+		for employee_id: String in plan.get("required_employee_ids", []):
+			if not admitted.has(employee_id):
+				accessible = false
+		var cost := 0
+		var needed_items := PackedStringArray()
+		var owned := PackedStringArray(world_context.get("owned_items", []))
+		var prices: Dictionary = world_context.get("item_prices", {}) as Dictionary
+		for item_id: String in plan.get("required_items", []):
+			if not owned.has(item_id):
+				if not prices.has(item_id):
+					accessible = false
+				else:
+					cost += int(prices[item_id])
+					needed_items.append(item_id)
+		if cost > 0 and cost > int(world_context.get("money", 0)):
+			accessible = false
 		if accessible:
-			plans.append({"family": plan["family"], "actions": Array(required), "safe": true})
+			var validated := {"family": plan["family"], "actions": Array(required), "safe": true}
+			if plan.has("required_items"):
+				validated["required_items"] = Array(plan["required_items"])
+				validated["purchase_items"] = Array(needed_items)
+				validated["purchase_cost"] = cost
+			plans.append(validated)
 	return plans
 
 

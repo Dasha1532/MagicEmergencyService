@@ -113,3 +113,16 @@ static func _result(applied: bool, summary: String) -> Dictionary:
 		"applied": applied,
 		"summary": summary,
 	}
+
+# Отказ задаётся свойствами объекта; действие остаётся видимым в меню.
+static func state_refusal_message(action_id: StringName, properties: Dictionary) -> String:
+	for rule: Dictionary in properties.get("action_refusal_rules", []):
+		if not PackedStringArray(rule.get("actions", [])).has(String(action_id)):
+			continue
+		var matches := true
+		for key: String in rule.get("equals", {}):
+			if properties.get(key) != rule["equals"][key]:
+				matches = false
+		if matches:
+			return str(rule.get("message", ""))
+	return ""

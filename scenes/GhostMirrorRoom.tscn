@@ -20,6 +20,8 @@
 [ext_resource type="Texture2D" uid="uid://dlqhfn28mtd6n" path="res://assets/objects/portal_mirror/closed_heat_damaged.png" id="18_closed_heat_damaged"]
 [ext_resource type="Texture2D" uid="uid://c1v5emvj8tt5k" path="res://assets/objects/portal_mirror/covered_heat_damaged.png" id="19_covered_heat_damaged"]
 
+[ext_resource type="PackedScene" path="res://scenes/LunnopuhCage.tscn" id="20_cage"]
+
 [sub_resource type="AtlasTexture" id="AtlasTexture_mirror_open"]
 atlas = ExtResource("7_open")
 region = Rect2(650, 0, 700, 941)
@@ -229,6 +231,14 @@ mouse_default_cursor_shape = 2
 
 [node name="Target" type="Marker2D" parent="GhostPlacement" unique_id=1904215176]
 position = Vector2(270, 270)
+
+[node name="LunnopuhCagePlacement" parent="." instance=ExtResource("20_cage")]
+z_index = 6
+offset_left = 1005.0
+offset_top = 615.0
+offset_right = 1225.0
+offset_bottom = 835.0
+visible = false
 
 [node name="TrapPlacement" type="Control" parent="." unique_id=593165209]
 z_index = 6

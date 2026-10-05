@@ -38,6 +38,15 @@ var pending_inspection_object: String = ""
 var pending_inspection_log_size: int = 0
 
 
+func _input(event: InputEvent) -> void:
+	if not is_visible_in_tree() or not event is InputEventMouseButton:
+		return
+	if event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var local_point: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
+		if not Rect2(Vector2.ZERO, size).has_point(local_point):
+			hide()
+
+
 func _ready() -> void:
 	get_node("/root/GameState").state_changed.connect(_record_completed_inspection)
 	buttons_container.move_child(%DiagnoseButton, 0)
@@ -110,6 +119,7 @@ func show_for_object(object_name: String, anchor_position: Vector2, action_label
 		clampf(anchor_position.x + 42.0, 20.0, 1300.0),
 		clampf(anchor_position.y - menu_height * 0.45, 90.0, 690.0 - menu_height)
 	)
+	_avoid_dialogue_overlap()
 	move_to_front()
 
 
@@ -135,6 +145,24 @@ func show_intents(title: String, choices: Array) -> void:
 	buttons_container.add_child(back_button)
 	temporary_buttons.append(back_button)
 	_resize_for_action_count(choices.size() + 1)
+	position.y = clampf(position.y, 90.0, maxf(90.0, 690.0 - menu_height))
+	_avoid_dialogue_overlap()
+
+
+func _avoid_dialogue_overlap() -> void:
+	var ancestor: Node = get_parent()
+	while ancestor != null:
+		if "repair_hud" in ancestor:
+			var hud: Variant = ancestor.get("repair_hud")
+			if hud != null and hud.employee_reaction_panel.is_visible_in_tree():
+				var top: float = hud.employee_reaction_panel.get_global_rect().position.y
+				if hud.dialogue_portrait_frame.is_visible_in_tree():
+					top = minf(top, hud.dialogue_portrait_frame.get_global_rect().position.y)
+				var bottom: float = get_global_rect().end.y
+				if bottom > top - 12.0:
+					position.y -= bottom - top + 12.0
+			return
+		ancestor = ancestor.get_parent()
 
 
 func _resize_for_action_count(action_count: int) -> void:

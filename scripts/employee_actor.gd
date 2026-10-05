@@ -1,15 +1,21 @@
 extends Control
 
 signal action_impact(action_id: StringName)
+signal physical_target_reached(action_id: StringName)
 signal action_finished
 
 @onready var neutral_pose: TextureRect = $NeutralPose
+@onready var specific_pose: TextureRect = $SpecificPose
 @onready var work_pose: TextureRect = $WorkPose
 @onready var heat_protected_work_pose: TextureRect = $HeatProtectedWorkPose
 @onready var walk_pose: TextureRect = $WalkPose
 @onready var walk_pose_alt: TextureRect = $WalkPoseAlt
 @onready var hold_pose: TextureRect = $HoldPose
 @onready var action_origin_marker: Marker2D = get_node_or_null("ActionOrigin") as Marker2D
+
+var inspect_texture: Texture2D
+var catch_texture: Texture2D
+var current_action_id: StringName = &""
 
 var idle_tween: Tween
 var action_in_progress: bool = false
@@ -58,6 +64,11 @@ func configure_employee(new_employee_id: StringName, employee_data: Dictionary) 
 	action_origin_from_data = bool(employee_data.get("actor_action_origin_from_data", false))
 	neutral_pose.texture = load(neutral_path)
 	work_pose.texture = load(work_path)
+	var inspect_path := str(employee_data.get("actor_inspect_pose", ""))
+	var catch_path := str(employee_data.get("actor_catch_pose", ""))
+	inspect_texture = load(inspect_path) as Texture2D if not inspect_path.is_empty() else null
+	catch_texture = load(catch_path) as Texture2D if not catch_path.is_empty() else null
+	_copy_pose_layout(neutral_pose, specific_pose)
 	var protected_work_path := str(employee_data.get("actor_heat_protected_work_pose", ""))
 	heat_protected_work_pose.texture = load(protected_work_path) as Texture2D if not protected_work_path.is_empty() else null
 	var walk_path := str(employee_data.get("actor_walk_pose", ""))
@@ -94,6 +105,7 @@ func set_horizontal_flip(should_flip: bool) -> void:
 
 
 func _reset_pose_visibility() -> void:
+	specific_pose.visible = false
 	neutral_pose.visible = true
 	neutral_pose.modulate = Color.WHITE
 	work_pose.visible = false
@@ -143,6 +155,7 @@ func play_action(
 	if action_in_progress:
 		return
 	action_in_progress = true
+	current_action_id = action_id
 	z_index = walking_z_index
 	if idle_tween != null:
 		idle_tween.pause()
@@ -154,6 +167,7 @@ func play_action(
 	else:
 		if physical_approach_position.is_finite() and walk_pose.texture != null:
 			await _walk_to(physical_approach_position)
+		physical_target_reached.emit(action_id)
 		z_index = physical_action_z_index
 		var selected_pose: TextureRect = work_pose
 		if physical_pose == &"hold" and hold_pose.texture != null:
@@ -162,6 +176,9 @@ func play_action(
 			selected_pose = heat_protected_work_pose
 		elif physical_pose == &"neutral":
 			selected_pose = neutral_pose
+		var action_pose := _pose_for_action(action_id)
+		if action_pose != work_pose:
+			selected_pose = action_pose
 		if employee_id == &"boris" and action_id in [&"repair", &"replace_faucet", &"install_thermal_regulator"]:
 			_play_audio_cue(&"play_boris_repair")
 		await _show_action_pose(selected_pose)
@@ -187,8 +204,16 @@ func play_action(
 	action_finished.emit()
 
 
+func _pose_for_action(action_id: StringName) -> TextureRect:
+	var texture: Texture2D = inspect_texture if action_id == &"diagnose" else catch_texture if action_id in [&"catch_hand", &"catch_into_cage"] else null
+	if texture != null:
+		specific_pose.texture = texture
+		return specific_pose
+	return work_pose
+
+
 func _show_action_pose(pose: TextureRect) -> void:
-	for item: TextureRect in [neutral_pose, work_pose, heat_protected_work_pose, walk_pose, walk_pose_alt, hold_pose]:
+	for item: TextureRect in [neutral_pose, work_pose, specific_pose, heat_protected_work_pose, walk_pose, walk_pose_alt, hold_pose]:
 		if item != pose:
 			item.visible = false
 	pose.visible = true
@@ -199,6 +224,12 @@ func _show_action_pose(pose: TextureRect) -> void:
 
 
 func set_persistent_work_pose(enabled: bool) -> void:
+	if enabled and not action_in_progress:
+		var state := get_node_or_null("/root/GameState")
+		if state != null:
+			var pending: Dictionary = state.get_pending_job_action(state.active_job_id)
+			if str(pending.get("employee_id", "")) == String(employee_id):
+				current_action_id = StringName(str(pending.get("action_id", current_action_id)))
 	set_persistent_action_pose(&"work" if enabled else &"")
 
 
@@ -220,6 +251,13 @@ func _show_persistent_pose_now() -> void:
 
 
 func _show_work_pose_now() -> void:
+	var action_pose := _pose_for_action(current_action_id)
+	if action_pose != work_pose:
+		for item: TextureRect in [neutral_pose, work_pose, specific_pose, heat_protected_work_pose, walk_pose, walk_pose_alt, hold_pose]:
+			item.visible = item == action_pose
+			action_pose.modulate = Color.WHITE
+		return
+	specific_pose.visible = false
 	if idle_tween != null:
 		idle_tween.pause()
 	for item: TextureRect in [neutral_pose, heat_protected_work_pose, walk_pose, walk_pose_alt, hold_pose]:
@@ -229,6 +267,7 @@ func _show_work_pose_now() -> void:
 
 
 func _show_hold_pose_now() -> void:
+	specific_pose.visible = false
 	if idle_tween != null:
 		idle_tween.pause()
 	for item: TextureRect in [neutral_pose, work_pose, heat_protected_work_pose, walk_pose, walk_pose_alt]:
@@ -238,6 +277,7 @@ func _show_hold_pose_now() -> void:
 
 
 func _walk_to(target_position: Vector2) -> void:
+	specific_pose.visible = false
 	var distance: float = position.distance_to(target_position)
 	if distance < 2.0:
 		return
@@ -425,14 +465,14 @@ func _magic_color(action_id: StringName) -> Color:
 	match action_id:
 		&"freeze":
 			return Color(0.34, 0.86, 1.0, 1.0)
-		&"antimagic":
+		&"antimagic", &"catch_lunnopuh", &"return_lunnopuh":
 			return Color(0.68, 0.48, 1.0, 1.0)
 		_:
 			return Color(1.0, 0.34, 0.08, 1.0)
 
 
 func _magic_core_color(action_id: StringName) -> Color:
-	return Color(0.94, 0.90, 1.0, 0.98) if action_id == &"antimagic" else (Color(0.92, 0.98, 1.0, 0.96) if action_id == &"freeze" else Color(1.0, 0.86, 0.48, 0.98))
+	return Color(0.94, 0.90, 1.0, 0.98) if action_id in [&"antimagic", &"catch_lunnopuh", &"return_lunnopuh"] else (Color(0.92, 0.98, 1.0, 0.96) if action_id == &"freeze" else Color(1.0, 0.86, 0.48, 0.98))
 
 
 func _spell_origin_global() -> Vector2:

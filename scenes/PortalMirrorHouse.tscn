@@ -17,6 +17,10 @@
 [ext_resource type="Texture2D" uid="uid://chrmgeu0c11dy" path="res://assets/effects/status/frost.png" id="15_frost"]
 [ext_resource type="Texture2D" uid="uid://dlqhfn28mtd6n" path="res://assets/objects/portal_mirror/closed_heat_damaged.png" id="16_mirror_closed_heat"]
 [ext_resource type="Texture2D" uid="uid://c1v5emvj8tt5k" path="res://assets/objects/portal_mirror/covered_heat_damaged.png" id="17_mirror_covered_heat"]
+[ext_resource type="Texture2D" uid="uid://dcrgjbmy3mfps" path="res://assets/objects/portal_mirror/silhouette.png" id="18_silhouette"]
+[ext_resource type="Texture2D" uid="uid://cb4y1053o603n" path="res://assets/objects/portal_mirror/silhouette_heat_damaged.png" id="19_silhouette_heat"]
+[ext_resource type="PackedScene" path="res://scenes/LunnopuhCage.tscn" id="20_cage"]
+[ext_resource type="PackedScene" uid="uid://c83fackellfwa" path="res://scenes/Lunnopuh.tscn" id="21_lunnopuh"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_marker"]
 bg_color = Color(0.2, 0.08, 0.28, 0.12)
@@ -41,6 +45,14 @@ region = Rect2(440, 14, 581, 1182)
 [sub_resource type="AtlasTexture" id="AtlasTexture_mirror_heat"]
 atlas = ExtResource("11_mirror_heat")
 region = Rect2(680, 0, 650, 1024)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_silhouette"]
+atlas = ExtResource("18_silhouette")
+region = Rect2(650, 0, 700, 941)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_silhouette_heat"]
+atlas = ExtResource("19_silhouette_heat")
+region = Rect2(650, 0, 700, 941)
 
 [node name="PortalMirrorHouse" type="Node2D" unique_id=883960508]
 script = ExtResource("3_script")
@@ -288,12 +300,60 @@ mouse_default_cursor_shape = 2
 position = Vector2(92, 320)
 gizmo_extents = 20.0
 
-[node name="EmployeeActor" parent="." unique_id=1756788923 instance=ExtResource("6_actor")]
+[node name="Silhouette" type="TextureRect" parent="PortalMirror" unique_id=572157429]
 visible = false
-offset_left = 570.0
-offset_top = 205.0
-offset_right = 1076.0
-offset_bottom = 886.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -91.0
+offset_top = -69.0
+offset_right = -71.0
+offset_bottom = -13.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_silhouette")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SilhouetteHeatDamaged" type="TextureRect" parent="PortalMirror" unique_id=1879332499]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -91.0
+offset_top = -69.0
+offset_right = -71.0
+offset_bottom = -13.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_silhouette_heat")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CagePlacement" parent="." unique_id=1213849415 instance=ExtResource("20_cage")]
+z_index = 4
+anchors_preset = 0
+offset_left = 1005.0
+offset_top = 615.0
+offset_right = 1225.0
+offset_bottom = 835.0
+
+[node name="LunnopuhPlacement" parent="." unique_id=1990050363 instance=ExtResource("21_lunnopuh")]
+z_index = 4
+offset_left = 918.0
+offset_top = 519.0
+offset_right = 1108.0
+offset_bottom = 709.0
+
+[node name="EmployeeActor" parent="." unique_id=1756788923 instance=ExtResource("6_actor")]
+offset_left = -4.0
+offset_top = 221.0
+offset_right = 502.0
+offset_bottom = 902.0
 
 [node name="PhysicalApproach" type="Marker2D" parent="." unique_id=2141750920]
 position = Vector2(1030, 245)
@@ -318,3 +378,17 @@ text = "←  К ОБЗОРУ ДОМА"
 
 [node name="PauseMenu" parent="." unique_id=361733957 instance=ExtResource("13_pause")]
 show_default_menu_button = false
+
+[node name="LunnopuhRoutes" type="Node2D" parent="." unique_id=1196193560]
+
+[node name="RightApproach" type="Marker2D" parent="LunnopuhRoutes" unique_id=745701767]
+position = Vector2(650, 217)
+
+[node name="LeftApproach" type="Marker2D" parent="LunnopuhRoutes" unique_id=1894854589]
+position = Vector2(50, 217)
+
+[node name="CageApproach" type="Marker2D" parent="LunnopuhRoutes" unique_id=1692327875]
+position = Vector2(760, 217)
+
+[node name="EscapeLeft" type="Marker2D" parent="LunnopuhRoutes" unique_id=1884949525]
+position = Vector2(123, 768)

@@ -3,6 +3,8 @@ extends Control
 signal selected
 
 @onready var open_pose: TextureRect = $Open
+@onready var silhouette_pose: TextureRect = $Silhouette
+@onready var silhouette_heat_damaged_pose: TextureRect = $SilhouetteHeatDamaged
 @onready var heat_damaged_pose: TextureRect = $HeatDamaged
 @onready var closed_pose: TextureRect = $Closed
 @onready var closed_heat_damaged_pose: TextureRect = $ClosedHeatDamaged
@@ -21,9 +23,11 @@ func _ready() -> void:
 		interaction_button.add_theme_stylebox_override(state, empty_style)
 
 
-func show_state(state: StringName, cold_aura_visible: bool = true) -> void:
-	open_pose.visible = state == &"open"
-	heat_damaged_pose.visible = state == &"heat_damaged"
+func show_state(state: StringName, cold_aura_visible: bool = true, has_silhouette: bool = false) -> void:
+	open_pose.visible = state == &"open" and not has_silhouette
+	silhouette_pose.visible = state == &"open" and has_silhouette
+	silhouette_heat_damaged_pose.visible = state == &"heat_damaged" and has_silhouette
+	heat_damaged_pose.visible = state == &"heat_damaged" and not has_silhouette
 	closed_pose.visible = state == &"closed"
 	closed_heat_damaged_pose.visible = state == &"closed_heat_damaged"
 	destroyed_pose.visible = state == &"destroyed"

@@ -907,7 +907,7 @@ func _build_supply_shop() -> void:
 	supply_catalog_list.custom_minimum_size = Vector2(350, 0)
 	supply_catalog_list.add_theme_constant_override("separation", 10)
 	catalog_scroll.add_child(supply_catalog_list)
-	_add_supply_catalog_section("СНАРЯЖЕНИЕ", [&"ghost_trap", &"thermal_regulator", &"protective_cloth", &"heat_gloves", &"replacement_faucet"])
+	_add_supply_catalog_section("СНАРЯЖЕНИЕ", [&"lunnopuh_cage", &"ghost_trap", &"thermal_regulator", &"protective_cloth", &"heat_gloves", &"replacement_faucet"])
 	_add_supply_catalog_section("МАГИЧЕСКИЕ КУРСЫ", [&"animation_kit", &"freeze_grimoire", &"heat_grimoire", &"telekinesis_grimoire", &"antimagic_grimoire"])
 
 	var catalog_hint := _label("Книги открывают курсы. Расходные материалы списываются на объектах.", 13, COLOR_MUTED)
@@ -1525,6 +1525,13 @@ func _refresh_equipment_storage() -> void:
 		"res://assets/objects/repair_kit/toolbox.png",
 		"Инструменты Бориса для диагностики\nи обычного ремонта. Набор не расходуется."
 	)
+	if game_state.has_supply_item(&"lunnopuh_cage"):
+		_add_equipment_card(
+			str(game_state.SUPPLY_ITEMS[&"lunnopuh_cage"]["name"]),
+			_equipment_status(&"lunnopuh_cage"),
+			str(game_state.SUPPLY_ITEMS[&"lunnopuh_cage"]["icon"]),
+			str(game_state.SUPPLY_ITEMS[&"lunnopuh_cage"]["description"])
+		)
 	if game_state.has_supply_item(&"ghost_trap"):
 		_add_equipment_card(
 			str(game_state.SUPPLY_ITEMS[&"ghost_trap"]["name"]),
@@ -1640,12 +1647,18 @@ func _equipment_status(item_id: StringName) -> String:
 	var job_id: StringName = &"frozen_bath"
 	if item_id == &"ghost_trap":
 		job_id = &"escaped_ghost"
-	elif item_id == &"protective_cloth":
+	elif item_id in [&"protective_cloth", &"lunnopuh_cage"]:
 		job_id = &"portal_mirror"
 	var active_state: Dictionary = game_state.get_job_repair_state(job_id)
 	var active_object: Variant = active_state.get("world_object", {})
 	if active_object is Dictionary:
-		if item_id == &"ghost_trap":
+		if item_id == &"lunnopuh_cage":
+			var cage_state := str((active_object as Dictionary).get("cage_state", "packed"))
+			if cage_state == "occupied" or str((active_object as Dictionary).get("lunnopuh_state", "absent")) == "caged":
+				return "ЗАНЯТА: ЛУНОПУХ В КЛЕТКЕ"
+			if cage_state == "installed":
+				return "УСТАНОВЛЕНА У СЕЛЕСТЫ"
+		elif item_id == &"ghost_trap":
 			var trap_state := StringName(str((active_object as Dictionary).get("trap_state", "packed")))
 			if trap_state == &"occupied":
 				return "ЗАНЯТА: ПРИВИДЕНИЕ В ЛОВУШКЕ"

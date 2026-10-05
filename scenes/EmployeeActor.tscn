@@ -113,3 +113,19 @@ stretch_mode = 5
 [node name="ActionOrigin" type="Marker2D" parent="."]
 position = Vector2(203, 125)
 gizmo_extents = 18.0
+
+[node name="SpecificPose" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 119.0
+offset_top = 47.0
+offset_right = 69.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+visible = false
+expand_mode = 1
+stretch_mode = 5
