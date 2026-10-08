@@ -1,0 +1,156 @@
+[gd_resource type="Resource" format=3 uid="uid://c2vnp1ij8gm2g"]
+
+[ext_resource type="Script" uid="uid://c0ey1vr85oawp" path="res://scripts/definitions/prison_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+initial_state = {
+"conversation_unlocked": false,
+"escaped": false,
+"eye_revealed": false,
+"lock_inspected": false,
+"mark_received": false,
+"mechanism_repaired": false,
+"pain_seen": false,
+"protection_active": true,
+"record_read": false,
+"repair_completed": false,
+"reverse_feedback": false,
+"shutdown_authorized": false
+}
+actions = {
+"antimagic": {
+"ability": "antimagic",
+"effects": {
+"escaped": true,
+"mark_received": true,
+"protection_active": false
+},
+"label": "Применить антимагию",
+"requires": {
+"protection_active": true,
+"repair_completed": false,
+"shutdown_authorized": true
+},
+"result": "Защита погасла. Заключённая прошла сквозь закрытую решётку, коснулась руки сотрудника и исчезла в стене. На руке осталась неизвестная печать.",
+"target": "girl"
+},
+"authorize_shutdown": {
+"ability": "",
+"effects": {
+"shutdown_authorized": true
+},
+"label": "Согласовать отключение",
+"requires": {
+"pain_seen": true,
+"record_read": true,
+"repair_completed": false,
+"reverse_feedback": false,
+"shutdown_authorized": false
+},
+"result": "Охранник разрешил временно отключить защиту для ремонта. Решётка останется запертой.",
+"speaker": "guard",
+"target": "guard"
+},
+"finish_repair": {
+"ability": "repair",
+"effects": {
+"protection_active": true,
+"repair_completed": true,
+"reverse_feedback": false
+},
+"label": "Исправить защиту",
+"requires": {
+"escaped": true,
+"repair_completed": false
+},
+"result": "Магическая защита восстановлена. Можно завершить работу.",
+"speaker": "selected",
+"target": "lock"
+},
+"inspect": {
+"ability": "diagnose",
+"effects": {
+"lock_inspected": true
+},
+"label": "Осмотреть замок",
+"requires": {
+"lock_inspected": false
+},
+"result": "Замок заклинило. Сначала нужно восстановить механизм, затем проверить магическую защиту.",
+"speaker": "selected",
+"target": "lock"
+},
+"read_record": {
+"ability": "",
+"effects": {
+"record_read": true
+},
+"label": "Прочитать дело",
+"target": "record"
+},
+"repair_mechanism": {
+"ability": "repair",
+"effects": {
+"mechanism_repaired": true
+},
+"label": "Починить механизм",
+"requires": {
+"lock_inspected": true,
+"mechanism_repaired": false
+},
+"result": "Механизм восстановлен. Теперь можно проверить защиту.",
+"speaker": "selected",
+"target": "lock"
+},
+"stop_test": {
+"ability": "",
+"effects": {
+"reverse_feedback": false
+},
+"label": "Остановить проверку",
+"requires": {
+"reverse_feedback": true
+},
+"target": "lock"
+},
+"test_protection": {
+"ability": "repair",
+"effects": {
+"conversation_unlocked": true,
+"eye_revealed": true,
+"pain_seen": true,
+"reverse_feedback": true
+},
+"label": "Проверить защиту",
+"requires": {
+"mechanism_repaired": true,
+"pain_seen": false
+},
+"target": "lock"
+},
+"wait_specialist": {
+"ability": "",
+"effects": {
+"protection_active": true,
+"repair_completed": true
+},
+"label": "Дождаться специалиста",
+"requires": {
+"escaped": false,
+"pain_seen": true,
+"repair_completed": false,
+"reverse_feedback": false
+},
+"result": "Тюремный специалист устранил обратное воздействие. Защита работает, заключённая осталась в клетке. Можно завершить работу.",
+"speaker": "guard",
+"target": "guard"
+}
+}
+prisoner_record = {
+"ability": "Внушение указаний посредством голоса. Может заставить слушателя выполнить указание, воспринимая его как собственное решение.",
+"accusation": "Подозрение в применении магического внушения к городскому хранителю и содействии похищению артефакта из охраняемого хранилища. Задержана до окончания разбирательства.",
+"appearance": "Молодая девушка, каштановые волосы, серые глаза.",
+"name": "Сара",
+"precautions": "Не вступать в разговор, не выполнять просьбы заключённой. При необходимости общения обеспечить присутствие второго сотрудника. Магическую защиту сохранять включённой."
+}

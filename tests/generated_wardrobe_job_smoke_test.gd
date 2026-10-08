@@ -4,8 +4,8 @@ const Generator := preload("res://scripts/generated_job_generator.gd")
 const Catalog := preload("res://scripts/generative_job_catalog.gd")
 const WardrobeSimulationScript := preload("res://scripts/wardrobe_simulation.gd")
 
-const TEST_SAVE_PATH := "res://tests/.generated_wardrobe_smoke_test.json"
-const LEGACY_TEST_SAVE_PATH := "res://tests/.generated_wardrobe_v14_smoke_test.json"
+const TEST_SAVE_PATH := "res://tests/.generated_wardrobe_skip_v2_test.json"
+const LEGACY_TEST_SAVE_PATH := "res://tests/.generated_wardrobe_v14_skip_v2_test.json"
 
 var failures := PackedStringArray()
 
@@ -42,7 +42,7 @@ func _run() -> void:
 	var first: Dictionary = examples["restless_animation"]
 	_check(Catalog.has_compatible_vertical_slice(), "Каталог связывает комнату, объект, аномалию и цели")
 
-	var game_state := root.get_node("GameState")
+	var game_state := preload("res://tests/prison_test_state.gd").install(root)
 	var history_test_path := "res://tests/.generator_history_test.cfg"
 	_check(game_state._write_generator_history("last_anomaly_id", "deep_freeze", history_test_path) == OK, "История шкафа записывается")
 	_check(game_state._write_generator_history("last_faucet_anomaly_id", "faucet_freeze", history_test_path) == OK, "История крана записывается")
@@ -63,18 +63,18 @@ func _run() -> void:
 	var debug_money: int = game_state.money
 	var debug_reputation: int = game_state.reputation
 	_check(game_state.debug_skip_day() and game_state.day == 2, "Отладочная кнопка пропускает первый день")
-	_check(game_state.is_job_available(Generator.JOB_ID), "Пропуск открывает шкаф без выполнения крана")
-	_check(game_state.money == debug_money and game_state.reputation == debug_reputation and game_state.job_reports.is_empty(), "Пропуск не начисляет оплату, штрафы и фиктивные отзывы")
-	_check(not game_state.is_tutorial_job_completed(), "Пропуск не выдаёт выполнение крана за настоящую работу")
+	_check(game_state.is_job_available(Generator.JOB_ID), "Пропуск закрывает кран и открывает шкаф")
+	_check(game_state.money > debug_money and game_state.reputation == debug_reputation and not game_state.job_reports.is_empty(), "Тестовое выполнение начисляет оплату без штрафов")
+	_check(game_state.is_tutorial_job_completed(), "Тестовый пропуск помечает кран выполненным")
 	_check(game_state._save_to_path(TEST_SAVE_PATH) == OK and game_state._load_from_path(TEST_SAVE_PATH) == OK, "Тестовый пропуск сохраняется и загружается")
-	_check(game_state.debug_tutorial_bypass_day == 1 and game_state.is_job_available(Generator.JOB_ID), "После загрузки шкаф остаётся доступен без фиктивного завершения крана")
+	_check(game_state.is_tutorial_job_completed() and game_state.is_job_available(Generator.JOB_ID), "После загрузки сохраняется выполнение крана и доступность шкафа")
 	game_state.active_job_id = Generator.JOB_ID
 	_check(not game_state.debug_skip_day() and game_state.day == 2, "Пропуск заблокирован во время активного выезда")
 	game_state.active_job_id = &""
 	_check(load("res://scenes/ui/OfficeDashboard.tscn") != null, "Офис с тестовой кнопкой загружается")
 	_check(game_state.debug_skip_day() and game_state.day == 3, "Тестовый пропуск работает и в следующие дни")
 	_check(not game_state.is_job_available(Generator.JOB_ID) and game_state.is_job_available(&"sleeping_gargoyle"), "Второй пропуск заменяет шкаф горгульей")
-	_check(not game_state.completed_job_ids.has(String(Generator.JOB_ID)) and game_state.job_reports.is_empty() and game_state.money == debug_money and game_state.reputation == debug_reputation, "Пропуск шкафа не подделывает выполнение и расчёт")
+	_check(game_state.completed_job_ids.has(String(Generator.JOB_ID)) and not game_state.job_reports.is_empty() and game_state.money > debug_money and game_state.reputation == debug_reputation, "Второй пропуск завершает шкаф и записывает расчёт")
 	_check(game_state._save_to_path(TEST_SAVE_PATH) == OK and game_state._load_from_path(TEST_SAVE_PATH) == OK and not game_state.is_job_available(Generator.JOB_ID) and game_state.is_job_available(&"sleeping_gargoyle"), "Загрузка сохраняет переход от шкафа к горгулье")
 	game_state.start_new_game()
 	_check(game_state.debug_skipped_job_ids.is_empty(), "Новая игра сбрасывает тестовые пропуски")

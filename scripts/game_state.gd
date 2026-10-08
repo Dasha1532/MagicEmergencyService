@@ -497,6 +497,18 @@ var jobs: Dictionary = {
 		"repair_scene": "res://scenes/GargoyleAttic.tscn",
 		"assigned": PackedStringArray(),
 	},
+	&"prison_lock": {
+		"title": "Восстановить замок в тюрьме",
+		"objective": "Починить замок пустой клетки и восстановить защиту",
+		"address": "Городская тюрьма",
+		"resident": "Тюремная охрана",
+		"description": "Неисправен замок пустой клетки. Требуется восстановить магическую защиту.",
+		"urgency": "Обычная", "initial_time": 180, "time_left": 180,
+		"unlocked": false, "overdue": false, "dispatched": false,
+		"danger": "Магическая защита", "base_reward": 300,
+		"repair_scene": "res://scenes/PrisonRoom.tscn",
+		"assigned": PackedStringArray(),
+	},
 	&"lunnopuh_care": {
 		"title": "Лунопух тоскует в клетке",
 		"objective": "Вернуть Лунопуха домой или передать в приют\nЗакрыть или изолировать портал",
@@ -882,6 +894,8 @@ func is_job_available(job_id: StringName) -> bool:
 		return false
 	if OS.is_debug_build() and debug_skipped_job_ids.has(String(job_id)):
 		return false
+	if job_id == &"prison_lock":
+		return jobs.has(job_id) and not completed_job_ids.has(String(job_id)) and is_prison_job_ready()
 	return jobs.has(job_id) and bool(jobs[job_id].get("unlocked", false)) and not completed_job_ids.has(String(job_id))
 
 
@@ -994,17 +1008,35 @@ func debug_skip_day() -> bool:
 	for job_id: StringName in jobs:
 		if bool(jobs[job_id].get("dispatched", false)) and not completed_job_ids.has(String(job_id)):
 			return false
-	# Пропускаем только доступные этапы, не создавая результатов выполненной работы.
-	for stage_id: StringName in [GeneratedJobGeneratorScript.JOB_ID, &"sleeping_gargoyle"]:
-		if is_job_available(stage_id):
-			debug_skipped_job_ids.append(String(stage_id))
-			jobs[stage_id]["assigned"] = PackedStringArray()
-	if not is_tutorial_job_completed() and debug_tutorial_bypass_day == 0:
-		debug_tutorial_bypass_day = day
-		_set_job_unlocked(tutorial_job_id, false)
-		tutorial_state = {"version": 1, "status": "skipped", "step": ""}
+	# Снимок доступных заявок: новые этапы проходят на следующем нажатии.
+	var today_jobs: Array[StringName] = []
+	for job_id: StringName in jobs:
+		if job_id != &"prison_lock" and is_job_available(job_id):
+			today_jobs.append(job_id)
+	for job_id: StringName in today_jobs:
+		jobs[job_id]["overdue"] = false
+		jobs[job_id]["pending_action"] = {}
+		if not complete_job(job_id, {"summary": "Заявка выполнена тестовой кнопкой пропуска дня.", "debug_skip_day": true}):
+			return false
+		debug_skipped_job_ids.erase(String(job_id))
+	# При обновлении старого тестового сохранения закрываем уже пропущенные этапы.
+	for skipped_id: String in debug_skipped_job_ids.duplicate():
+		if jobs.has(StringName(skipped_id)) and not completed_job_ids.has(skipped_id):
+			complete_job(StringName(skipped_id), {"summary": "Заявка выполнена тестовой кнопкой пропуска дня.", "debug_skip_day": true})
+	debug_skipped_job_ids.clear()
+	if is_tutorial_job_completed():
+		tutorial_state = {"version": 1, "status": "completed", "step": ""}
+	# Старый обход обучения тоже должен считаться выполненным краном.
+	elif debug_tutorial_bypass_day > 0 and jobs.has(tutorial_job_id):
+		complete_job(tutorial_job_id, {"summary": "Заявка выполнена тестовой кнопкой пропуска дня.", "debug_skip_day": true})
+		tutorial_state = {"version": 1, "status": "completed", "step": ""}
+	for report: Dictionary in job_reports:
+		report["report_acknowledged"] = true
+	pending_job_report = {}
 	clock_paused = true
 	advance_day()
+	if is_job_available(&"prison_lock"):
+		selected_job_id = &"prison_lock"
 	save_autosave()
 	return true
 
@@ -1369,7 +1401,7 @@ func complete_job(job_id: StringName, result: Dictionary = {}) -> bool:
 		var restoration_check: RefCounted = load("res://scripts/repair_simulation.gd").new()
 		restoration_check.initialize_from_job(job)
 		restoration_check.load_state(repair_state)
-		if repair_state.is_empty() or not restoration_check.is_resolved():
+		if (repair_state.is_empty() or not restoration_check.is_resolved()) and not (OS.is_debug_build() and bool(result.get("debug_skip_day", false))):
 			return false
 		result = result.duplicate(true)
 		result["reputation_change"] = _settle_restoration(job)
@@ -1632,7 +1664,7 @@ func is_demo_complete() -> bool:
 	return true
 
 
-func get_demo_required_job_ids() -> PackedStringArray:
+func get_demo_prerequisite_job_ids() -> PackedStringArray:
 	var required := DEMO_CORE_JOB_IDS.duplicate()
 	var first_job_index := required.find("lava_leak")
 	if first_job_index >= 0 and not tutorial_job_id.is_empty():
@@ -1652,6 +1684,36 @@ func get_demo_required_job_ids() -> PackedStringArray:
 	if (world_memory.has_consequence(&"lunnopuh_care") or completed_job_ids.has("lunnopuh_care")) and not required.has("lunnopuh_care"):
 		required.append("lunnopuh_care")
 	return required
+
+
+func get_demo_required_job_ids() -> PackedStringArray:
+	var required := get_demo_prerequisite_job_ids()
+	for job_id: StringName in jobs:
+		if bool(jobs[job_id].get("restoration", false)) and not required.has(String(job_id)):
+			required.append(String(job_id))
+	required.append("prison_lock")
+	return required
+
+
+func is_prison_job_ready() -> bool:
+	if dismissal_triggered:
+		return false
+	for job_id: String in get_demo_prerequisite_job_ids():
+		if not completed_job_ids.has(job_id):
+			return false
+	for job_id: StringName in jobs:
+		var job: Dictionary = jobs[job_id]
+		if (bool(job.get("restoration", false)) or bool(job.get("consequence", false))) and not completed_job_ids.has(String(job_id)):
+			return false
+	for event: Dictionary in world_memory.deferred_events:
+		if str(event.get("status", "")) in ["pending", "claimed"]:
+			return false
+	for report: Dictionary in job_reports:
+		if bool(report.get("object_destroyed", false)) and not bool(report.get("restoration", false)) and not bool(report.get("property_restored", false)):
+			if str(report.get("object_definition_id", "")) == str(RESTORATION_PROFILE.base_properties["target_definition_id"]):
+				if not completed_job_ids.has(str(report.get("job_id", "")) + "_restoration"):
+					return false
+	return true
 
 
 func should_show_demo_completion() -> bool:

@@ -84,6 +84,16 @@ mouse_filter = 0
 mouse_default_cursor_shape = 2
 text = "Башенная улица, 8"
 
+[node name="Prison" type="Button" parent="MapArea/HouseMarkers"]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 180.0
+offset_right = 500.0
+offset_bottom = 340.0
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+text = "Городская тюрьма"
+
 [node name="Header" type="Panel" parent="."]
 layout_mode = 0
 offset_left = 22.0

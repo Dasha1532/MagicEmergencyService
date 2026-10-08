@@ -1,0 +1,11 @@
+{
+  "active_cells": [
+    2,
+    3,
+    5,
+    7,
+    9
+  ],
+  "empty_cell": 1,
+  "prisoner_cell": 2
+}

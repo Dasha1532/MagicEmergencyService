@@ -12,6 +12,10 @@ const COLOR_GOLD := Color(0.96, 0.78, 0.46)
 const COLOR_PARCHMENT := Color(0.92, 0.84, 0.69)
 const COLOR_MUTED := Color(0.70, 0.63, 0.52)
 var HOUSE_DEFINITIONS: Dictionary = {
+	&"prison": {
+		"address": "Городская тюрьма",
+		"job_ids": PackedStringArray(["prison_lock"]),
+	},
 	&"ragnar_eleonora": {
 		"address": "Старый квартал, 5",
 		"job_ids": PackedStringArray(["lava_leak", "generated_faucet_tutorial_1", "walking_wardrobe", "generated_wardrobe_1"]),
@@ -30,6 +34,7 @@ var HOUSE_DEFINITIONS: Dictionary = {
 @onready var ragnar_marker: Button = $MapArea/HouseMarkers/RagnarAndEleonora
 @onready var selesta_marker: Button = $MapArea/HouseMarkers/Selesta
 @onready var gargoyle_marker: Button = $MapArea/HouseMarkers/GargoyleAttic
+@onready var prison_marker: Button = $MapArea/HouseMarkers/Prison
 @onready var house_panel: Panel = $HousePanel
 @onready var house_title: Label = $HousePanel/Title
 @onready var house_summary: Label = $HousePanel/Summary
@@ -44,6 +49,7 @@ func _ready() -> void:
 	ragnar_marker.pressed.connect(_select_house.bind(&"ragnar_eleonora"))
 	selesta_marker.pressed.connect(_select_house.bind(&"selesta"))
 	gargoyle_marker.pressed.connect(_select_house.bind(&"tower_street"))
+	prison_marker.pressed.connect(_select_house.bind(&"prison"))
 	if not game_state.state_changed.is_connected(refresh):
 		game_state.state_changed.connect(refresh)
 	_apply_styles()
@@ -54,6 +60,7 @@ func refresh() -> void:
 	_refresh_marker(ragnar_marker, &"ragnar_eleonora")
 	_refresh_marker(selesta_marker, &"selesta")
 	_refresh_marker(gargoyle_marker, &"tower_street")
+	_refresh_marker(prison_marker, &"prison")
 	if not selected_house_id.is_empty():
 		_refresh_house_panel()
 
@@ -63,7 +70,7 @@ func _apply_styles() -> void:
 	house_panel.add_theme_stylebox_override("panel", _style(COLOR_PANEL, COLOR_BRASS, 2, 10))
 	$BackButton.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_BRASS, 2, 8))
 	$BackButton.add_theme_stylebox_override("hover", _style(COLOR_CARD_HOVER, COLOR_GOLD, 2, 8))
-	for marker: Button in [ragnar_marker, selesta_marker, gargoyle_marker]:
+	for marker: Button in [ragnar_marker, selesta_marker, gargoyle_marker, prison_marker]:
 		marker.add_theme_stylebox_override("normal", _style(COLOR_CARD, COLOR_BRASS, 2, 8))
 		marker.add_theme_stylebox_override("hover", _style(COLOR_CARD_HOVER, COLOR_GOLD, 3, 8))
 		marker.add_theme_stylebox_override("pressed", _style(COLOR_SELECTED, COLOR_GOLD, 3, 8))

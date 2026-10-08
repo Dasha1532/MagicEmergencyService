@@ -11,7 +11,9 @@ func _run() -> void:
 	var game_state := root.get_node("GameState")
 	game_state.start_new_game()
 	_check(not game_state.is_demo_complete(), "Новая игра не считается завершённой демонстрацией")
-	game_state.completed_job_ids = game_state.DEMO_CORE_JOB_IDS.duplicate()
+	game_state.completed_job_ids = game_state.get_demo_prerequisite_job_ids()
+	_check(not game_state.is_demo_complete(), "До тюремной заявки финал не показывается")
+	game_state.completed_job_ids.append("prison_lock")
 	game_state.job_reports = [
 		{"job_id": "lava_leak", "claim_amount": 0, "compensation": 0},
 		{"job_id": "walking_wardrobe", "claim_amount": 180, "compensation": 180},
@@ -23,7 +25,7 @@ func _run() -> void:
 	_check(game_state.is_demo_complete(), "Выполненная заявка-последствие завершает выбранную ветку")
 	_check(game_state.should_show_demo_completion(), "Финальный экран готов к показу после последнего отчёта")
 	var summary: Dictionary = game_state.get_demo_summary()
-	_check(int(summary["completed_jobs"]) == 5 and int(summary["required_jobs"]) == 5, "Итог показывает фактическое число заявок выбранной ветки")
+	_check(int(summary["completed_jobs"]) == 6 and int(summary["required_jobs"]) == 6, "Итог показывает фактическое число заявок выбранной ветки")
 	_check(int(summary["damaged_jobs"]) == 1 and int(summary["compensation_paid"]) == 180, "Итог учитывает ущерб и компенсации")
 	_check(str(summary["reputation_status"]) == "Надёжная служба", "Итог показывает словесный статус репутации")
 	_check(str((summary["inspection"] as Dictionary).get("title", "")) == "Лицензия подтверждена", "Устойчивой службе инспекция подтверждает лицензию")

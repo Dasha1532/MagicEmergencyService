@@ -465,7 +465,7 @@ func _build_office_hub() -> void:
 	if OS.is_debug_build():
 		for debug_parent: Control in [hub_layer, dashboard_layer]:
 			var skip_day_button := _button("ТЕСТ: ПРОПУСТИТЬ ДЕНЬ", Vector2(22, 20) if debug_parent == hub_layer else Vector2(625, 164), Vector2(300, 42))
-			skip_day_button.tooltip_text = "Перейти к следующему утру без выполнения заявки с краном и без штрафов. Обновляет автосохранение."
+			skip_day_button.tooltip_text = "Завершить доступные заявки текущего дня и перейти к следующему утру. Тюрьма остаётся для ручного прохождения. Обновляет автосохранение."
 			skip_day_button.pressed.connect(_debug_skip_day)
 			debug_parent.add_child(skip_day_button)
 	_build_cat_easter_egg()
