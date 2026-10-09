@@ -6,8 +6,11 @@
 script = ExtResource("1")
 initial_state = {
 "conversation_unlocked": false,
+"empty_protection_active": false,
 "escaped": false,
 "eye_revealed": false,
+"guard_away": false,
+"incident_seen": false,
 "lock_inspected": false,
 "mark_received": false,
 "mechanism_repaired": false,
@@ -16,7 +19,8 @@ initial_state = {
 "record_read": false,
 "repair_completed": false,
 "reverse_feedback": false,
-"shutdown_authorized": false
+"shutdown_authorized": false,
+"stop_dialogue_pending": false
 }
 actions = {
 "antimagic": {
@@ -91,6 +95,7 @@ actions = {
 },
 "repair_mechanism": {
 "ability": "repair",
+"dialogue_section": "mechanism_repaired",
 "effects": {
 "mechanism_repaired": true
 },
@@ -106,28 +111,31 @@ actions = {
 "stop_test": {
 "ability": "",
 "effects": {
-"reverse_feedback": false
+"empty_protection_active": false,
+"reverse_feedback": false,
+"stop_dialogue_pending": true
 },
 "label": "Остановить проверку",
 "requires": {
 "reverse_feedback": true
 },
-"target": "lock"
+"target": "control_panel"
 },
 "test_protection": {
-"ability": "repair",
+"ability": "",
 "effects": {
 "conversation_unlocked": true,
+"empty_protection_active": true,
 "eye_revealed": true,
 "pain_seen": true,
 "reverse_feedback": true
 },
-"label": "Проверить защиту",
+"label": "Включить защиту камеры № 1",
 "requires": {
 "mechanism_repaired": true,
 "pain_seen": false
 },
-"target": "lock"
+"target": "control_panel"
 },
 "wait_specialist": {
 "ability": "",

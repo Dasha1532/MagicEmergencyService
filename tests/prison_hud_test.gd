@@ -7,6 +7,7 @@ func _run() -> void:
 	var room = load("res://scenes/PrisonRoom.tscn").instantiate()
 	root.add_child(room)
 	await process_frame
+	room._next_line()
 	assert(room.dialogue_portrait.texture is AtlasTexture)
 	assert(room.dialogue_portrait.texture.region == Rect2(190, 0, 650, 620))
 	room._close_conversation()
@@ -19,8 +20,11 @@ func _run() -> void:
 	assert(room.tool_bar.visible)
 	for id: String in ["inspect", "repair_mechanism", "test_protection", "stop_test"]:
 		assert(room.perform_action(id))
+		if id == "test_protection":
+			room.show_room("cells")
 		assert(room.dialogue_open and room.dialogue_panel.visible)
-		room._close_conversation()
+		while room.dialogue_open:
+			room._next_line()
 	assert(room.talk is Control and not room.talk is Button)
 	assert(room.talk.mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND)
 	room._show_actions("girl")

@@ -44,8 +44,9 @@ func _run() -> void:
 	assert(room.employee_actor.visible)
 	assert(room.dialogue_panel.size == Vector2(1560, 150))
 	assert(room.dialogue_portrait_frame.position.y == -98)
-	assert(room.lines.size() == 1)
-	room._next_line()
+	assert(room.lines.size() > 1)
+	while room.dialogue_open:
+		room._next_line()
 	assert(not room.dialogue_open)
 	assert(room.get_node_or_null("Interface") == null)
 	assert(room.get_node_or_null("DebugPrisonButton") == null)

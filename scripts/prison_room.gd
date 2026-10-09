@@ -49,6 +49,11 @@ func _ready() -> void:
 	var saved: Dictionary = game_state.get_job_repair_state(&"prison_lock")
 	if not saved.is_empty():
 		simulation.load_state(saved)
+		if not saved.get("properties", {}).has("guard_away"):
+			simulation.state["guard_away"] = bool(simulation.state.get("mechanism_repaired", false)) and not bool(simulation.state.get("pain_seen", false))
+		# Old saves already in the incident had the empty chamber switched on.
+		if not saved.get("properties", {}).has("empty_protection_active"):
+			simulation.state["empty_protection_active"] = bool(simulation.state.get("reverse_feedback", false))
 	_build_employee_actor()
 	_build_work_interface()
 	$Office/ToCells.pressed.connect(show_room.bind("cells"))
@@ -69,6 +74,7 @@ func _ready() -> void:
 	_setup_modal_windows()
 	$Office/ProtectionBox.pressed.connect(_open_control_panel)
 	$ProtectionPanel.closed.connect(_close_control_panel)
+	$ProtectionPanel.action_requested.connect(_on_control_panel_action)
 	show_room("office")
 	if repair_hud.is_timed_action_active():
 		var pending: Dictionary = game_state.get_pending_job_action(&"prison_lock")
@@ -83,8 +89,6 @@ func _ready() -> void:
 	if not action_in_progress:
 		_configure_employee_actor()
 	if not bool(simulation.state.get("arrival_seen", false)):
-		simulation.state["arrival_seen"] = true
-		_save_campaign()
 		_begin_dialogue("arrival", false)
 	elif not repair_hud.is_timed_action_active() and simulation.state.get("pending_prison_action") is Dictionary:
 		var interrupted: Dictionary = simulation.state["pending_prison_action"]
@@ -96,6 +100,19 @@ func _ready() -> void:
 func show_room(room_id: String) -> void:
 	if dialogue_open or (action_in_progress and is_node_ready()) or room_id not in ["office", "cells"]:
 		return
+	_set_room_view(room_id)
+	_close_conversation()
+	if room_id == "cells" and bool(simulation.state.get("reverse_feedback", false)) and not bool(simulation.state.get("incident_seen", false)):
+		simulation.state["incident_seen"] = true
+		_save_campaign()
+		_begin_dialogue("test_protection", false)
+	elif room_id == "cells" and bool(simulation.state.get("stop_dialogue_pending", false)):
+		simulation.state["stop_dialogue_pending"] = false
+		_save_campaign()
+		_begin_dialogue("stop_test", false)
+
+# Dialogue cues change the view without closing the dialogue or resuming time.
+func _set_room_view(room_id: String) -> void:
 	tool_bar.hide()
 	current_room = room_id
 	actor_placement.scale = Vector2(0.85, 0.85) if room_id == "office" else Vector2(0.65, 0.65)
@@ -106,7 +123,6 @@ func show_room(room_id: String) -> void:
 	office.visible = room_id == "office"
 	cells.visible = room_id == "cells"
 	record.hide()
-	_close_conversation()
 
 func perform_action(action_id: String) -> bool:
 	if dialogue_open or record.visible or not _actor_allowed(action_id):
@@ -123,8 +139,15 @@ func perform_action(action_id: String) -> bool:
 		repair_finished.emit(simulation.state.duplicate(true))
 	if action_id == "antimagic":
 		_play_escape_cutscene(selected_employee_id)
-	elif action_id in ["test_protection", "stop_test"]:
-		_begin_dialogue(action_id, false)
+	elif action_id == "test_protection":
+		pass # The player first sees the incident after returning to the cells.
+	elif action_id == "stop_test":
+		if current_room == "cells":
+			simulation.state["stop_dialogue_pending"] = false
+			_save_campaign()
+			_begin_dialogue(action_id, false)
+	elif Definition.actions[action_id].has("dialogue_section"):
+		_begin_dialogue(str(Definition.actions[action_id]["dialogue_section"]), false)
 	elif not str(Definition.actions[action_id].get("result", "")).is_empty():
 		_begin_dialogue("result", false)
 		var result_speaker := str(Definition.actions[action_id].get("speaker", ""))
@@ -143,6 +166,7 @@ func _read_record() -> void:
 	var entry: Dictionary = Definition.prisoner_record
 	$Record/Text.text = "ДЕЛО ЗАКЛЮЧЁННОЙ\n\nИмя: %s.\n\nОснование содержания под стражей: %s\n\nПриметы: %s\n\nИзвестная способность: %s\n\nМеры предосторожности: %s" % [entry["name"], entry["accusation"], entry["appearance"], entry["ability"], entry["precautions"]]
 	record.show()
+	$Record/Text.scroll_to_line(0)
 	_refresh()
 
 func _open_conversation() -> void:
@@ -157,6 +181,10 @@ func _open_conversation() -> void:
 	conversation_requested.emit(&"mysterious_girl")
 
 func _close_conversation() -> void:
+	if dialogue_open and dialogue_section == "arrival":
+		_set_room_view("cells")
+		mysterious_girl.flip_h = false
+	$Office/ProtectionHighlight.hide()
 	if dialogue_open:
 		game_state.clock_paused = dialogue_clock_was_paused
 	dialogue_open = false
@@ -171,6 +199,11 @@ func _close_conversation() -> void:
 
 func _refresh() -> void:
 	var state: Dictionary = simulation.state
+	var guard_at_cells := not bool(state.get("guard_away", false))
+	if dialogue_open and dialogue_section == "arrival":
+		guard_at_cells = current_room == "cells"
+	$Cells/ArrivalGuard.visible = guard_at_cells
+	$Office/Guard.visible = dialogue_open and dialogue_section == "arrival" and current_room == "office"
 	if finish_button != null:
 		finish_button.visible = not dialogue_open and not record.visible
 		finish_button.disabled = not bool(state.get("repair_completed", false))
@@ -274,13 +307,15 @@ func _build_dialogue_interface() -> void:
 	finish_conversation.pressed.connect(func() -> void: _set_dialogue_lines("ending"))
 	row.add_child(finish_conversation)
 	conversation_choice.hide()
-	$Record/Text.add_theme_font_size_override("font_size", 18)
-	$Record/Text.position.x = 420
-	$Record/Text.size.x = 570
+	$Record/Text.add_theme_font_size_override("normal_font_size", 18)
 
 func _begin_dialogue(section: String, close_up: bool) -> void:
 	dialogue_employee_id = selected_employee_id
 	dialogue_crew = _available_crew()
+	if not dialogue_crew.has(dialogue_employee_id) and not dialogue_crew.is_empty():
+		dialogue_employee_id = dialogue_crew[0]
+		selected_employee_id = dialogue_employee_id
+		_configure_employee_actor()
 	if not dialogue_open:
 		dialogue_clock_was_paused = game_state.clock_paused
 	game_state.clock_paused = true
@@ -309,6 +344,17 @@ func _show_line() -> void:
 		_close_conversation()
 		return
 	var line: Dictionary = lines[line_index]
+	if line.has("girl_flip_h"):
+		mysterious_girl.flip_h = bool(line["girl_flip_h"])
+	if line.has("effects"):
+		simulation.state.merge(line["effects"], true)
+		_save_campaign()
+		_refresh()
+	var room_cue := str(line.get("room", ""))
+	if room_cue in ["cells", "office"]:
+		_set_room_view(room_cue)
+		_refresh()
+	$Office/ProtectionHighlight.visible = bool(line.get("highlight_control_panel", false))
 	if line.get("visual", "") == "hide_eye":
 		$Portrait/Background.texture = load("res://assets/prison/mysterious_girl_hidden_eye.png")
 		simulation.state["eye_hidden"] = true
@@ -337,6 +383,9 @@ func _next_line() -> void:
 			_save_campaign()
 		_set_dialogue_lines("ending")
 	else:
+		if dialogue_section == "arrival":
+			simulation.state["arrival_seen"] = true
+			_save_campaign()
 		_close_conversation()
 
 func _build_work_interface() -> void:
@@ -379,13 +428,19 @@ func _build_work_interface() -> void:
 	var hotspot := Control.new()
 	hotspot.position = Vector2(435, 355)
 	hotspot.size = Vector2(165, 140)
-	hotspot.tooltip_text = "Замок пустой клетки"
+	hotspot.name = "LockHotspot"
 	hotspot.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	hotspot.gui_input.connect(func(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			_show_actions("lock")
 	)
 	cells.add_child(hotspot)
+	$Cells/ArrivalGuard.mouse_filter = Control.MOUSE_FILTER_STOP
+	$Cells/ArrivalGuard.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	$Cells/ArrivalGuard.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_show_actions("guard")
+	)
 	$Cells/Gate.mouse_filter = Control.MOUSE_FILTER_STOP
 	$Cells/Gate.gui_input.connect(func(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -464,7 +519,7 @@ func _request_action(action_id: String) -> void:
 	var ability := str(Definition.actions[action_id].get("ability", ""))
 	if not ability.is_empty():
 		var target := Vector2(525, 425) if current_room == "cells" and action_id != "antimagic" else Vector2(1130, 440)
-		var approach: Vector2 = actor_placement.get_global_transform().affine_inverse() * Vector2(315, 225)
+		var approach: Vector2 = actor_placement.get_global_transform().affine_inverse() * Vector2(315, actor_placement.global_position.y)
 		employee_actor.play_action(StringName(ability), target, approach, &"work", true)
 		await employee_actor.action_finished
 	if action_id in ["inspect", "repair_mechanism", "finish_repair"]:
@@ -483,9 +538,19 @@ func _open_control_panel() -> void:
 	control_panel_clock_was_paused = game_state.clock_paused
 	game_state.clock_paused = true
 	tool_bar.hide()
-	$ProtectionPanel.refresh(bool(simulation.state.get("protection_active", true)))
+	$ProtectionPanel.refresh(bool(simulation.state.get("protection_active", true)), bool(simulation.state.get("empty_protection_active", false)))
+	var action_id := "stop_test" if simulation.available("stop_test") else "test_protection"
+	$ProtectionPanel.set_action(action_id, simulation.available(action_id) and _actor_allowed(action_id))
 	repair_hud.hide()
 	$ProtectionPanel.show()
+
+func _on_control_panel_action(action_id: String) -> void:
+	if not simulation.available(action_id) or not _actor_allowed(action_id):
+		return
+	perform_action(action_id)
+	$ProtectionPanel.refresh(bool(simulation.state["protection_active"]), bool(simulation.state["empty_protection_active"]))
+	var next_action := "stop_test" if simulation.available("stop_test") else "test_protection"
+	$ProtectionPanel.set_action(next_action, simulation.available(next_action) and _actor_allowed(next_action))
 
 func _close_control_panel() -> void:
 	$ProtectionPanel.hide()

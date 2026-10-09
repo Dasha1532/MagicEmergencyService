@@ -20,5 +20,12 @@ static func build(section: String, crew: PackedStringArray, selected: String) ->
 		line["speaker"] = speaker
 		if line.has("variants"):
 			line["text"] = line["variants"].get(selected, line.get("text", ""))
+		if not str(line.get("description", "")).is_empty():
+			var narration := line.duplicate(true)
+			narration["speaker"] = ""
+			narration["text"] = line["description"]
+			narration.erase("description")
+			result.append(narration)
+			line.erase("description")
 		result.append(line)
 	return result
